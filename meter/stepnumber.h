@@ -1,0 +1,94 @@
+#pragma once
+
+#include <atomic>
+#include <cstdint>
+#include "clock.h"
+
+namespace atlas {
+namespace meter {
+
+template <typename T>
+class StepNumber {
+  template <typename CT>
+  struct type {};
+
+ public:
+  StepNumber& operator=(const StepNumber& s) = delete;
+  StepNumber(const StepNumber& s) = delete;
+
+  StepNumber(T init, int64_t step_millis, const Clock& clock) noexcept
+      : init_(init),
+        step_millis_(step_millis),
+        clock_(clock),
+        previous_(init),
+        current_(init),
+        last_init_pos_(clock.WallTime() / step_millis) {}
+
+  /// Get the value for the last completed interval
+  T Poll() noexcept {
+    RollCountNow();
+    return previous_.load(std::memory_order_relaxed);
+  }
+
+  /// Get the value for the current interval
+  T Current() noexcept {
+    RollCountNow();
+    return current_.load(std::memory_order_relaxed);
+  }
+
+  /// Add amount to the current value
+  void Add(T amount) noexcept {
+    RollCountNow();
+    AddAmount(amount, type<T>());
+  }
+
+  /// Atomically update the current bucket to be max(current, value)
+  void UpdateCurrentMax(T value) noexcept {
+    auto m = Current();
+    while (value > m) {
+      if (current_.compare_exchange_weak(m, value)) {
+        break;
+      }
+      m = current_.load(std::memory_order_relaxed);
+    }
+  }
+
+ private:
+  T init_;
+  int64_t step_millis_;
+  const Clock& clock_;
+  std::atomic<T> previous_;
+  std::atomic<T> current_;
+  std::atomic<T> last_init_pos_;
+
+  void RollCount(int64_t now) noexcept {
+    const auto step_time = now / step_millis_;
+    auto last_init = last_init_pos_.load();
+    if (last_init < step_time &&
+        last_init_pos_.compare_exchange_strong(last_init, step_time)) {
+      const auto v = current_.exchange(init_);
+      // Need to check if there was any activity during the previous step
+      // interval. If there was then the init position will move forward by 1,
+      // otherwise it will be older. No activity
+      // means the previous interval should be set to the `init` value.
+      previous_.store((last_init == step_time - 1) ? v : init_);
+    }
+  }
+  void RollCountNow() noexcept { RollCount(clock_.WallTime()); }
+
+  template <typename CT>
+  void AddAmount(T amount, type<CT>) noexcept {
+    current_ += amount;
+  }
+
+  void AddAmount(double amount, type<double>) noexcept {
+    double current;
+    do {
+      current = current_.load(std::memory_order_relaxed);
+    } while (!current_.compare_exchange_weak(current, current + amount));
+  }
+};
+
+using StepLong = StepNumber<int64_t>;
+}  // namespace meter
+}  // namespace atlas

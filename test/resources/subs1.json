@@ -1,0 +1,14 @@
+{
+  "expressions" : [
+    {
+      "expression" : "nf.cluster,skan-test,:eq,name,foometric,:eq,:and,:sum",
+      "frequency" : 60000,
+      "id" : "So3yA1c1xN_vzZASUQdORBqd9hM"
+    },
+    {
+      "expression" : "nf.cluster,skan,:re,name,foometric,:eq,:and,:sum",
+      "frequency" : 60000,
+      "id" : "tphgPWqODm0ZUhgUCwj23lpEs1o"
+    }
+  ]
+}

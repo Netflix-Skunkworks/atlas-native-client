@@ -1,0 +1,27 @@
+{
+  "instanceId" : "i-12345678",
+                 "billingProducts"
+                 : null,
+                   "imageId" : "ami-87654321",
+                               "architecture"
+                               : "x86_64",
+                                 "pendingTime"
+                                 : "2014-07-15T22:27:08Z",
+                                   "instanceType"
+                                   : "m2.4xlarge",
+                                     "accountId"
+                                     : "123456789000",
+                                       "kernelId" : "aki-12345678",
+                                                    "ramdiskId"
+                                                    : null,
+                                                      "region"
+                                                      : "us-east-1",
+                                                        "version"
+                                                        : "2010-08-31",
+                                                          "availabilityZone"
+                                                          : "us-east-1e",
+                                                            "devpayProductCodes"
+                                                            : null,
+                                                              "privateIp"
+                                                              : "1.2.3.4"
+}

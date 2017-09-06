@@ -36,6 +36,8 @@ class Registry {
   virtual void RegisterMonitor(std::shared_ptr<Meter> meter) noexcept = 0;
 
   virtual Meters meters() const noexcept = 0;
+
+  virtual Pollers& pollers() noexcept = 0;
 };
 
 }  // namespace meter

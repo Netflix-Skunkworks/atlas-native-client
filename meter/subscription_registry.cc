@@ -76,6 +76,8 @@ class SubscriptionRegistry::impl {
 
 const Clock& SubscriptionRegistry::clock() const noexcept { return *clock_; }
 
+Pollers& SubscriptionRegistry::pollers() noexcept { return poller_freq_; }
+
 IdPtr SubscriptionRegistry::CreateId(std::string name, Tags tags) {
   return std::make_shared<Id>(name, tags);
 }

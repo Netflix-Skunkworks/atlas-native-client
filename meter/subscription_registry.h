@@ -31,6 +31,8 @@ class SubscriptionRegistry : public Registry {
 
   const Clock& clock() const noexcept override;
 
+  Pollers& pollers() noexcept override;
+
   IdPtr CreateId(std::string name, Tags tags) override;
 
   std::shared_ptr<Counter> counter(IdPtr id) noexcept override;

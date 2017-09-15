@@ -171,6 +171,7 @@ static int do_post(const char* url, int connect_timeout, int read_timeout,
   if (!error) {
     logger->info("Was able to POST to {} - status code: {}", url, http_code);
   }
+  curl_slist_free_all(headers);
   return static_cast<int>(http_code);
 }
 
@@ -196,6 +197,7 @@ int http::post(const std::string& url, int connect_timeout, int read_timeout,
         "Failed to compress payload: {}, while posting to {} - uncompressed "
         "size: {}",
         compress_res, url, size);
+    curl_slist_free_all(headers);
     return 400;
   }
 

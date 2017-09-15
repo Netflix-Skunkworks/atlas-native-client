@@ -10,8 +10,8 @@ namespace meter {
 
 template <typename T>
 class SubscriptionMaxGauge : public Meter, public Gauge<T> {
-  using StepNumbers = std::array<StepNumber<T>*, MAX_POLLER_FREQ>;
   static constexpr auto kMinValue = std::numeric_limits<T>::lowest();
+  using StepNumbers = std::array<std::unique_ptr<StepNumber<T>>, MAX_POLLER_FREQ>;
 
  public:
   SubscriptionMaxGauge(IdPtr id, const Clock& clock, Pollers& poller_frequency)
@@ -57,11 +57,12 @@ class SubscriptionMaxGauge : public Meter, public Gauge<T> {
   }
 
   void UpdatePollers() override {
+    const auto init = kMinValue;
     auto new_size = poller_frequency_.size();
     if (new_size > current_size_) {
       for (auto i = current_size_; i < new_size; ++i) {
         step_numbers.at(i) =
-            new StepNumber<T>(kMinValue, poller_frequency_[i], clock_);
+            std::make_unique<StepNumber<T>>(init, poller_frequency_[i], clock_);
       }
     }
     current_size_ = new_size;

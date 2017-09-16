@@ -6,6 +6,7 @@
 using namespace atlas::meter;
 using atlas::interpreter::Interpreter;
 using atlas::interpreter::ClientVocabulary;
+using atlas::util::intern_str;
 
 TEST(PercentileTimer, Percentile) {
   SubscriptionRegistry atlas_registry{
@@ -33,10 +34,12 @@ TEST(PercentileTimer, HasProperStatistic) {
   t.Record(std::chrono::milliseconds{42});
 
   auto ms = atlas_registry.meters();
+  auto percentileRef = intern_str("percentile");
+  auto statisticRef = intern_str("statistic");
   for (auto i = ms.begin(); i != ms.end(); ++i) {
     auto tags = (*i)->GetId()->GetTags();
-    if (tags.find("percentile") != tags.end()) {
-      EXPECT_EQ(tags.at("statistic"), "percentile");
+    if (tags.find(percentileRef) != tags.end()) {
+      EXPECT_EQ(tags.at(statisticRef), percentileRef);
     }
   }
 }

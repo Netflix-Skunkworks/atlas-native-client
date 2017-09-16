@@ -15,15 +15,16 @@ static constexpr size_t MAX_USER_TAGS = 20;
 static constexpr size_t MAX_NAME_LENGTH = 255;
 
 using util::StartsWith;
+using util::to_string;
 
 static bool is_key_restricted(const std::string& k) noexcept {
   return StartsWith(k, "nf.") || StartsWith(k, "atlas.");
 }
 
 static std::unordered_set<std::string> kValidNfTags = {
-    "nf.node",    "nf.cluster", "nf.app",  "nf.asg",   "nf.stack",
-    "nf.ami",     "nf.vmtype",  "nf.zone", "nf.region",
-    "nf.account", "nf.country", "nf.task", "nf.country.rollup"};
+    "nf.node",    "nf.cluster", "nf.app",           "nf.asg",    "nf.stack",
+    "nf.ami",     "nf.vmtype",  "nf.zone",          "nf.region", "nf.account",
+    "nf.country", "nf.task",    "nf.country.rollup"};
 
 static bool is_user_key_invalid(const std::string& k) noexcept {
   if (StartsWith(k, "atlas.")) {
@@ -44,8 +45,10 @@ bool IsValid(const Tags& tags) noexcept {
   auto name_seen = false;
 
   for (const auto& kv : tags) {
-    const auto& k = kv.first;
-    const auto& v = kv.second;
+    const auto& k_ref = kv.first;
+    const auto& v_ref = kv.second;
+    const std::string k = to_string(k_ref);
+    const std::string v = to_string(v_ref);
 
     if (k.empty() || v.empty()) {
       err_msg = "Tag keys or values cannot be empty";

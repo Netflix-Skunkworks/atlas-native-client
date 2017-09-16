@@ -4,6 +4,8 @@
 using namespace atlas::util;
 using std::string;
 
+static atlas::util::StrRef to_ref(const char* s) { return intern_str(s); }
+
 TEST(ExpandVars, InPlace) {
   string tmpl = "foo $bar ${baz}";
   auto replacer = [](const string& var) -> string {
@@ -39,30 +41,37 @@ TEST(ExpandVars, Words) {
 }
 
 TEST(Strings, ToValidCharset) {
-  string valid = "foo_bar";
+  auto valid = to_ref("foo_bar");
   EXPECT_EQ(valid, ToValidCharset(valid));
 
-  string invalid = "bar/foo";
-  EXPECT_EQ(ToValidCharset(invalid), "bar_foo");
+  auto invalid = to_ref("bar/foo");
+  EXPECT_EQ(ToValidCharset(invalid), to_ref("bar_foo"));
 
-  string empty = "";
-  EXPECT_EQ(ToValidCharset(empty), "");
+  auto empty = to_ref("");
+  EXPECT_EQ(ToValidCharset(empty), to_ref(""));
 }
 
 TEST(Strings, EncodeValueForKey) {
-  EXPECT_EQ("abc.1234", EncodeValueForKey("abc.1234", "nf.asg"))
+  EXPECT_EQ(to_ref("abc.1234"),
+            EncodeValueForKey(to_ref("abc.1234"), to_ref("nf.asg")))
       << "No encoding needed";
-  EXPECT_EQ("abc_abc", EncodeValueForKey("abc_abc", "nf.asg"))
+  EXPECT_EQ(to_ref("abc_abc"),
+            EncodeValueForKey(to_ref("abc_abc"), to_ref("nf.asg")))
       << "Does not encode underscores";
-  EXPECT_EQ("^abcabc", EncodeValueForKey("^abcabc", "nf.asg"))
+  EXPECT_EQ(to_ref("^abcabc"),
+            EncodeValueForKey(to_ref("^abcabc"), to_ref("nf.asg")))
       << "Caret allowed for nf.asg";
-  EXPECT_EQ("abcabc_", EncodeValueForKey("abcabc/", "nf.cluster"))
+  EXPECT_EQ(to_ref("abcabc_"),
+            EncodeValueForKey(to_ref("abcabc/"), to_ref("nf.cluster")))
       << "Special char at end";
-  EXPECT_EQ("abc_abc_", EncodeValueForKey("abc{abc}", "nf.cluster"))
+  EXPECT_EQ(to_ref("abc_abc_"),
+            EncodeValueForKey(to_ref("abc{abc}"), to_ref("nf.cluster")))
       << "Multiple substitutions";
-  EXPECT_EQ("abc^abc~_", EncodeValueForKey("abc^abc~#", "nf.cluster"))
+  EXPECT_EQ(to_ref("abc^abc~_"),
+            EncodeValueForKey(to_ref("abc^abc~#"), to_ref("nf.cluster")))
       << "Multiple substitutions, plus invalid";
-  EXPECT_EQ("abc_abc__", EncodeValueForKey("abc^abc~#", "nf.app"))
+  EXPECT_EQ(to_ref("abc_abc__"),
+            EncodeValueForKey(to_ref("abc^abc~#"), to_ref("nf.app")))
       << "Multiple substitutions for normal keys";
 }
 

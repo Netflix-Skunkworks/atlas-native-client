@@ -8,6 +8,8 @@
 namespace atlas {
 namespace interpreter {
 
+using StringRefs = std::vector<util::StrRef>;
+
 enum class ExpressionType {
   Literal,
   List,
@@ -59,7 +61,7 @@ class List : public Expression {
 
   bool Contains(const std::string& key) const noexcept;
 
-  std::unique_ptr<Strings> ToStrings() const;
+  std::unique_ptr<StringRefs> ToStrings() const;
 
   size_t Size() const noexcept;
 

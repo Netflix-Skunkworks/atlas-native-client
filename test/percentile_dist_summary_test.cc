@@ -7,6 +7,7 @@
 using namespace atlas::meter;
 using atlas::interpreter::Interpreter;
 using atlas::interpreter::ClientVocabulary;
+using atlas::util::intern_str;
 
 TEST(PercentileDistributionSummary, Percentile) {
   SubscriptionRegistry atlas_registry{
@@ -29,15 +30,17 @@ TEST(PercentileDistributionSummary, HasProperStatistic) {
   SubscriptionRegistry atlas_registry{
       std::make_unique<Interpreter>(std::make_unique<ClientVocabulary>())};
   PercentileDistributionSummary t{&atlas_registry,
-                    atlas_registry.CreateId("foo", kEmptyTags)};
+                                  atlas_registry.CreateId("foo", kEmptyTags)};
 
   t.Record(42);
 
   auto ms = atlas_registry.meters();
+  auto percentileRef = intern_str("percentile");
+  auto statisticRef = intern_str("statistic");
   for (auto i = ms.begin(); i != ms.end(); ++i) {
     auto tags = (*i)->GetId()->GetTags();
-    if (tags.find("percentile") != tags.end()) {
-      EXPECT_EQ(tags.at("statistic"), "percentile");
+    if (tags.find(percentileRef) != tags.end()) {
+      EXPECT_EQ(tags.at(statisticRef), percentileRef);
     }
   }
 }

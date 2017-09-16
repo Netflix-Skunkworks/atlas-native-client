@@ -41,6 +41,8 @@ class AbstractKeyQuery : public Query {
 
   const std::string& Key() const noexcept;
 
+  util::StrRef KeyRef() const noexcept;
+
  private:
   const std::string key_;
 
@@ -124,7 +126,7 @@ class RegexQuery : public AbstractKeyQuery {
 
 class InQuery : public AbstractKeyQuery {
  public:
-  InQuery(std::string key, std::unique_ptr<Strings> vs) noexcept;
+  InQuery(std::string key, std::unique_ptr<StringRefs> vs) noexcept;
 
   std::ostream& Dump(std::ostream& os) const override;
 
@@ -140,7 +142,7 @@ class InQuery : public AbstractKeyQuery {
   QueryType GetQueryType() const noexcept override { return QueryType::In; }
 
  private:
-  std::unique_ptr<Strings> vs_;
+  std::unique_ptr<StringRefs> vs_;
 };
 
 class TrueQuery : public Query {
@@ -247,8 +249,8 @@ inline std::unique_ptr<Query> eq(std::string k, std::string v) noexcept {
   return std::make_unique<RelopQuery>(std::move(k), std::move(v), RelOp::EQ);
 }
 
-inline std::unique_ptr<Query> in(std::string k, Strings vs) noexcept {
-  auto unique_vs = std::make_unique<Strings>(std::move(vs));
+inline std::unique_ptr<Query> in(std::string k, StringRefs vs) noexcept {
+  auto unique_vs = std::make_unique<StringRefs>(std::move(vs));
   return std::make_unique<InQuery>(std::move(k), std::move(unique_vs));
 }
 

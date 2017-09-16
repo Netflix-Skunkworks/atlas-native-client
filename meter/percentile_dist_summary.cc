@@ -24,13 +24,16 @@ void PercentileDistributionSummary::Record(int64_t amount) noexcept {
 
 const std::string kPercentile{"percentile"};
 
-inline Tag PercentileTag(size_t i) { return Tag{kPercentile, kDistTags.at(i)}; }
+inline Tag PercentileTag(size_t i) {
+  return Tag::of(kPercentile, kDistTags.at(i));
+}
 
 std::shared_ptr<Counter> PercentileDistributionSummary::CounterFor(
     size_t i) const noexcept {
   auto& c = counters_.at(i);
   if (!c) {
-    c = registry_->counter(id_->WithTag(statistic::percentile)->WithTag(PercentileTag(i)));
+    c = registry_->counter(
+        id_->WithTag(statistic::percentile)->WithTag(PercentileTag(i)));
     counters_.at(i) = c;
   }
   return c;

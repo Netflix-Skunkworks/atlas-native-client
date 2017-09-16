@@ -24,13 +24,14 @@ void PercentileTimer::Record(std::chrono::nanoseconds nanos) noexcept {
 const std::string kPercentile{"percentile"};
 
 inline Tag PercentileTag(size_t i) {
-  return Tag{kPercentile, kTimerTags.at(i)};
+  return Tag::of(kPercentile, kTimerTags.at(i));
 }
 
 std::shared_ptr<Counter> PercentileTimer::CounterFor(size_t i) const noexcept {
   auto& c = counters_.at(i);
   if (!c) {
-    c = registry_->counter(id_->WithTag(statistic::percentile)->WithTag(PercentileTag(i)));
+    c = registry_->counter(
+        id_->WithTag(statistic::percentile)->WithTag(PercentileTag(i)));
     counters_.at(i) = c;
   }
   return c;

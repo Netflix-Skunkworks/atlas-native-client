@@ -1,5 +1,6 @@
 #pragma once
 
+#include "intern.h"
 #include <algorithm>
 #include <cctype>
 #include <functional>
@@ -35,13 +36,12 @@ std::string ExpandEnvVars(const std::string& raw) noexcept;
 /// get the sanitized string representation of atlas_str
 /// letters, numbers, dots, and underscores are allowed, otherwise we convert it
 /// to _
-std::string ToValidCharset(const std::string& atlas_str) noexcept;
+StrRef ToValidCharset(StrRef atlas_str_ref) noexcept;
 
 /// convert value to a representation atlas would allow
 /// some keys have a more relaxed restriction, therefore this
 /// function needs to know for which key we need to encode
-std::string EncodeValueForKey(const std::string& value,
-                              const std::string& key) noexcept;
+StrRef EncodeValueForKey(StrRef value, StrRef key) noexcept;
 
 std::string join_path(const std::string& dir, const char* file_name) noexcept;
 

@@ -46,12 +46,12 @@ static std::vector<std::string> vector_from(const rapidjson::Value& array) {
 static inline void put_if_nonempty(meter::Tags* tags, const char* key,
                                    std::string&& val) {
   if (!val.empty()) {
-    tags->insert(std::make_pair(std::string{key}, val));
+    tags->add(key, val.c_str());
   }
 }
 
-static std::map<std::string, std::string> get_default_common_tags() {
-  std::map<std::string, std::string> common_tags_;
+static meter::Tags get_default_common_tags() {
+  meter::Tags common_tags_;
   put_if_nonempty(&common_tags_, "nf.node", env::instance_id());
   put_if_nonempty(&common_tags_, "nf.cluster", env::cluster());
   put_if_nonempty(&common_tags_, "nf.app", env::app());
@@ -237,7 +237,7 @@ void ConfigManager::refresh_configs() noexcept {
 }
 
 void ConfigManager::AddCommonTag(const char* key, const char* value) noexcept {
-  extra_tags_.emplace(std::make_pair(std::string(key), std::string(value)));
+  extra_tags_.add(key, value);
 }
 
 }  // namespace util

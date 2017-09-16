@@ -24,7 +24,7 @@ static const std::string kBucket{"bucket"};
 
 void BucketDistributionSummary::Record(int64_t amount) noexcept {
   const auto& bucket = bucket_function_(amount);
-  registry_->distribution_summary(id_->WithTag(Tag{kBucket, bucket}))
+  registry_->distribution_summary(id_->WithTag(Tag::of(kBucket, bucket)))
       ->Record(amount);
   Updated();
 }

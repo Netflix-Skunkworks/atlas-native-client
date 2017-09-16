@@ -22,7 +22,7 @@ static const std::string kBucket{"bucket"};
 
 void BucketCounter::Record(int64_t amount) noexcept {
   const auto& bucket = bucket_function_(amount);
-  registry_->counter(id_->WithTag(Tag{kBucket, bucket}))->Increment();
+  registry_->counter(id_->WithTag(Tag::of(kBucket, bucket)))->Increment();
   Updated();
 }
 

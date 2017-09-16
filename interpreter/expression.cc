@@ -5,8 +5,10 @@
 namespace atlas {
 namespace interpreter {
 
-using ::atlas::meter::Measurements;
-using ::atlas::util::Logger;
+using meter::Measurements;
+using util::Logger;
+using util::intern_str;
+using util::to_string;
 
 Literal::Literal(std::string str) noexcept : str_(std::move(str)) {}
 
@@ -65,12 +67,12 @@ bool List::Contains(const std::string& key) const noexcept {
   return std::any_of(list_.begin(), list_.end(), contains_key);
 }
 
-std::unique_ptr<Strings> List::ToStrings() const {
-  auto strs = std::make_unique<Strings>();
+std::unique_ptr<StringRefs> List::ToStrings() const {
+  auto strs = std::make_unique<StringRefs>();
   strs->reserve(list_.size());
   for (auto& e : list_) {
     if (expression::IsLiteral(*e)) {
-      strs->push_back(expression::LiteralToStr(*e));
+      strs->push_back(intern_str(expression::LiteralToStr(*e)));
     }
   }
   return strs;
@@ -92,18 +94,18 @@ std::ostream& operator<<(std::ostream& os, const TagsValuePair& tagsValuePair) {
     } else {
       first = false;
     }
-    os << tag.first << "=" << tag.second;
+    os << to_string(tag.first) << "=" << to_string(tag.second);
   }
   os << ", value=" << tagsValuePair.value << "}";
   return os;
 }
 
+const auto kNameRef = intern_str("name");
 TagsValuePair TagsValuePair::from(const meter::Measurement& measurement,
                                   const meter::Tags& common_tags) noexcept {
-  meter::Tags tags{common_tags.begin(), common_tags.end()};
-  tags.insert(measurement.id->GetTags().begin(),
-              measurement.id->GetTags().end());
-  tags.emplace("name", measurement.id->Name());
+  meter::Tags tags{common_tags};
+  tags.add_all(measurement.id->GetTags());
+  tags.add(kNameRef, measurement.id->NameRef());
 
   return TagsValuePair{tags, measurement.value};
 }

@@ -39,7 +39,7 @@ TEST(SubCounterTest, Add) {
 
 TEST(SubCounterTest, Measure) {
   auto counter = newCounter();
-  auto expected_id = *(Id("foo").WithTag(statistic::count));
+  auto expected_id = *(Id("foo", kEmptyTags).WithTag(statistic::count));
   counter->Add(42);
   const Measurements& empty_ms = counter->Measure();
   EXPECT_EQ(0, empty_ms.size());

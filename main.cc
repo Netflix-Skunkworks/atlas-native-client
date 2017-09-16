@@ -13,9 +13,9 @@ std::shared_ptr<Counter> counter(std::string&& name, const Tags& tags) {
 
 void init_tags(Tags* tags) {
   std::string prefix{"some.random.string.for.testing."};
-  std::string value{"some.random.value.for.testing"};
+  const char* value = "some.random.value.for.testing";
   for (int i = 0; i < 10; ++i) {
-    tags->emplace(std::make_pair(prefix + std::to_string(i), value));
+    tags->add((prefix + std::to_string(i)).c_str(), value);
   }
 }
 
@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
   init_tags(&test_tags);
   std::string prefix{"atlas.client.test."};
   for (int minute = 0; minute < 5; ++minute) {
-    logger->info("Starting to generate 10k metrics");
+    logger->info("Starting to generate 50k metrics");
     for (int i = 0; i < 50000; ++i) {
       counter(prefix + std::to_string(i), test_tags)->Increment();
     }

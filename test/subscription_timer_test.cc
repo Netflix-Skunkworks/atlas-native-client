@@ -71,16 +71,18 @@ TEST(SubTimer, Measure) {
   EXPECT_EQ(4, one.size());
   for (auto& m : one) {
     EXPECT_EQ(120000, m.timestamp);
-    if (*(m.id) == *(Id("foo").WithTag(statistic::count))) {
+    if (*(m.id) == *(Id("foo", kEmptyTags).WithTag(statistic::count))) {
       EXPECT_DOUBLE_EQ(3 / 60.0, m.value);
-    } else if (*(m.id) == *(Id("foo").WithTag(statistic::totalTime))) {
+    } else if (*(m.id) ==
+               *(Id("foo", kEmptyTags).WithTag(statistic::totalTime))) {
       EXPECT_DOUBLE_EQ(126 / 60000.0, m.value);
     } else if (*(m.id) ==
-               *(Id("foo")
+               *(Id("foo", kEmptyTags)
                      .WithTag(statistic::max)
-                     ->WithTag(Tag{"atlas.dstype", "gauge"}))) {
+                     ->WithTag(Tag::of("atlas.dstype", "gauge")))) {
       EXPECT_DOUBLE_EQ(44 / 1000.0, m.value);
-    } else if (*(m.id) == *(Id("foo").WithTag(statistic::totalOfSquares))) {
+    } else if (*(m.id) ==
+               *(Id("foo", kEmptyTags).WithTag(statistic::totalOfSquares))) {
       auto sum_sq = 40.0 * 1e6 * 40.0 * 1e6 + 42.0 * 1e6 * 42.0 * 1e6 +
                     44.0 * 1e6 * 44.0 * 1e6;
       auto factor = 1e9 * 1e9;

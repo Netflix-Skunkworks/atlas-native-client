@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 
 using atlas::util::DefaultConfig;
+using atlas::util::intern_str;
 using std::make_pair;
 using std::map;
 using std::string;
@@ -16,13 +17,13 @@ TEST(Config, AddCommonTag) {
   auto cfg = DefaultConfig();
   auto orig_common_tags = cfg->CommonTags();
 
-  map<string, string> new_tags;
-  string new_key = "foo";
-  string new_val = "bar";
-  new_tags.emplace(make_pair(new_key, new_val));
+  atlas::meter::Tags new_tags;
+  new_tags.add("foo", "bar");
   cfg->AddCommonTags(new_tags);
 
   auto new_common_tags = cfg->CommonTags();
-  EXPECT_EQ(new_val, new_common_tags[new_key]);
+  auto new_key_ref = intern_str("foo");
+  auto new_val_ref = intern_str("bar");
+  EXPECT_EQ(new_val_ref, new_common_tags.at(new_key_ref));
   EXPECT_EQ(orig_common_tags.size() + 1, new_common_tags.size());
 }

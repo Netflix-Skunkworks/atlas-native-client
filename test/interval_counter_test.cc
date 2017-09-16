@@ -8,6 +8,7 @@ using atlas::meter::Id;
 using atlas::meter::IntervalCounter;
 using atlas::meter::Measurements;
 using atlas::meter::kEmptyTags;
+using atlas::util::intern_str;
 
 static std::unique_ptr<TestRegistry> registry() {
   return std::make_unique<TestRegistry>();
@@ -53,10 +54,11 @@ TEST(IntervalCounter, Increment) {
 
 void assert_interval_counter(const Measurements& ms, int64_t timestamp,
                              double count, double interval) {
+  auto statisticRef = intern_str("statistic");
   EXPECT_EQ(ms.size(), 2);
   for (const auto& m : ms) {
     EXPECT_EQ(m.timestamp, timestamp) << "Wrong timestamp for " << m;
-    const auto& stat = m.id->GetTags().at("statistic");
+    const auto& stat = m.id->GetTags().at(statisticRef);
     if (atlas::meter::statistic::count.value == stat) {
       EXPECT_DOUBLE_EQ(m.value, count);
     } else {

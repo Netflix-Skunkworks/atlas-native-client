@@ -1,10 +1,14 @@
 #include "query.h"
 #include "../util/logger.h"
-
-using atlas::util::Logger;
+#include "../meter/id.h"
 
 namespace atlas {
 namespace interpreter {
+
+using util::Logger;
+using util::StrRef;
+using util::intern_str;
+using util::to_string;
 
 const OptionalString kNone{nullptr};
 
@@ -17,7 +21,7 @@ bool Query::IsRegex() const noexcept { return false; }
 HasKeyQuery::HasKeyQuery(std::string key) : AbstractKeyQuery(std::move(key)) {}
 
 bool HasKeyQuery::Matches(const meter::Tags& tags) const {
-  return tags.find(Key()) != tags.end();
+  return tags.find(KeyRef()) != tags.end();
 }
 
 std::ostream& HasKeyQuery::Dump(std::ostream& os) const {
@@ -30,14 +34,16 @@ AbstractKeyQuery::AbstractKeyQuery(std::string key) noexcept
 
 const OptionalString AbstractKeyQuery::getvalue(const meter::Tags& tags) const
     noexcept {
-  auto k = tags.find(Key());
+  auto k = tags.find(KeyRef());
   if (k == tags.end()) {
     return kNone;
   }
-  return OptionalString{(*k).second};
+  return OptionalString{to_string((*k).second)};
 }
 
 const std::string& AbstractKeyQuery::Key() const noexcept { return key_; }
+
+StrRef AbstractKeyQuery::KeyRef() const noexcept { return intern_str(key_); }
 
 RelopQuery::RelopQuery(std::string k, std::string v, RelOp op)
     : AbstractKeyQuery(std::move(k)), op_(op), value_(std::move(v)) {}
@@ -77,7 +83,7 @@ std::ostream& RelopQuery::Dump(std::ostream& os) const {
 
 meter::Tags RelopQuery::Tags() const noexcept {
   if (op_ == RelOp::EQ) {
-    return meter::Tags{{Key(), value_}};
+    return meter::Tags{{KeyRef(), intern_str(value_)}};
   }
   return meter::Tags();
 }
@@ -179,7 +185,7 @@ std::ostream& operator<<(std::ostream& os, const RelOp& op) {
   return os;
 }
 
-InQuery::InQuery(std::string key, std::unique_ptr<Strings> vs) noexcept
+InQuery::InQuery(std::string key, std::unique_ptr<StringRefs> vs) noexcept
     : AbstractKeyQuery(std::move(key)),
       vs_(std::move(vs)) {}
 
@@ -188,8 +194,9 @@ bool InQuery::Matches(const meter::Tags& tags) const {
   if (!value) {
     return false;
   }
+  auto valueRef = intern_str(value.get());
   return std::any_of(vs_->begin(), vs_->end(),
-                     [&value](std::string& s) { return value == s; });
+                     [valueRef](util::StrRef& s) { return valueRef == s; });
 }
 
 std::ostream& InQuery::Dump(std::ostream& os) const { return os; }
@@ -235,7 +242,7 @@ bool AndQuery::Matches(const meter::Tags& tags) const {
 meter::Tags AndQuery::Tags() const noexcept {
   auto t1 = q1_->Tags();
   auto t2 = q2_->Tags();
-  t1.insert(t2.begin(), t2.end());
+  t1.add_all(t2);
   return t1;
 }
 

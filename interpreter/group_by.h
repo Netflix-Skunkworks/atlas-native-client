@@ -24,7 +24,7 @@ class GroupBy : public MultipleResults {
   virtual std::ostream& Dump(std::ostream& os) const override;
 
  private:
-  std::unique_ptr<Strings> keys_;
+  std::unique_ptr<StringRefs> keys_;
   std::shared_ptr<ValueExpression> expr_;
 };
 

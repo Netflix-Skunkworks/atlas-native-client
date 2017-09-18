@@ -15,7 +15,6 @@ static constexpr size_t MAX_USER_TAGS = 20;
 static constexpr size_t MAX_NAME_LENGTH = 255;
 
 using util::StartsWith;
-using util::to_string;
 
 static bool is_key_restricted(const std::string& k) noexcept {
   return StartsWith(k, "nf.") || StartsWith(k, "atlas.");
@@ -47,8 +46,8 @@ bool IsValid(const Tags& tags) noexcept {
   for (const auto& kv : tags) {
     const auto& k_ref = kv.first;
     const auto& v_ref = kv.second;
-    const std::string k = to_string(k_ref);
-    const std::string v = to_string(v_ref);
+    const std::string k = k_ref.get();
+    const std::string v = v_ref.get();
 
     if (k.empty() || v.empty()) {
       err_msg = "Tag keys or values cannot be empty";

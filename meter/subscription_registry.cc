@@ -284,7 +284,8 @@ SubscriptionResults SubscriptionRegistry::GetLwcMetricsForInterval(
   SubscriptionResults result;
   // get all the subscriptions for a given interval (ignoring main)
   auto subs = SubsForInterval(frequency);
-  atlas_registry.gauge(subsId->WithTag(Tag::of("freq", frequency)))
+  auto frequency_str = std::to_string(frequency).c_str();
+  atlas_registry.gauge(subsId->WithTag(Tag::of("freq", frequency_str)))
       ->Update(subs.size());
 
   // get all the measurements that will be used
@@ -305,7 +306,7 @@ SubscriptionResults SubscriptionRegistry::GetLwcMetricsForInterval(
                      return SubscriptionMetric{s.id, pair.tags, pair.value};
                    });
   }
-  atlas_registry.gauge(measurementsId->WithTag(Tag::of("freq", frequency)))
+  atlas_registry.gauge(measurementsId->WithTag(Tag::of("freq", frequency_str)))
       ->Update(result.size());
   return result;
 }

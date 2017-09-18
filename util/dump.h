@@ -7,8 +7,6 @@
 
 template <typename OStream>
 inline OStream& dump_tags(OStream& os, const atlas::meter::Tags& tags) {
-  using atlas::util::to_string;
-
   bool first = true;
   os << '[';
   for (const auto& tag : tags) {
@@ -17,7 +15,7 @@ inline OStream& dump_tags(OStream& os, const atlas::meter::Tags& tags) {
     } else {
       os << ", ";
     }
-    os << to_string(tag.first) << "->" << to_string(tag.second);
+    os << tag.first.get() << "->" << tag.second.get();
   }
   os << ']';
   return os;

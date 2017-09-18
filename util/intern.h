@@ -6,16 +6,22 @@
 namespace atlas {
 namespace util {
 
+class StringPool;
+
 class StrRef {
  public:
   StrRef() = default;
   bool operator==(const StrRef& rhs) const { return data == rhs.data; }
+  const char* get() const { return data; }
+
+ private:
   const char* data = nullptr;
+  friend std::hash<StrRef>;
+  friend StringPool;
 };
 
 const StrRef& intern_str(const char* string);
 const StrRef& intern_str(const std::string& string);
-const char* to_string(const StrRef& ref);
 }
 }
 

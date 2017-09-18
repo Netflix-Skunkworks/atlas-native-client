@@ -40,8 +40,6 @@ class StringPool {
     return table.at(copy);
   }
 
-  const char* to_string(const StrRef& ref) { return ref.data; }
-
  private:
   std::unordered_map<const char*, StrRef, Hasher, Comparer> table;
 
@@ -53,8 +51,8 @@ static StringPool the_pool;
 const StrRef& intern_str(const char* string) {
   const auto& r = the_pool.intern(string);
 #ifdef DEBUG
-  if (strcmp(string, to_string(r)) != 0) {
-    printf("Unable to intern %s = %s -> %s\n", string, r.data, to_string(r));
+  if (strcmp(string, r.get()) != 0) {
+    printf("Unable to intern %s = %s -> %s\n", string, r.data, r.get());
     abort();
   }
 #endif
@@ -64,8 +62,6 @@ const StrRef& intern_str(const char* string) {
 const StrRef& intern_str(const std::string& string) {
   return intern_str(string.c_str());
 }
-
-const char* to_string(const StrRef& ref) { return the_pool.to_string(ref); }
 
 }  // namespace util
 }  // namespace atlas

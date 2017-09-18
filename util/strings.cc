@@ -79,7 +79,7 @@ std::string ExpandEnvVars(const std::string& raw) noexcept {
 static StrRef ToValidTable(const std::array<bool, 128>& table,
                            StrRef atlas_str_ref) noexcept {
   std::string ret;
-  std::string atlas_str = to_string(atlas_str_ref);
+  std::string atlas_str = atlas_str_ref.get();
   ret.resize(atlas_str.size());
   const auto n = atlas_str.length();
   for (size_t i = 0; i < n; ++i) {

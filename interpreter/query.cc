@@ -8,7 +8,6 @@ namespace interpreter {
 using util::Logger;
 using util::StrRef;
 using util::intern_str;
-using util::to_string;
 
 const OptionalString kNone{nullptr};
 
@@ -38,7 +37,7 @@ const OptionalString AbstractKeyQuery::getvalue(const meter::Tags& tags) const
   if (k == tags.end()) {
     return kNone;
   }
-  return OptionalString{to_string((*k).second)};
+  return OptionalString{k->second.get()};
 }
 
 const std::string& AbstractKeyQuery::Key() const noexcept { return key_; }

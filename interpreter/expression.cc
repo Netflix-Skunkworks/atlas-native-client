@@ -8,7 +8,6 @@ namespace interpreter {
 using meter::Measurements;
 using util::Logger;
 using util::intern_str;
-using util::to_string;
 
 Literal::Literal(std::string str) noexcept : str_(std::move(str)) {}
 
@@ -94,7 +93,7 @@ std::ostream& operator<<(std::ostream& os, const TagsValuePair& tagsValuePair) {
     } else {
       first = false;
     }
-    os << to_string(tag.first) << "=" << to_string(tag.second);
+    os << tag.first.get() << "=" << tag.second.get();
   }
   os << ", value=" << tagsValuePair.value << "}";
   return os;

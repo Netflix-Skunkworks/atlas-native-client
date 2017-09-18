@@ -12,7 +12,6 @@ namespace interpreter {
 using meter::Measurements;
 using util::StrRef;
 using util::intern_str;
-using util::to_string;
 
 const static auto kNameRef = intern_str("name");
 

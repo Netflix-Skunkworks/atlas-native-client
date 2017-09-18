@@ -7,7 +7,7 @@ namespace meter {
 
 const Tags kEmptyTags;
 
-const char* Id::Name() const noexcept { return util::to_string(name_); }
+const char* Id::Name() const noexcept { return name_.get(); }
 
 const Tags& Id::GetTags() const noexcept { return tags_; }
 

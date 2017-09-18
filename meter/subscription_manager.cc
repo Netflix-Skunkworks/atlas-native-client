@@ -23,7 +23,6 @@ SubscriptionManager::SubscriptionManager(
 using util::kMainFrequencyMillis;
 using util::Logger;
 using util::intern_str;
-using util::to_string;
 
 using std::chrono::system_clock;
 using std::chrono::duration_cast;
@@ -64,7 +63,7 @@ static void updateAlertServer(const std::string& endpoint, int connect_timeout,
                               int read_timeout) {
   util::http client;
   auto res = client.post(endpoint, connect_timeout, read_timeout,
-                         "Content-type: application/octet-stream", "", 0);
+                         "Content-type: application/octect-stream", "", 0);
   Logger()->debug("Got {} from alert server {}", res, endpoint);
 }
 
@@ -149,10 +148,10 @@ rapidjson::Document SubResultsToJson(
                   alloc);
     Value tags{kObjectType};
     for (const auto& kv : subscriptionResult.tags) {
-      const auto* key = to_string(kv.first);
+      const auto* key = kv.first.get();
       Value k(key, static_cast<SizeType>(strlen(key)), alloc);
 
-      const auto* val = to_string(kv.second);
+      const auto* val = kv.second.get();
       Value v(val, static_cast<SizeType>(strlen(val)), alloc);
       tags.AddMember(k, v, alloc);
     }
@@ -200,12 +199,12 @@ void SubscriptionManager::RefreshSubscriptions(
     const std::string& subs_endpoint) {
   static auto timer_refresh_subs =
       atlas_registry.timer("atlas.client.refreshSubs");
-  static auto refresh_parsing_errors = atlas_registry.counter(
-      atlas_registry.CreateId("atlas.client.refreshSubsErrors",
-                              Tags{{intern_str("error"), intern_str("json")}}));
-  static auto refresh_http_errors = atlas_registry.counter(
-      atlas_registry.CreateId("atlas.client.refreshSubsErrors",
-                              Tags{{intern_str("error"), intern_str("http")}}));
+  static auto refresh_parsing_errors =
+      atlas_registry.counter(atlas_registry.CreateId(
+          "atlas.client.refreshSubsErrors", Tags{{"error", "json"}}));
+  static auto refresh_http_errors =
+      atlas_registry.counter(atlas_registry.CreateId(
+          "atlas.client.refreshSubsErrors", Tags{{"error", "http"}}));
   util::http http_client;
   std::string subs_str;
   auto logger = Logger();
@@ -404,9 +403,8 @@ rapidjson::Document MeasurementsToJson(
     Value json_metric_tags{kObjectType};
 
     for (const auto& tag : measure.tags) {
-      const char* k_str = to_string(util::ToValidCharset(tag.first));
-      const char* v_str =
-          to_string(util::EncodeValueForKey(tag.second, tag.first));
+      const char* k_str = util::ToValidCharset(tag.first).get();
+      const char* v_str = util::EncodeValueForKey(tag.second, tag.first).get();
 
       Value k(k_str, static_cast<SizeType>(strlen(k_str)), alloc);
       Value v(v_str, static_cast<SizeType>(strlen(v_str)), alloc);
@@ -472,7 +470,7 @@ static void SendBatch(const util::http& client, const util::Config& config,
 
     atlas_registry
         .counter(errorsId->WithTag(httpErr)->WithTag(
-            Tag::of("statusCode", http_res)))
+            Tag::of("statusCode", std::to_string(http_res))))
         ->Add(added);
   } else {
     sent->Add(added);

@@ -5,11 +5,8 @@ using namespace atlas::meter;
 using namespace atlas::interpreter;
 using atlas::util::intern_str;
 
-Tags tags{{intern_str("k"), intern_str("bar")},
-          {intern_str("name"), intern_str("foo")}};
-
-Tags tags2{{intern_str("name"), intern_str("foo")},
-           {intern_str("k1"), intern_str("ba")}};
+Tags tags{{"k", "bar"}, {"name", "foo"}};
+Tags tags2{{"name", "foo"}, {"k1", "ba"}};
 
 TEST(Queries, HasKey) {
   const Query& name_query = HasKeyQuery("name");

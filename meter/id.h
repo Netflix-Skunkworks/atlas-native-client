@@ -15,15 +15,11 @@ struct Tag {
 
   Tag(util::StrRef k, util::StrRef v) noexcept : key{k}, value{v} {}
 
-  static Tag of(const std::string& k, const char* v) {
+  static Tag of(const char* k, const char* v) {
     return Tag{util::intern_str(k), util::intern_str(v)};
   }
   static Tag of(const std::string& k, const std::string& v) {
     return Tag{util::intern_str(k), util::intern_str(v)};
-  }
-  static Tag of(const std::string& k, int64_t v) {
-    std::string s = std::to_string(v);
-    return Tag{util::intern_str(k), util::intern_str(s)};
   }
 };
 
@@ -86,8 +82,7 @@ class Tags {
     if (it != entries_.end()) {
       return it->second;
     }
-    throw std::out_of_range(std::string("Unknown key: ") +
-                            util::to_string(key));
+    throw std::out_of_range(std::string("Unknown key: ") + key.get());
   }
 
   size_t size() const { return entries_.size(); }

@@ -77,7 +77,7 @@ class AtlasClient {
     std::transform(
         measurements.begin(), measurements.end(),
         std::back_inserter(tagsValuePairs), [](const Measurement& measurement) {
-          return TagsValuePair::from(measurement, atlas::meter::Tags());
+          return TagsValuePair::from(measurement, atlas::meter::kEmptyTags);
         });
 
     subscription_manager->PushMeasurements(atlas_registry.clock().WallTime(),

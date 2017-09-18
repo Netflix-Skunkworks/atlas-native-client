@@ -12,6 +12,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL Linux)
     link_directories(/usr/lib/x86_64-linux-gnu)
 endif()
 
+# We need to initialize intern.cc first, since other files depend on it
+# for interning strings directly or indirectly using static Tags
 set(LIB_SOURCE_FILES
     util/intern.cc util/xxhash.c util/config.cc util/config_manager.cc util/environment.cc
     util/gzip.cc util/http.cc util/logger.cc util/strings.cc atlas_client.cc 

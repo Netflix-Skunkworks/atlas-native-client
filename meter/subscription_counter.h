@@ -66,7 +66,8 @@ class SubscriptionCounterNumber : public Meter, public CounterNumber<T> {
     auto new_size = poller_frequency_.size();
     if (new_size > current_size_) {
       for (auto i = current_size_; i < new_size; ++i) {
-        step_numbers_[i] = std::make_unique<StepNumber<T>>(0, poller_frequency_[i], clock_);
+        step_numbers_[i] =
+            std::make_unique<StepNumber<T>>(0, poller_frequency_[i], clock_);
       }
     }
     current_size_ = new_size;
@@ -75,7 +76,8 @@ class SubscriptionCounterNumber : public Meter, public CounterNumber<T> {
  private:
   std::size_t current_size_;  // MUST be < MAX_POLLER_FREQ
 
-  using StepNumbers = std::array<std::unique_ptr<StepNumber<T>>, MAX_POLLER_FREQ>;
+  using StepNumbers =
+      std::array<std::unique_ptr<StepNumber<T>>, MAX_POLLER_FREQ>;
   mutable StepNumbers step_numbers_;
   std::atomic<T> value_;  // to keep the total count
   const Pollers& poller_frequency_;

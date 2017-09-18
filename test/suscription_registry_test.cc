@@ -7,6 +7,8 @@
 using atlas::util::Config;
 using atlas::util::ConfigManager;
 using atlas::util::DefaultConfig;
+using atlas::util::intern_str;
+
 using atlas::interpreter::TagsValuePair;
 using atlas::interpreter::TagsValuePairs;
 using atlas::interpreter::Interpreter;

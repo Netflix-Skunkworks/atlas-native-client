@@ -11,7 +11,8 @@ namespace meter {
 template <typename T>
 class SubscriptionMaxGauge : public Meter, public Gauge<T> {
   static constexpr auto kMinValue = std::numeric_limits<T>::lowest();
-  using StepNumbers = std::array<std::unique_ptr<StepNumber<T>>, MAX_POLLER_FREQ>;
+  using StepNumbers =
+      std::array<std::unique_ptr<StepNumber<T>>, MAX_POLLER_FREQ>;
 
  public:
   SubscriptionMaxGauge(IdPtr id, const Clock& clock, Pollers& poller_frequency)

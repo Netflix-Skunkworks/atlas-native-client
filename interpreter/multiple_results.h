@@ -13,8 +13,8 @@ class MultipleResults : public Expression {
 
  protected:
   static OptionalString get_value(const TagsValuePair& tagsValuePair,
-                                  const std::string& k);
-  static std::string keys_str(std::vector<std::string>);
+                                  util::StrRef k);
+  static std::string keys_str(StringRefs strings);
 };
 }
 }

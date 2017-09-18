@@ -17,7 +17,7 @@ Config::Config(const std::string& evaluate_endpoint,
                int read_timeout, int batch_size, bool force_start,
                bool enable_main, bool enable_subscriptions, bool dump_metrics,
                bool dump_subscriptions, int log_verbosity,
-               std::map<std::string, std::string> common_tags) noexcept
+               meter::Tags common_tags) noexcept
     : evaluate_endpoint_(ExpandEnvVars(evaluate_endpoint)),
       subscriptions_endpoint_(ExpandEnvVars(subscriptions_endpoint)),
       publish_endpoint_(ExpandEnvVars(publish_endpoint)),

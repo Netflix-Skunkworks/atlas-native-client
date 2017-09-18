@@ -22,7 +22,7 @@ static const std::string kBucket{"bucket"};
 
 void BucketTimer::Record(std::chrono::nanoseconds duration) {
   const auto& bucket = bucket_function_(duration.count());
-  registry_->timer(id_->WithTag(Tag{kBucket, bucket}))->Record(duration);
+  registry_->timer(id_->WithTag(Tag::of(kBucket, bucket)))->Record(duration);
   Updated();
 }
 

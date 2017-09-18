@@ -21,9 +21,9 @@ static bool is_key_restricted(const std::string& k) noexcept {
 }
 
 static std::unordered_set<std::string> kValidNfTags = {
-    "nf.node",    "nf.cluster", "nf.app",  "nf.asg",   "nf.stack",
-    "nf.ami",     "nf.vmtype",  "nf.zone", "nf.region",
-    "nf.account", "nf.country", "nf.task", "nf.country.rollup"};
+    "nf.node",    "nf.cluster", "nf.app",           "nf.asg",    "nf.stack",
+    "nf.ami",     "nf.vmtype",  "nf.zone",          "nf.region", "nf.account",
+    "nf.country", "nf.task",    "nf.country.rollup"};
 
 static bool is_user_key_invalid(const std::string& k) noexcept {
   if (StartsWith(k, "atlas.")) {
@@ -44,8 +44,10 @@ bool IsValid(const Tags& tags) noexcept {
   auto name_seen = false;
 
   for (const auto& kv : tags) {
-    const auto& k = kv.first;
-    const auto& v = kv.second;
+    const auto& k_ref = kv.first;
+    const auto& v_ref = kv.second;
+    const std::string k = k_ref.get();
+    const std::string v = v_ref.get();
 
     if (k.empty() || v.empty()) {
       err_msg = "Tag keys or values cannot be empty";

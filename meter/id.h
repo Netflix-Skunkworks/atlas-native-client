@@ -2,36 +2,113 @@
 
 #include <map>
 #include <ostream>
+#include <unordered_map>
 #include "../types.h"
+#include "../util/intern.h"
 
 namespace atlas {
 namespace meter {
 
 struct Tag {
-  std::string key;
-  std::string value;
+  util::StrRef key;
+  util::StrRef value;
+
+  Tag(util::StrRef k, util::StrRef v) noexcept : key{k}, value{v} {}
+
+  static Tag of(const char* k, const char* v) {
+    return Tag{util::intern_str(k), util::intern_str(v)};
+  }
+  static Tag of(const std::string& k, const std::string& v) {
+    return Tag{util::intern_str(k), util::intern_str(v)};
+  }
 };
 
-using Tags = std::map<std::string, std::string>;
+class Tags {
+  using K = util::StrRef;
+  using table_t = std::unordered_map<K, K>;
+  using value_t = table_t::value_type;
+  table_t entries_;
+
+  static inline table_t to_str_refs(
+      std::initializer_list<std::pair<const char*, const char*>>(vs)) {
+    table_t res;
+    for (const auto& pair : vs) {
+      res.insert(std::make_pair(util::intern_str(pair.first),
+                                util::intern_str(pair.second)));
+    }
+    return res;
+  }
+
+ public:
+  Tags() = default;
+
+  Tags(std::initializer_list<value_t> vs) : entries_(vs) {}
+
+  Tags(std::initializer_list<std::pair<const char*, const char*>> vs)
+      : entries_(to_str_refs(vs)) {}
+
+  void add(const Tag& tag) { entries_[tag.key] = tag.value; }
+
+  void add(K k, K v) { entries_[k] = v; }
+
+  void add(const char* k, const char* v) {
+    entries_[util::intern_str(k)] = util::intern_str(v);
+  }
+
+  size_t hash() const {
+    size_t res = 0;
+    for (const auto& tag : entries_) {
+      res += std::hash<K>()(tag.first) ^ std::hash<K>()(tag.second);
+    }
+    return res;
+  }
+
+  void add_all(const Tags& source) {
+    entries_.insert(source.entries_.begin(), source.entries_.end());
+  }
+
+  bool operator==(const Tags& that) const { return that.entries_ == entries_; }
+
+  table_t::const_iterator begin() const { return entries_.begin(); }
+
+  table_t::const_iterator end() const { return entries_.end(); }
+
+  bool has(K key) const { return entries_.count(key) == 1; }
+
+  table_t::const_iterator find(const K& k) const { return entries_.find(k); }
+
+  K at(K key) const {
+    auto it = entries_.find(key);
+    if (it != entries_.end()) {
+      return it->second;
+    }
+    throw std::out_of_range(std::string("Unknown key: ") + key.get());
+  }
+
+  size_t size() const { return entries_.size(); }
+};
 
 extern const Tags kEmptyTags;
 
 class Id {
  public:
-  Id(std::string name, Tags tags = kEmptyTags) noexcept
-      : name_(std::move(name)),
+  Id(util::StrRef name, Tags tags) noexcept : name_(name),
+                                              tags_(std::move(tags)),
+                                              hash_(0u) {}
+  Id(const std::string& name, Tags tags) noexcept
+      : name_(util::intern_str(name)),
         tags_(std::move(tags)),
         hash_(0u) {}
 
   bool operator==(const Id& rhs) const noexcept;
 
-  const std::string& Name() const noexcept;
+  const char* Name() const noexcept;
+
+  util::StrRef NameRef() const noexcept { return name_; };
 
   const Tags& GetTags() const noexcept;
 
   std::unique_ptr<Id> WithTag(const Tag& tag) const;
-
-  bool operator<(const Id& rhs) const noexcept;
 
   friend std::ostream& operator<<(std::ostream& os, const Id& id);
 
@@ -40,20 +117,14 @@ class Id {
   friend struct std::hash<std::shared_ptr<Id>>;
 
  private:
-  std::string name_;
+  util::StrRef name_;
   Tags tags_;
   mutable size_t hash_;
 
   size_t Hash() const noexcept {
-    using std::hash;
-    using std::string;
-
     if (hash_ == 0) {
       // compute hash code, and reuse it
-      for (const auto& tag : tags_) {
-        hash_ += hash<string>()(tag.first) ^ hash<string>()(tag.second);
-      }
-      hash_ ^= hash<string>()(name_);
+      hash_ = tags_.hash() ^ std::hash<atlas::util::StrRef>()(name_);
     }
 
     return hash_;
@@ -75,6 +146,13 @@ namespace std {
 template <>
 struct hash<atlas::meter::Id> {
   size_t operator()(const atlas::meter::Id& id) const { return id.Hash(); }
+};
+
+template <>
+struct hash<atlas::meter::Tags> {
+  size_t operator()(const atlas::meter::Tags& tags) const {
+    return tags.hash();
+  }
 };
 
 template <>

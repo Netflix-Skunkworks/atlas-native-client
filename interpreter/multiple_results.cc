@@ -1,4 +1,5 @@
 #include "multiple_results.h"
+#include "../meter/id.h"
 #include <sstream>
 
 namespace atlas {
@@ -7,16 +8,16 @@ namespace interpreter {
 const OptionalString kNone{nullptr};
 
 OptionalString MultipleResults::get_value(const TagsValuePair& tagsValuePair,
-                                          const std::string& k) {
+                                          const util::StrRef k) {
   auto it = tagsValuePair.tags.find(k);
   if (it != tagsValuePair.tags.end()) {
-    return OptionalString{(*it).second};
+    return OptionalString{(*it).second.get()};
   }
 
   return kNone;
 }
 
-std::string MultipleResults::keys_str(std::vector<std::string> strings) {
+std::string MultipleResults::keys_str(StringRefs strings) {
   std::ostringstream os;
 
   auto first = true;
@@ -26,7 +27,7 @@ std::string MultipleResults::keys_str(std::vector<std::string> strings) {
     } else {
       first = false;
     }
-    os << s;
+    os << s.get();
   }
   return os.str();
 }

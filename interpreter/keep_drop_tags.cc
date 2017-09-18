@@ -1,29 +1,35 @@
 #include "keep_drop_tags.h"
 #include "../meter/id.h"
 #include "../meter/measurement.h"
+#include "../util/dump.h"
 #include <algorithm>
 #include <unordered_set>
+#include <iostream>
 
 namespace atlas {
 namespace interpreter {
 
-using ::atlas::meter::Measurements;
+using meter::Measurements;
+using util::StrRef;
+using util::intern_str;
 
-const static std::string name_str{"name"};
+const static auto kNameRef = intern_str("name");
+
 KeepOrDropTags::KeepOrDropTags(const List& keys,
                                std::shared_ptr<ValueExpression> expr, bool keep)
     : keys_(keys.ToStrings()), expr_(std::move(expr)), keep_(keep) {
   if (keep) {
     // make sure we keep name, it's required
-    if (std::find(keys_->begin(), keys_->end(), name_str) == keys_->end()) {
-      keys_->push_back(name_str);
+    if (std::find(keys_->begin(), keys_->end(), kNameRef) == keys_->end()) {
+      keys_->push_back(kNameRef);
     }
   }
 }
 
-static Strings drop_keys(const meter::Tags& tags, const Strings& keys) {
-  std::unordered_set<std::string> keys_set(keys.begin(), keys.end());
-  Strings res{name_str};
+using StringRefs = std::vector<StrRef>;
+static StringRefs drop_keys(const meter::Tags& tags, const StringRefs& keys) {
+  std::unordered_set<StrRef> keys_set(keys.begin(), keys.end());
+  StringRefs res{kNameRef};
 
   // add all tag keys that are not in the set of keys to be dropped
   for (const auto& tag : tags) {
@@ -36,7 +42,7 @@ static Strings drop_keys(const meter::Tags& tags, const Strings& keys) {
 
 TagsValuePairs KeepOrDropTags::Apply(const TagsValuePairs& valuePairs) {
   // group metrics by keys
-  std::map<meter::Tags, TagsValuePairs> grouped;
+  std::unordered_map<meter::Tags, TagsValuePairs> grouped;
   for (auto& valuePair : valuePairs) {
     auto should_keep = true;
     meter::Tags group_by_vals;
@@ -46,7 +52,7 @@ TagsValuePairs KeepOrDropTags::Apply(const TagsValuePairs& valuePairs) {
     for (auto& key : keys) {
       auto value = get_value(valuePair, key);
       if (value) {
-        group_by_vals[key] = value.get();
+        group_by_vals.add(key, intern_str(value.get()));
       } else {
         should_keep = false;
         break;

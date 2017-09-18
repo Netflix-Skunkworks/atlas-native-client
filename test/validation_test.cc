@@ -3,6 +3,7 @@
 
 using atlas::meter::Tags;
 using atlas::meter::validation::IsValid;
+using atlas::util::intern_str;
 
 TEST(Validation, NoName) {
   Tags empty;
@@ -17,21 +18,21 @@ TEST(Validation, NoName) {
 
 TEST(Validation, LongName) {
   std::string just_right(255, 'x');
-  Tags just_right_name{{"name", just_right}};
+  Tags just_right_name{{"name", just_right.c_str()}};
   EXPECT_TRUE(IsValid(just_right_name));
 
   std::string too_long(256, 'x');
-  Tags too_long_name{{"name", too_long}};
+  Tags too_long_name{{"name", too_long.c_str()}};
   EXPECT_FALSE(IsValid(too_long_name));
 }
 
 TEST(Validation, KeyLengths) {
   std::string key_just_right(60, 'k');
-  Tags just_right{{"name", "foo"}, {key_just_right, "x"}};
+  Tags just_right{{"name", "foo"}, {key_just_right.c_str(), "x"}};
   EXPECT_TRUE(IsValid(just_right));
 
   std::string key_too_long(61, 'k');
-  Tags too_long{{"name", "foo"}, {key_too_long, "v"}};
+  Tags too_long{{"name", "foo"}, {key_too_long.c_str(), "v"}};
   EXPECT_FALSE(IsValid(too_long));
 }
 
@@ -62,13 +63,14 @@ TEST(Validation, InvalidKey) {
 }
 
 TEST(Validation, TooManyUserTags) {
-  Tags tags{{"name", "n"}, {"atlas.dstype", "counter"}, {"nf.country", "us"}};
+  Tags tags = {
+      {"name", "n"}, {"atlas.dstype", "counter"}, {"nf.country", "us"}};
 
   for (auto i = 1; i < 20; ++i) {
-    tags[std::to_string(i)] = "v";
+    tags.add(std::to_string(i).c_str(), "v");
   }
   EXPECT_TRUE(IsValid(tags));
 
-  tags["extra"] = "v";
+  tags.add("extra", "v");
   EXPECT_FALSE(IsValid(tags));
 }

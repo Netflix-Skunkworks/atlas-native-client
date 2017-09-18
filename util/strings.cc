@@ -76,9 +76,10 @@ std::string ExpandEnvVars(const std::string& raw) noexcept {
   return ExpandVars(raw, expander);
 }
 
-static std::string ToValidTable(const std::array<bool, 128>& table,
-                                const std::string& atlas_str) noexcept {
+static StrRef ToValidTable(const std::array<bool, 128>& table,
+                           StrRef atlas_str_ref) noexcept {
   std::string ret;
+  std::string atlas_str = atlas_str_ref.get();
   ret.resize(atlas_str.size());
   const auto n = atlas_str.length();
   for (size_t i = 0; i < n; ++i) {
@@ -86,11 +87,11 @@ static std::string ToValidTable(const std::array<bool, 128>& table,
     auto valid = (static_cast<size_t>(ch) >= table.size()) ? false : table[ch];
     ret[i] = valid ? ch : '_';
   }
-  return ret;
+  return intern_str(ret);
 }
 
-std::string ToValidCharset(const std::string& atlas_str) noexcept {
-  return ToValidTable(kCharsAllowed, atlas_str);
+StrRef ToValidCharset(StrRef atlas_str_ref) noexcept {
+  return ToValidTable(kCharsAllowed, atlas_str_ref);
 }
 
 std::string join_path(const std::string& dir, const char* file_name) noexcept {
@@ -107,9 +108,11 @@ std::string join_path(const std::string& dir, const char* file_name) noexcept {
   return os.str();
 }
 
-std::string EncodeValueForKey(const std::string& value,
-                              const std::string& key) noexcept {
-  auto isGroup = key == "nf.asg" || key == "nf.cluster";
+auto kAsgRef = intern_str("nf.asg");
+auto kClusterRef = intern_str("nf.cluster");
+
+StrRef EncodeValueForKey(StrRef value, StrRef key) noexcept {
+  auto isGroup = kAsgRef == key || kClusterRef == key;
   const auto& table = isGroup ? kGroupCharsAllowed : kCharsAllowed;
   return ToValidTable(table, value);
 }

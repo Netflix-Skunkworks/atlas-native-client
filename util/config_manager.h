@@ -29,7 +29,7 @@ class ConfigManager {
   mutable std::mutex config_mutex;
   std::shared_ptr<Config> current_config_;
   std::atomic<bool> should_run_{false};
-  std::map<std::string, std::string> extra_tags_;
+  meter::Tags extra_tags_;
 
   void refresher() noexcept;
   void refresh_configs() noexcept;

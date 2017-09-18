@@ -1,9 +1,12 @@
 #include "../interpreter/interpreter.h"
 #include "../interpreter/all.h"
+#include "../util/logger.h"
 #include "../types.h"
 #include <gtest/gtest.h>
 
 using ::atlas::Strings;
+using atlas::util::intern_str;
+using atlas::util::Logger;
 
 using namespace atlas::interpreter;
 using namespace atlas::meter;
@@ -64,6 +67,7 @@ TEST(Interpreter, SplitWithTrim) {
 static Tags common_tags{{"nf.node", "i-1234"},
                         {"nf.cluster", "foo-main"},
                         {"nf.asg", "foo-main-v001"}};
+
 static std::unique_ptr<Context> exec(const std::string& expr) {
   Interpreter interpreter{std::make_unique<ClientVocabulary>()};
   auto stack = std::make_unique<Context::Stack>();
@@ -154,8 +158,13 @@ TEST(Interpreter, GroupBy) {
   Tags t2{{"name", "name1"}, {"k1", "v2"}};
   TagsValuePair exp1{t1, 4.0};
   TagsValuePair exp2{t2, 2.0};
-  TagsValuePairs expected{exp1, exp2};
-  EXPECT_EQ(res, expected);
+  if (res.at(0).tags.at(intern_str("k1")) == intern_str("v1")) {
+    TagsValuePairs expected{exp1, exp2};
+    EXPECT_EQ(res, expected);
+  } else {
+    TagsValuePairs expected{exp2, exp1};
+    EXPECT_EQ(res, expected);
+  }
 }
 
 TEST(Interpreter, GroupByFiltering) {
@@ -206,6 +215,9 @@ TEST(Interpreter, DropTags) {
   auto all = std::static_pointer_cast<MultipleResults>(expr);
 
   auto measurements = get_measurements();
+  for (const auto& m : measurements) {
+    Logger()->info("M: {}", m);
+  }
   auto res = all->Apply(measurements);
   EXPECT_EQ(res.size(), 2);
 
@@ -213,8 +225,14 @@ TEST(Interpreter, DropTags) {
   Tags t2{{"name", "name1"}, {"k1", "v2"}};
   TagsValuePair exp1{t1, 1.0};
   TagsValuePair exp2{t2, 0.0};
-  TagsValuePairs expected{exp1, exp2};
-  EXPECT_EQ(res, expected);
+  EXPECT_EQ(res.size(), 2);
+  if (res.at(0).tags == t1) {
+    TagsValuePairs expected{exp1, exp2};
+    EXPECT_EQ(expected, res);
+  } else {
+    TagsValuePairs expected{exp2, exp1};
+    EXPECT_EQ(expected, res);
+  }
 }
 
 TEST(Interpreter, GetQuery) {

@@ -73,17 +73,19 @@ TEST(SubDistSummary, Measure) {
   EXPECT_EQ(4, one.size());
   for (auto& m : one) {
     EXPECT_EQ(120000, m.timestamp);
-    if (*(m.id) == *(Id("foo").WithTag(statistic::count))) {
+    if (*(m.id) == *(Id("foo", kEmptyTags).WithTag(statistic::count))) {
       EXPECT_DOUBLE_EQ(3 / 60.0, m.value);
-    } else if (*(m.id) == *(Id("foo").WithTag(statistic::totalAmount))) {
+    } else if (*(m.id) ==
+               *(Id("foo", kEmptyTags).WithTag(statistic::totalAmount))) {
       EXPECT_DOUBLE_EQ(126 / 60.0, m.value);
-    } else if (*(m.id) == *(Id("foo").WithTag(statistic::totalOfSquares))) {
+    } else if (*(m.id) ==
+               *(Id("foo", kEmptyTags).WithTag(statistic::totalOfSquares))) {
       auto totalSq = 40.0 * 40.0 + 42.0 * 42.0 + 44.0 * 44.0;
       EXPECT_DOUBLE_EQ(totalSq / 60.0, m.value);
     } else if (*(m.id) ==
-               *(Id("foo")
+               *(Id("foo", kEmptyTags)
                      .WithTag(statistic::max)
-                     ->WithTag(Tag{"atlas.dstype", "gauge"}))) {
+                     ->WithTag(Tag::of("atlas.dstype", "gauge")))) {
       EXPECT_DOUBLE_EQ(44, m.value);
     } else {
       FAIL() << "Unknown id from measurement: " << *m.id;

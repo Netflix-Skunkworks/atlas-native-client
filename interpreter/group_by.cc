@@ -4,9 +4,10 @@
 namespace atlas {
 namespace interpreter {
 
-namespace expression {
+using util::Logger;
+using util::intern_str;
 
-using atlas::util::Logger;
+namespace expression {
 
 std::shared_ptr<MultipleResults> GetMultipleResults(
     std::shared_ptr<Expression> e) {
@@ -37,14 +38,14 @@ std::ostream& GroupBy::Dump(std::ostream& os) const {
 
 TagsValuePairs GroupBy::Apply(const TagsValuePairs& tagsValuePairs) {
   // group metrics by keys
-  std::map<meter::Tags, TagsValuePairs> grouped;
+  std::unordered_map<meter::Tags, TagsValuePairs> grouped;
   for (auto& tagsValuePair : tagsValuePairs) {
     auto should_keep = true;
     meter::Tags group_by_vals;
     for (auto& key : *keys_) {
       auto value = get_value(tagsValuePair, key);
       if (value) {
-        group_by_vals[key] = value.get();
+        group_by_vals.add(key, intern_str(value.get()));
       } else {
         should_keep = false;
         break;
@@ -60,7 +61,7 @@ TagsValuePairs GroupBy::Apply(const TagsValuePairs& tagsValuePairs) {
     auto tags = entry.first;
     const auto& pairs_for_key = entry.second;
     const auto& expr_results = expr_->Apply(pairs_for_key);
-    tags.insert(expr_results.tags.begin(), expr_results.tags.end());
+    tags.add_all(expr_results.tags);
 
     results.push_back(TagsValuePair{tags, expr_results.value});
   }

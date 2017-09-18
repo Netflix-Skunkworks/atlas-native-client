@@ -22,6 +22,8 @@ SubscriptionManager::SubscriptionManager(
 
 using util::kMainFrequencyMillis;
 using util::Logger;
+using util::intern_str;
+
 using std::chrono::system_clock;
 using std::chrono::duration_cast;
 using std::chrono::milliseconds;
@@ -146,10 +148,11 @@ rapidjson::Document SubResultsToJson(
                   alloc);
     Value tags{kObjectType};
     for (const auto& kv : subscriptionResult.tags) {
-      Value k(kv.first.c_str(), static_cast<SizeType>(kv.first.length()),
-              alloc);
-      Value v(kv.second.c_str(), static_cast<SizeType>(kv.second.length()),
-              alloc);
+      const auto* key = kv.first.get();
+      Value k(key, static_cast<SizeType>(strlen(key)), alloc);
+
+      const auto* val = kv.second.get();
+      Value v(val, static_cast<SizeType>(strlen(val)), alloc);
       tags.AddMember(k, v, alloc);
     }
     sub.AddMember("tags", tags, alloc);
@@ -318,7 +321,7 @@ static void SendBatchToLwc(const util::http& client, const util::Config& config,
   const auto& clock = atlas_registry.clock();
   auto start = clock.MonotonicTime();
   const auto& msecs_str = std::to_string(freq_millis);
-  Tag freq_tag{"freq", msecs_str};
+  Tag freq_tag = Tag::of("freq", msecs_str);
   auto timer = atlas_registry.timer(sendBatchLwcId->WithTag(freq_tag));
 
   auto metrics = SubResultsToJson(clock.WallTime(), results);
@@ -342,7 +345,7 @@ void SubscriptionManager::SendMetricsForInterval(int64_t millis) noexcept {
   const auto& clock = atlas_registry.clock();
   const auto start = clock.MonotonicTime();
   const auto& msecs_str = std::to_string(millis);
-  const Tag freq_tag{"freq", msecs_str};
+  const Tag freq_tag = Tag::of("freq", msecs_str);
 
   auto timer = atlas_registry.timer(sendId->WithTag(freq_tag));
   auto cfg = config_manager_.GetConfig();
@@ -400,11 +403,11 @@ rapidjson::Document MeasurementsToJson(
     Value json_metric_tags{kObjectType};
 
     for (const auto& tag : measure.tags) {
-      const std::string& k_str = util::ToValidCharset(tag.first);
-      const std::string& v_str = util::EncodeValueForKey(tag.second, tag.first);
+      const char* k_str = util::ToValidCharset(tag.first).get();
+      const char* v_str = util::EncodeValueForKey(tag.second, tag.first).get();
 
-      Value k(k_str.c_str(), static_cast<SizeType>(k_str.length()), alloc);
-      Value v(v_str.c_str(), static_cast<SizeType>(v_str.length()), alloc);
+      Value k(k_str, static_cast<SizeType>(strlen(k_str)), alloc);
+      Value v(v_str, static_cast<SizeType>(strlen(v_str)), alloc);
       json_metric_tags.AddMember(k, v, alloc);
     }
     ++added;
@@ -426,17 +429,18 @@ static void SendBatch(const util::http& client, const util::Config& config,
                       int64_t now_millis,
                       const interpreter::TagsValuePairs& measurements) {
   static auto timer = atlas_registry.timer("atlas.client.mainBatch");
-  const static Tags atlas_client_tags{{"class", "NetflixAtlasObserver"},
-                                      {"id", "main-vip"}};
+  const static Tags atlas_client_tags{
+      {intern_str("class"), intern_str("NetflixAtlasObserver")},
+      {intern_str("id"), intern_str("main-vip")}};
   static auto total = atlas_registry.counter(
       atlas_registry.CreateId("numMetricsTotal", atlas_client_tags));
   static auto sent = atlas_registry.counter(
       atlas_registry.CreateId("numMetricsSent", atlas_client_tags));
   static auto errorsId =
       atlas_registry.CreateId("numMetricsDropped", atlas_client_tags);
-  static Tag httpErr{"error", "httpError"};
+  static Tag httpErr = Tag::of("error", "httpError");
   static auto validationErrors = atlas_registry.counter(
-      errorsId->WithTag(Tag{"error", "validationFailed"}));
+      errorsId->WithTag(Tag::of("error", "validationFailed")));
   auto logger = Logger();
 
   logger->info("Sending batch of {} metrics to {}", measurements.size(),
@@ -466,7 +470,7 @@ static void SendBatch(const util::http& client, const util::Config& config,
 
     atlas_registry
         .counter(errorsId->WithTag(httpErr)->WithTag(
-            Tag{"statusCode", std::to_string(http_res)}))
+            Tag::of("statusCode", std::to_string(http_res))))
         ->Add(added);
   } else {
     sent->Add(added);

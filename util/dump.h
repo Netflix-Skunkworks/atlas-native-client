@@ -1,12 +1,12 @@
 #pragma once
 
+#include "../meter/id.h"
 #include <map>
 #include <string>
 #include <vector>
 
 template <typename OStream>
-inline OStream& dump_tags(OStream& os,
-                          const std::map<std::string, std::string>& tags) {
+inline OStream& dump_tags(OStream& os, const atlas::meter::Tags& tags) {
   bool first = true;
   os << '[';
   for (const auto& tag : tags) {
@@ -15,7 +15,7 @@ inline OStream& dump_tags(OStream& os,
     } else {
       os << ", ";
     }
-    os << tag.first << "->" << tag.second;
+    os << tag.first.get() << "->" << tag.second.get();
   }
   os << ']';
   return os;

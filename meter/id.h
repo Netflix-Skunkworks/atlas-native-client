@@ -33,10 +33,23 @@ class Tags {
   using value_t = table_t::value_type;
   table_t entries_;
 
+  static inline table_t to_str_refs(
+      std::initializer_list<std::pair<const char*, const char*>>(vs)) {
+    table_t res;
+    for (const auto& pair : vs) {
+      res.insert(std::make_pair(util::intern_str(pair.first),
+                                util::intern_str(pair.second)));
+    }
+    return res;
+  }
+
  public:
   Tags() = default;
 
   Tags(std::initializer_list<value_t> vs) : entries_(vs) {}
+
+  Tags(std::initializer_list<std::pair<const char*, const char*>> vs)
+      : entries_(to_str_refs(vs)) {}
 
   void add(const Tag& tag) { entries_[tag.key] = tag.value; }
 

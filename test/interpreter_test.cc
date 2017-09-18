@@ -11,14 +11,6 @@ using atlas::util::Logger;
 using namespace atlas::interpreter;
 using namespace atlas::meter;
 
-static Tags from(const std::map<std::string, std::string>& s) {
-  Tags res;
-  for (const auto& kv : s) {
-    res.add(intern_str(kv.first), intern_str(kv.second));
-  }
-  return res;
-}
-
 TEST(Interpreter, SplitEmpty) {
   Expressions result;
   split("", &result);
@@ -72,9 +64,9 @@ TEST(Interpreter, SplitWithTrim) {
   result.clear();
 }
 
-static Tags common_tags = from({{"nf.node", "i-1234"},
-                                {"nf.cluster", "foo-main"},
-                                {"nf.asg", "foo-main-v001"}});
+static Tags common_tags{{"nf.node", "i-1234"},
+                        {"nf.cluster", "foo-main"},
+                        {"nf.asg", "foo-main-v001"}};
 
 static std::unique_ptr<Context> exec(const std::string& expr) {
   Interpreter interpreter{std::make_unique<ClientVocabulary>()};
@@ -93,10 +85,10 @@ TEST(Interpreter, EqualQuery) {
 
   auto query = std::static_pointer_cast<Query>(expr);
 
-  Tags sps = from({{"name", "sps"}});
+  Tags sps{{"name", "sps"}};
   ASSERT_TRUE(query->Matches(sps));
 
-  Tags not_sps = from({{"name", "sps2"}});
+  Tags not_sps{{"name", "sps2"}};
   ASSERT_FALSE(query->Matches(not_sps));
 }
 
@@ -107,17 +99,17 @@ TEST(Interpreter, RegexQuery) {
   auto expr = context->PopExpression();
   auto query = std::static_pointer_cast<Query>(expr);
 
-  Tags sps = from({{"name", "foo"}, {"id", "sps_foobar"}});
+  Tags sps{{"name", "foo"}, {"id", "sps_foobar"}};
   ASSERT_TRUE(query->Matches(sps));
 
-  Tags not_sps = from({{"name", "foo"}, {"id", "xsps_foobar"}});
+  Tags not_sps{{"name", "foo"}, {"id", "xsps_foobar"}};
   ASSERT_FALSE(query->Matches(not_sps));
 }
 
 static TagsValuePairs get_measurements() {
-  Tags id1 = from({{"name", "name1"}, {"k1", "v1"}});
-  Tags id2 = from({{"name", "name1"}, {"k1", "v2"}});
-  Tags id3 = from({{"name", "name1"}, {"k1", "v1"}, {"k2", "w1"}});
+  Tags id1{{"name", "name1"}, {"k1", "v1"}};
+  Tags id2{{"name", "name1"}, {"k1", "v2"}};
+  Tags id3{{"name", "name1"}, {"k1", "v1"}, {"k2", "w1"}};
 
   TagsValuePair m1{id1, 1.0};
   TagsValuePair m2{id2, 2.0};
@@ -139,9 +131,9 @@ TEST(Interpreter, All) {
   auto res = all->Apply(measurements);
   EXPECT_EQ(res.size(), 3);
 
-  Tags t1 = from({{"name", "name1"}, {"k1", "v1"}});
-  Tags t2 = from({{"name", "name1"}, {"k1", "v2"}});
-  Tags t3 = from({{"name", "name1"}, {"k1", "v1"}, {"k2", "w1"}});
+  Tags t1{{"name", "name1"}, {"k1", "v1"}};
+  Tags t2{{"name", "name1"}, {"k1", "v2"}};
+  Tags t3{{"name", "name1"}, {"k1", "v1"}, {"k2", "w1"}};
   TagsValuePair exp1{t1, 1.0};
   TagsValuePair exp2{t2, 2.0};
   TagsValuePair exp3{t3, 3.0};
@@ -162,8 +154,8 @@ TEST(Interpreter, GroupBy) {
   auto res = all->Apply(measurements);
   EXPECT_EQ(res.size(), 2);
 
-  Tags t1 = from({{"name", "name1"}, {"k1", "v1"}});
-  Tags t2 = from({{"name", "name1"}, {"k1", "v2"}});
+  Tags t1{{"name", "name1"}, {"k1", "v1"}};
+  Tags t2{{"name", "name1"}, {"k1", "v2"}};
   TagsValuePair exp1{t1, 4.0};
   TagsValuePair exp2{t2, 2.0};
   if (res.at(0).tags.at(intern_str("k1")) == intern_str("v1")) {
@@ -188,7 +180,7 @@ TEST(Interpreter, GroupByFiltering) {
   auto res = all->Apply(measurements);
   EXPECT_EQ(res.size(), 1);
 
-  Tags t1 = from({{"name", "name1"}, {"k2", "w1"}});
+  Tags t1{{"name", "name1"}, {"k2", "w1"}};
   TagsValuePair exp1{t1, 1.0};
   TagsValuePairs expected{exp1};
   EXPECT_EQ(res, expected);
@@ -207,7 +199,7 @@ TEST(Interpreter, KeepTags) {
   auto res = all->Apply(measurements);
   EXPECT_EQ(res.size(), 1);
 
-  Tags t1 = from({{"name", "name1"}, {"k2", "w1"}});
+  Tags t1{{"name", "name1"}, {"k2", "w1"}};
   TagsValuePair exp1{t1, 1.0};
   TagsValuePairs expected{exp1};
   EXPECT_EQ(res, expected);
@@ -229,8 +221,8 @@ TEST(Interpreter, DropTags) {
   auto res = all->Apply(measurements);
   EXPECT_EQ(res.size(), 2);
 
-  Tags t1 = from({{"name", "name1"}, {"k1", "v1"}});
-  Tags t2 = from({{"name", "name1"}, {"k1", "v2"}});
+  Tags t1{{"name", "name1"}, {"k1", "v1"}};
+  Tags t2{{"name", "name1"}, {"k1", "v2"}};
   TagsValuePair exp1{t1, 1.0};
   TagsValuePair exp2{t2, 0.0};
   EXPECT_EQ(res.size(), 2);

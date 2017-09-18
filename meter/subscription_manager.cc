@@ -63,7 +63,7 @@ static void updateAlertServer(const std::string& endpoint, int connect_timeout,
                               int read_timeout) {
   util::http client;
   auto res = client.post(endpoint, connect_timeout, read_timeout,
-                         "Content-type: application/octect-stream", "", 0);
+                         "Content-type: application/octet-stream", "", 0);
   Logger()->debug("Got {} from alert server {}", res, endpoint);
 }
 

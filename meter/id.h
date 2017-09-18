@@ -82,7 +82,7 @@ class Tags {
     if (it != entries_.end()) {
       return it->second;
     }
-    throw std::out_of_range(std::string("Unknown key: ") + key.get());
+    return intern_str(""); // cannot throw exceptions on nodejs
   }
 
   size_t size() const { return entries_.size(); }

@@ -82,7 +82,7 @@ class Tags {
     if (it != entries_.end()) {
       return it->second;
     }
-    return util::intern_str(""); // cannot throw exceptions on nodejs
+    return util::intern_str("");  // cannot throw exceptions on nodejs
   }
 
   size_t size() const { return entries_.size(); }

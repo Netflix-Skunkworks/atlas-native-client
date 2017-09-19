@@ -127,7 +127,8 @@ void SubscriptionManager::SubSender(int64_t millis) noexcept {
 
 // non-static for testing
 rapidjson::Document SubResultsToJson(
-    int64_t now_millis, const SubscriptionResults& subscriptionResults) {
+    int64_t now_millis, const SubscriptionResults::const_iterator& first,
+    const SubscriptionResults::const_iterator& last) {
   using rapidjson::Document;
   using rapidjson::kArrayType;
   using rapidjson::kObjectType;
@@ -139,7 +140,8 @@ rapidjson::Document SubResultsToJson(
   ret.AddMember("timestamp", now_millis, alloc);
   Value metrics{kArrayType};
 
-  for (const auto& subscriptionResult : subscriptionResults) {
+  for (auto it = first; it != last; ++it) {
+    const auto& subscriptionResult = *it;
     Value sub{kObjectType};
     const auto& id = subscriptionResult.id;
     sub.AddMember("id",
@@ -313,7 +315,8 @@ static void DumpJson(const std::string& dir, const std::string& base_file_name,
 
 static void SendBatchToLwc(const util::http& client, const util::Config& config,
                            int64_t freq_millis,
-                           const SubscriptionResults& results) {
+                           const SubscriptionResults::const_iterator& first,
+                           const SubscriptionResults::const_iterator& last) {
   static auto sendBatchLwcId =
       atlas_registry.CreateId("atlas.client.lwcBatch", kEmptyTags);
   static auto errorId =
@@ -324,7 +327,7 @@ static void SendBatchToLwc(const util::http& client, const util::Config& config,
   Tag freq_tag = Tag::of("freq", msecs_str);
   auto timer = atlas_registry.timer(sendBatchLwcId->WithTag(freq_tag));
 
-  auto metrics = SubResultsToJson(clock.WallTime(), results);
+  auto metrics = SubResultsToJson(clock.WallTime(), first, last);
   if (config.ShouldDumpSubs()) {
     std::string file_name{"lwc_"};
     DumpJson("/tmp", file_name + msecs_str + "_", metrics);
@@ -351,34 +354,28 @@ void SubscriptionManager::SendMetricsForInterval(int64_t millis) noexcept {
   auto cfg = config_manager_.GetConfig();
   const auto& sub_results = registry_.GetLwcMetricsForInterval(*cfg, millis);
   util::http http_client;
-  // avoid copies if possible
-  auto batch_size = static_cast<size_t>(cfg->BatchSize());
-  if (sub_results.size() <= batch_size) {
-    SendBatchToLwc(http_client, *cfg, millis, sub_results);
-  } else {
-    // we need to batch requests
-    SubscriptionResults results_batch;
-    results_batch.reserve(batch_size);
-    size_t i = 0;
-    for (const auto& res : sub_results) {
-      results_batch.push_back(res);
-      ++i;
-      if (i % batch_size == 0) {
-        SendBatchToLwc(http_client, *cfg, millis, results_batch);
-        results_batch.clear();
-      }
-    }
-    if (!results_batch.empty()) {
-      SendBatchToLwc(http_client, *cfg, millis, results_batch);
-    }
+
+  auto batch_size =
+      static_cast<SubscriptionResults::difference_type>(cfg->BatchSize());
+  auto from = sub_results.begin();
+  auto end = sub_results.end();
+  while (from != end) {
+    auto to_end = std::distance(from, end);
+    auto to_advance = std::min(batch_size, to_end);
+    auto to = from;
+    std::advance(to, to_advance);
+    SendBatchToLwc(http_client, *cfg, millis, from, to);
+    from = to;
   }
   timer->Record(clock.MonotonicTime() - start);
 }
 
 // not static for testing
 rapidjson::Document MeasurementsToJson(
-    int64_t now_millis, const interpreter::TagsValuePairs& measurements,
-    bool validate, int64_t* metrics_added) {
+    int64_t now_millis,
+    const interpreter::TagsValuePairs::const_iterator& first,
+    const interpreter::TagsValuePairs::const_iterator& last, bool validate,
+    int64_t* metrics_added) {
   using rapidjson::Document;
   using rapidjson::kArrayType;
   using rapidjson::kObjectType;
@@ -392,7 +389,8 @@ rapidjson::Document MeasurementsToJson(
   Value common_tags_section{kObjectType};
 
   Value json_metrics{kArrayType};
-  for (const auto& measure : measurements) {
+  for (auto it = first; it < last; it++) {
+    const auto& measure = *it;
     if (std::isnan(measure.value)) {
       continue;
     }
@@ -427,7 +425,8 @@ rapidjson::Document MeasurementsToJson(
 
 static void SendBatch(const util::http& client, const util::Config& config,
                       int64_t now_millis,
-                      const interpreter::TagsValuePairs& measurements) {
+                      const interpreter::TagsValuePairs::const_iterator& first,
+                      const interpreter::TagsValuePairs::const_iterator& last) {
   static auto timer = atlas_registry.timer("atlas.client.mainBatch");
   const static Tags atlas_client_tags{
       {intern_str("class"), intern_str("NetflixAtlasObserver")},
@@ -443,12 +442,13 @@ static void SendBatch(const util::http& client, const util::Config& config,
       errorsId->WithTag(Tag::of("error", "validationFailed")));
   auto logger = Logger();
 
-  logger->info("Sending batch of {} metrics to {}", measurements.size(),
+  auto num_measurements = std::distance(first, last);
+  logger->info("Sending batch of {} metrics to {}", num_measurements,
                config.PublishEndpoint());
   // TODO(dmuino): retries
   int64_t added = 0;
-  auto num_metrics = static_cast<int64_t>(measurements.size());
-  auto payload = MeasurementsToJson(now_millis, measurements, true, &added);
+  auto num_metrics = static_cast<int64_t>(num_measurements);
+  auto payload = MeasurementsToJson(now_millis, first, last, true, &added);
   if (added != num_metrics) {
     validationErrors->Add(num_metrics - added);
   }
@@ -466,7 +466,7 @@ static void SendBatch(const util::http& client, const util::Config& config,
   }
   if (http_res != 200) {
     logger->error("Unable to send batch of {} measurements to publish: {}",
-                  measurements.size(), http_res);
+                  num_measurements, http_res);
 
     atlas_registry
         .counter(errorsId->WithTag(httpErr)->WithTag(
@@ -483,28 +483,18 @@ void SubscriptionManager::PushMeasurements(
 
   util::http client;
   auto cfg = config_manager_.GetConfig();
-  auto batch_size = static_cast<size_t>(cfg->BatchSize());
+  auto batch_size =
+      static_cast<TagsValuePairs::difference_type>(cfg->BatchSize());
 
-  // if no need to batch, avoid copies
-  if (measurements.size() <= batch_size) {
-    SendBatch(client, *cfg, now_millis, measurements);
-    return;
-  }
-
-  // too many metrics: send them in nice chunks
-  TagsValuePairs measurements_in_batch;
-  measurements_in_batch.reserve(static_cast<size_t>(cfg->BatchSize()));
-  size_t i = 0;
-  for (const auto& metric : measurements) {
-    measurements_in_batch.push_back(metric);
-    ++i;
-    if (i % batch_size == 0) {
-      SendBatch(client, *cfg, now_millis, measurements_in_batch);
-      measurements_in_batch.clear();
-    }
-  }
-  if (!measurements_in_batch.empty()) {
-    SendBatch(client, *cfg, now_millis, measurements_in_batch);
+  auto from = measurements.begin();
+  auto end = measurements.end();
+  while (from != end) {
+    auto to_end = std::distance(from, end);
+    auto to_advance = std::min(batch_size, to_end);
+    auto to = from;
+    std::advance(to, to_advance);
+    SendBatch(client, *cfg, now_millis, from, to);
+    from = to;
   }
 }
 

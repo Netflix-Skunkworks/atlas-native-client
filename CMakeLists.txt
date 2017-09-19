@@ -12,6 +12,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL Linux)
     link_directories(/usr/lib/x86_64-linux-gnu)
 endif()
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # We need to initialize intern.cc first, since other files depend on it
 # for interning strings directly or indirectly using static Tags
 set(LIB_SOURCE_FILES

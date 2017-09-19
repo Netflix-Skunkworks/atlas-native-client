@@ -215,9 +215,6 @@ TEST(Interpreter, DropTags) {
   auto all = std::static_pointer_cast<MultipleResults>(expr);
 
   auto measurements = get_measurements();
-  for (const auto& m : measurements) {
-    Logger()->info("M: {}", m);
-  }
   auto res = all->Apply(measurements);
   EXPECT_EQ(res.size(), 2);
 

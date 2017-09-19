@@ -17,8 +17,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # We need to initialize intern.cc first, since other files depend on it
 # for interning strings directly or indirectly using static Tags
 set(LIB_SOURCE_FILES
-    util/intern.cc util/xxhash.c util/config.cc util/config_manager.cc util/environment.cc
-    util/gzip.cc util/http.cc util/logger.cc util/strings.cc atlas_client.cc 
+    util/string_pool.cc util/intern.cc util/xxhash.c util/config.cc util/config_manager.cc util/environment.cc
+    util/gzip.cc util/http.cc util/logger.cc util/strings.cc atlas_client.cc
     meter/bucket_counter.cc meter/bucket_distribution_summary.cc meter/bucket_functions.cc
     meter/bucket_timer.cc meter/clock.cc meter/id.cc meter/interval_counter.cc meter/monotonic_counter.cc
     meter/percentile_buckets.cc meter/percentile_dist_summary.cc meter/percentile_timer.cc meter/statistic.cc

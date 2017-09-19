@@ -46,6 +46,8 @@ class SubscriptionManager {
   void RefreshSubscriptions(const std::string& subs_endpoint);
 
   void SendToMain();
+
+  void UpdateMetrics() noexcept;
 };
 }  // namespace meter
 }  // namespace atlas

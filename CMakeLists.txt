@@ -16,7 +16,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 file(GLOB LIB_SOURCE_FILES
   atlas_client.cc atlas_client.h types.h
   meter/*.h meter/*.cc
-  util/*.h util/*.cc
+  util/*.h util/*.cc util/*.c
   interpreter/*.h interpreter/*.cc)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pedantic -Werror -Wall -std=c99 -fpic -D_GNU_SOURCE")

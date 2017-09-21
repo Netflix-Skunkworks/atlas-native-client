@@ -3,7 +3,10 @@
 namespace atlas {
 namespace util {
 
-StringPool the_str_pool;
+StringPool& the_str_pool() {
+  static StringPool* the_pool = new StringPool();
+  return *the_pool;
+}
 
 StringPool::~StringPool() noexcept {
   for (const auto& kv : table) {

@@ -4,7 +4,6 @@ set(PROJECT_NAME_STR libatlasclient)
 set(CMAKE_MACOSX_RPATH 1)
 project(${PROJECT_NAME_STR})
 
-
 include_directories(3rd-party /usr/local/include)
 link_directories(/usr/local/lib)
 
@@ -14,19 +13,11 @@ endif()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# We need to initialize intern.cc first, since other files depend on it
-# for interning strings directly or indirectly using static Tags
-set(LIB_SOURCE_FILES
-    util/string_pool.cc util/intern.cc util/xxhash.c util/config.cc util/config_manager.cc util/environment.cc
-    util/gzip.cc util/http.cc util/logger.cc util/strings.cc atlas_client.cc
-    meter/bucket_counter.cc meter/bucket_distribution_summary.cc meter/bucket_functions.cc
-    meter/bucket_timer.cc meter/clock.cc meter/id.cc meter/interval_counter.cc meter/monotonic_counter.cc
-    meter/percentile_buckets.cc meter/percentile_dist_summary.cc meter/percentile_timer.cc meter/statistic.cc
-    meter/subscription_gauge.cc meter/subscription_long_task_timer.cc meter/subscription_manager.cc
-    meter/subscription_registry.cc meter/subscription_timer.cc meter/validation.cc
-    interpreter/aggregation.cc interpreter/all.cc interpreter/context.cc interpreter/expression.cc
-    interpreter/group_by.cc interpreter/interpreter.cc interpreter/keep_drop_tags.cc
-    interpreter/multiple_results.cc interpreter/query.cc interpreter/vocabulary.cc)
+file(GLOB LIB_SOURCE_FILES
+  atlas_client.cc atlas_client.h types.h
+  meter/*.h meter/*.cc
+  util/*.h util/*.cc
+  interpreter/*.h interpreter/*.cc)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pedantic -Werror -Wall -std=c99 -fpic -D_GNU_SOURCE")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native")

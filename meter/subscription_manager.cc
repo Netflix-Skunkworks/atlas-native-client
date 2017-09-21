@@ -504,8 +504,8 @@ void SubscriptionManager::UpdateMetrics() noexcept {
   static auto pool_size = atlas_registry.gauge("atlas.client.strPoolSize");
   static auto pool_alloc = atlas_registry.gauge("atlas.client.strPoolAlloc");
 
-  pool_size->Update(util::the_str_pool.pool_size());
-  pool_alloc->Update(util::the_str_pool.alloc_size());
+  pool_size->Update(util::the_str_pool().pool_size());
+  pool_alloc->Update(util::the_str_pool().alloc_size());
 }
 
 void SubscriptionManager::SendToMain() {

@@ -5,7 +5,7 @@ namespace atlas {
 namespace util {
 
 const StrRef& intern_str(const char* string) {
-  const auto& r = the_str_pool.intern(string);
+  const auto& r = the_str_pool().intern(string);
 #ifdef DEBUG
   if (strcmp(string, r.get()) != 0) {
     printf("Unable to intern %s = %s -> %s\n", string, r.data, r.get());

@@ -42,6 +42,6 @@ class StringPool {
   std::mutex mutex;
 };
 
-extern StringPool the_str_pool;
+StringPool& the_str_pool();
 }
 }

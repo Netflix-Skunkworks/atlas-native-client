@@ -20,7 +20,7 @@ void init_tags(Tags* tags) {
 }
 
 int main(int argc, char* argv[]) {
-  atlas::util::UseConsoleLogger();
+  atlas::util::UseConsoleLogger(1);
   auto logger = atlas::util::Logger();
   InitAtlas();
 

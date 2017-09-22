@@ -120,7 +120,7 @@ void SetLoggingLevel(int level) noexcept {
   Logger()->set_level(level_from_int(level));
 }
 
-void UseConsoleLogger() noexcept {
+void UseConsoleLogger(int level) noexcept {
   std::lock_guard<std::mutex> lock(logger_mutex);
   auto logger = spdlog::get(kMainLogger);
   if (logger) {
@@ -128,7 +128,7 @@ void UseConsoleLogger() noexcept {
   }
 
   logger = spdlog::stdout_color_mt(kMainLogger);
-  logger->set_level(spdlog::level::debug);
+  logger->set_level(level_from_int(level));
   current_logging_directory = "";
 }
 

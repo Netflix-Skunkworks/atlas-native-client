@@ -131,3 +131,5 @@ void PushMeasurements(const atlas::meter::Measurements& measurements) {
 void SetLoggingDirs(const std::vector<std::string>& dirs) {
   atlas::util::SetLoggingDirs(dirs);
 }
+
+void UseConsoleLogger(int level) { atlas::util::UseConsoleLogger(level); }

@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include "../meter/id.h"
+#include "file_watcher.h"
 
 namespace atlas {
 namespace util {
@@ -14,7 +15,7 @@ static constexpr int kMainFrequencyMillis{60000};
 
 class Config {
  public:
-  Config(const std::string& evaluate_endpoint,
+  Config(const std::string& disabled_file, const std::string& evaluate_endpoint,
          const std::string& subscriptions_endpoint,
          const std::string& publish_endpoint, bool validate_metrics,
          const std::string& check_cluster_endpoint, bool notifyAlertServer,
@@ -37,8 +38,8 @@ class Config {
   bool ShouldValidateMetrics() const noexcept { return validate_metrics_; }
   bool ShouldForceStart() const noexcept { return force_start_; }
   bool ShouldNotifyAlertServer() const noexcept { return notify_alert_server_; }
-  bool IsMainEnabled() const noexcept { return enable_main_; }
-  bool AreSubsEnabled() const noexcept { return enable_subscriptions_; }
+  bool IsMainEnabled() const noexcept;
+  bool AreSubsEnabled() const noexcept;
   bool ShouldDumpMetrics() const noexcept { return dump_metrics_; }
   bool ShouldDumpSubs() const noexcept { return dump_subscriptions_; }
   std::string PublishEndpoint() const noexcept { return publish_endpoint_; }
@@ -50,8 +51,12 @@ class Config {
   void AddCommonTags(const meter::Tags& extra_tags) noexcept {
     common_tags_.add_all(extra_tags);
   }
+  std::string DisabledFile() const noexcept {
+    return disabled_file_watcher_.file_name();
+  }
 
  private:
+  FileWatcher disabled_file_watcher_;
   std::string evaluate_endpoint_;
   std::string subscriptions_endpoint_;
   std::string publish_endpoint_;

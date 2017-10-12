@@ -31,6 +31,7 @@ static const char* kCheckClusterUrl =
     "net/"
     "alertchecker/checkCluster/$NETFLIX_CLUSTER";
 static const char* kPublishExpr = ":true,:all";
+static const char* kDefaultDisabledFile = "/mnt/data/atlas.disabled";
 
 static const std::vector<std::string> kPublishConfig{kPublishExpr};
 constexpr int kDefaultVerbosity = 2;
@@ -145,11 +146,11 @@ static std::unique_ptr<Config> DocToConfig(
                            : defaults->LogVerbosity();
 
   return std::make_unique<Config>(
-      eval_url, sub_endpoint, publish_endpoint, validate_metrics,
-      check_cluster_endpoint, notify_alert_server, publish_config, sub_refresh,
-      connect_timeout, read_timeout, batch_size, force_start, main_enabled,
-      subs_enabled, dump_metrics, dump_subscriptions, log_verbosity,
-      get_default_common_tags());
+      defaults->DisabledFile(), eval_url, sub_endpoint, publish_endpoint,
+      validate_metrics, check_cluster_endpoint, notify_alert_server,
+      publish_config, sub_refresh, connect_timeout, read_timeout, batch_size,
+      force_start, main_enabled, subs_enabled, dump_metrics, dump_subscriptions,
+      log_verbosity, get_default_common_tags());
 }
 
 static std::unique_ptr<Config> ParseConfigFile(
@@ -175,8 +176,13 @@ static std::unique_ptr<Config> ParseConfigFile(
 }
 
 std::unique_ptr<Config> DefaultConfig() noexcept {
+  const char* disabled_file = std::getenv("ATLAS_DISABLED_FILE");
+  if (disabled_file == nullptr) {
+    disabled_file = kDefaultDisabledFile;
+  }
+
   return std::make_unique<Config>(
-      std::string(kEvaluateUrl), std::string(kSubscriptionsUrl),
+      disabled_file, std::string(kEvaluateUrl), std::string(kSubscriptionsUrl),
       std::string(kPublishUrl), kValidateMetrics, std::string(kCheckClusterUrl),
       // notify alert-server we do not support on-instance alerts
       true, kPublishConfig, kRefresherMillis, kConnectTimeout, kReadTimeout,

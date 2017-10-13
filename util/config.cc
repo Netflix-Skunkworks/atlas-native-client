@@ -8,7 +8,8 @@
 namespace atlas {
 namespace util {
 
-Config::Config(const std::string& evaluate_endpoint,
+Config::Config(const std::string& disabled_file,
+               const std::string& evaluate_endpoint,
                const std::string& subscriptions_endpoint,
                const std::string& publish_endpoint, bool validate_metrics,
                const std::string& check_cluster_endpoint,
@@ -18,7 +19,8 @@ Config::Config(const std::string& evaluate_endpoint,
                bool enable_main, bool enable_subscriptions, bool dump_metrics,
                bool dump_subscriptions, int log_verbosity,
                meter::Tags common_tags) noexcept
-    : evaluate_endpoint_(ExpandEnvVars(evaluate_endpoint)),
+    : disabled_file_watcher_(disabled_file),
+      evaluate_endpoint_(ExpandEnvVars(evaluate_endpoint)),
       subscriptions_endpoint_(ExpandEnvVars(subscriptions_endpoint)),
       publish_endpoint_(ExpandEnvVars(publish_endpoint)),
       validate_metrics_(validate_metrics),
@@ -39,6 +41,16 @@ Config::Config(const std::string& evaluate_endpoint,
 
 std::string Config::LoggingDirectory() const noexcept {
   return GetLoggingDir();
+}
+
+bool Config::IsMainEnabled() const noexcept {
+  bool disabled = disabled_file_watcher_.exists();
+  return !disabled && enable_main_;
+}
+
+bool Config::AreSubsEnabled() const noexcept {
+  bool disabled = disabled_file_watcher_.exists();
+  return !disabled && enable_subscriptions_;
 }
 
 std::string ConfigToString(const Config& config) noexcept {

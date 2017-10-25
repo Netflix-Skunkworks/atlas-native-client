@@ -100,25 +100,6 @@ class AtlasClient {
 
 static auto atlas_client = std::unique_ptr<AtlasClient>(nullptr);
 
-void InitAtlas() {
-  if (!atlas_client) {
-    atlas_client.reset(new AtlasClient());
-  }
-  atlas_client->Start();
-}
-
-void ShutdownAtlas() {
-  if (atlas_client) {
-    atlas_client->Stop();
-  }
-}
-
-void AtlasAddCommonTag(const char* key, const char* value) {
-  if (atlas_client) {
-    atlas_client->AddCommonTag(key, value);
-  }
-}
-
 namespace atlas {
 util::Config GetConfig() {
   if (atlas_client) {
@@ -144,4 +125,37 @@ void SetNotifyAlertServer(bool notify) {
     atlas_client->SetNotifyAlertServer(notify);
   }
 }
+
+void Init() {
+  if (!atlas_client) {
+    atlas_client.reset(new AtlasClient());
+  }
+  atlas_client->Start();
+}
+
+void Shutdown() {
+  if (atlas_client) {
+    atlas_client->Stop();
+  }
+}
+
+void AddCommonTag(const char* key, const char* value) {
+  if (atlas_client) {
+    atlas_client->AddCommonTag(key, value);
+  }
+}
+
 }  // namespace atlas
+
+void InitAtlas() {
+  atlas::Init();
+}
+
+void ShutdownAtlas() {
+  atlas::Shutdown();
+}
+
+void AtlasAddCommonTag(const char* key, const char* value) {
+  atlas::AddCommonTag(key, value);
+}
+

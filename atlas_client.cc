@@ -88,6 +88,10 @@ class AtlasClient {
     config_manager.AddCommonTag(key, value);
   }
 
+  void SetNotifyAlertServer(bool notify) {
+    config_manager.SetNotifyAlertServer(notify);
+  }
+
  private:
   bool started;
   ConfigManager config_manager;
@@ -115,7 +119,8 @@ void AtlasAddCommonTag(const char* key, const char* value) {
   }
 }
 
-atlas::util::Config GetConfig() {
+namespace atlas {
+util::Config GetConfig() {
   if (atlas_client) {
     return *atlas_client->GetConfig();
   }
@@ -133,3 +138,10 @@ void SetLoggingDirs(const std::vector<std::string>& dirs) {
 }
 
 void UseConsoleLogger(int level) { atlas::util::UseConsoleLogger(level); }
+
+void SetNotifyAlertServer(bool notify) {
+  if (atlas_client) {
+    atlas_client->SetNotifyAlertServer(notify);
+  }
+}
+}  // namespace atlas

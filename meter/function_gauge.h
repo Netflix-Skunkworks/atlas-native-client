@@ -2,6 +2,7 @@
 
 #include "gauge.h"
 #include "registry.h"
+#include <functional>
 
 namespace atlas {
 namespace meter {

@@ -21,6 +21,7 @@ file(GLOB LIB_SOURCE_FILES
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pedantic -Werror -Wall -std=c99 -fpic -D_GNU_SOURCE")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native")
+set(CMAKE_EXPORT_COMPILE_COMMANDS "ON")
 
 add_library(atlasclient SHARED ${LIB_SOURCE_FILES})
 set_target_properties(atlasclient PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -Wextra -Wno-missing-braces")

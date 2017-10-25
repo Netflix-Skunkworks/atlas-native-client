@@ -11,7 +11,7 @@
 namespace atlas {
 namespace util {
 
-std::unique_ptr<Config> DefaultConfig() noexcept;
+std::unique_ptr<Config> DefaultConfig(bool default_notify = true) noexcept;
 
 class ConfigManager {
  public:
@@ -25,14 +25,18 @@ class ConfigManager {
 
   void AddCommonTag(const char* key, const char* value) noexcept;
 
+  void SetNotifyAlertServer(bool notify) noexcept;
+
  private:
   mutable std::mutex config_mutex;
   std::shared_ptr<Config> current_config_;
   std::atomic<bool> should_run_{false};
   meter::Tags extra_tags_;
+  bool default_notify_ = true;
 
   void refresher() noexcept;
   void refresh_configs() noexcept;
+  std::unique_ptr<Config> get_current_config() noexcept;
 };
 }
 }

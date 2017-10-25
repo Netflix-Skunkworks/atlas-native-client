@@ -165,8 +165,9 @@ static std::unique_ptr<Config> ParseConfigFile(
       return defaults;
     }
     rapidjson::Document document;
-    document.Parse<rapidjson::kParseCommentsFlag |
-                   rapidjson::kParseNanAndInfFlag>(buffer.str().c_str());
+    document
+        .Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseNanAndInfFlag>(
+            buffer.str().c_str());
     auto cfg = DocToConfig(document, std::move(defaults));
     Logger()->debug("Config after parsing {}: {}", file_name,
                     ConfigToString(*cfg));
@@ -175,7 +176,7 @@ static std::unique_ptr<Config> ParseConfigFile(
   return defaults;
 }
 
-std::unique_ptr<Config> DefaultConfig() noexcept {
+std::unique_ptr<Config> DefaultConfig(bool default_notify) noexcept {
   const char* disabled_file = std::getenv("ATLAS_DISABLED_FILE");
   if (disabled_file == nullptr) {
     disabled_file = kDefaultDisabledFile;
@@ -185,8 +186,8 @@ std::unique_ptr<Config> DefaultConfig() noexcept {
       disabled_file, std::string(kEvaluateUrl), std::string(kSubscriptionsUrl),
       std::string(kPublishUrl), kValidateMetrics, std::string(kCheckClusterUrl),
       // notify alert-server we do not support on-instance alerts
-      true, kPublishConfig, kRefresherMillis, kConnectTimeout, kReadTimeout,
-      kBatchSize,
+      default_notify, kPublishConfig, kRefresherMillis, kConnectTimeout,
+      kReadTimeout, kBatchSize,
       // do not run on dev env
       false,
       // enable main but not subscriptions yet (need clusters in main account)
@@ -199,13 +200,13 @@ static constexpr const char* const kGlobalFile =
     "/usr/local/etc/atlas-config.json";
 static constexpr const char* const kLocalFile = "./atlas-config.json";
 
-static std::unique_ptr<Config> GetCurrentConfig() noexcept {
-  auto my_global = ParseConfigFile(kGlobalFile, DefaultConfig());
+std::unique_ptr<Config> ConfigManager::get_current_config() noexcept {
+  auto my_global = ParseConfigFile(kGlobalFile, DefaultConfig(default_notify_));
   return ParseConfigFile(kLocalFile, std::move(my_global));
 }
 
 ConfigManager::ConfigManager() noexcept
-    : current_config_{std::shared_ptr<Config>(GetCurrentConfig())} {}
+    : current_config_{std::shared_ptr<Config>(get_current_config())} {}
 
 std::shared_ptr<Config> ConfigManager::GetConfig() const noexcept {
   std::lock_guard<std::mutex> lock{config_mutex};
@@ -235,7 +236,7 @@ void ConfigManager::Stop() noexcept { should_run_ = false; }
 
 void ConfigManager::refresh_configs() noexcept {
   auto logger = Logger();
-  auto new_config = GetCurrentConfig();
+  auto new_config = get_current_config();
   SetLoggingLevel(new_config->LogVerbosity());
   std::lock_guard<std::mutex> lock{config_mutex};
   new_config->AddCommonTags(extra_tags_);
@@ -244,6 +245,10 @@ void ConfigManager::refresh_configs() noexcept {
 
 void ConfigManager::AddCommonTag(const char* key, const char* value) noexcept {
   extra_tags_.add(key, value);
+}
+
+void ConfigManager::SetNotifyAlertServer(bool notify) noexcept {
+  default_notify_ = notify;
 }
 
 }  // namespace util

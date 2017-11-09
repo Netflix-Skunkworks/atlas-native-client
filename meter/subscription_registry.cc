@@ -148,20 +148,6 @@ void SubscriptionRegistry::RegisterMonitor(
   InsertIfNeeded(meter);
 }
 
-// FIXME: test
-std::shared_ptr<interpreter::Query> QueryForSubs(
-    const interpreter::Interpreter& inter, const Subscriptions& subscriptions) {
-  using interpreter::Query;
-  using interpreter::query::false_q;
-  using interpreter::query::or_q;
-  return std::accumulate(
-      subscriptions.begin(), subscriptions.end(),
-      std::shared_ptr<interpreter::Query>(false_q()),
-      [&inter](std::shared_ptr<Query>& q, const Subscription& s) {
-        return or_q(q, inter.GetQuery(s.expression));
-      });
-}
-
 static void LogRules(const std::vector<std::string>& rules,
                      size_t num_measurements) {
   auto logger = Logger();

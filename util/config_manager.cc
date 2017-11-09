@@ -176,7 +176,7 @@ static std::unique_ptr<Config> ParseConfigFile(
   return defaults;
 }
 
-std::unique_ptr<Config> DefaultConfig(bool default_notify) noexcept {
+std::unique_ptr<Config> DefaultConfig(bool notify) noexcept {
   const char* disabled_file = std::getenv("ATLAS_DISABLED_FILE");
   if (disabled_file == nullptr) {
     disabled_file = kDefaultDisabledFile;
@@ -185,8 +185,8 @@ std::unique_ptr<Config> DefaultConfig(bool default_notify) noexcept {
   return std::make_unique<Config>(
       disabled_file, std::string(kEvaluateUrl), std::string(kSubscriptionsUrl),
       std::string(kPublishUrl), kValidateMetrics, std::string(kCheckClusterUrl),
-      // notify alert-server we do not support on-instance alerts
-      default_notify, kPublishConfig, kRefresherMillis, kConnectTimeout,
+      notify, // whether to notify alert-server about on-instance alert support
+      kPublishConfig, kRefresherMillis, kConnectTimeout,
       kReadTimeout, kBatchSize,
       // do not run on dev env
       false,

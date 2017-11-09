@@ -11,7 +11,7 @@
 namespace atlas {
 namespace util {
 
-std::unique_ptr<Config> DefaultConfig(bool default_notify = true) noexcept;
+std::unique_ptr<Config> DefaultConfig(bool notify = true) noexcept;
 
 class ConfigManager {
  public:

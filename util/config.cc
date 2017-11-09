@@ -60,6 +60,7 @@ std::string ConfigToString(const Config& config) noexcept {
      << ", subs_endpoint=" << config.SubsEndpoint() << '\n'
      << ", subs_refresh=" << config.SubRefreshMillis() << "ms"
      << ", publish=" << config.PublishEndpoint() << '\n'
+     << ", notifyAlertServer=" << config.ShouldNotifyAlertServer() << '\n'
      << ", validateMetrics=" << config.ShouldValidateMetrics() << '\n'
      << ", forceStart=" << config.ShouldForceStart()
      << ", mainEnabled=" << config.IsMainEnabled() << '\n'

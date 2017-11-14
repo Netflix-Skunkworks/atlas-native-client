@@ -29,7 +29,9 @@ namespace std {
 template <>
 struct hash<atlas::util::StrRef> {
   size_t operator()(const atlas::util::StrRef& ref) const {
-    return reinterpret_cast<size_t>(ref.data);
+    auto pointer_value = reinterpret_cast<uint64_t>(ref.data);
+    // get rid of lower bits since the pointer will usually be 16-byte aligned
+    return pointer_value >> 4;
   }
 };
 }

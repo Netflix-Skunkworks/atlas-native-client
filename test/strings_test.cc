@@ -9,8 +9,8 @@ static atlas::util::StrRef to_ref(const char* s) { return intern_str(s); }
 TEST(ExpandVars, InPlace) {
   string tmpl = "foo $bar ${baz}";
   auto replacer = [](const string& var) -> string {
-    EXPECT_TRUE(var == "bar" || var == "baz") << "Unexpected '" << var
-                                              << "' variable";
+    EXPECT_TRUE(var == "bar" || var == "baz")
+        << "Unexpected '" << var << "' variable";
     if (var == "bar") {
       return "BAR";
     }
@@ -26,8 +26,8 @@ TEST(ExpandVars, InPlace) {
 TEST(ExpandVars, Words) {
   string tmpl = "$baz.iep$bar.$baz.netflix";
   auto replacer = [](const string& var) -> string {
-    EXPECT_TRUE(var == "bar" || var == "baz") << "Unexpected '" << var
-                                              << "' variable";
+    EXPECT_TRUE(var == "bar" || var == "baz")
+        << "Unexpected '" << var << "' variable";
     if (var == "bar") {
       return "BAR";
     }
@@ -114,8 +114,8 @@ TEST(Strings, ExpandVarsUrl) {
                                             {"NETFLIX_ENVIRONMENT", "test"},
                                             {"EC2_REGION", "us-east-1"}};
   auto replacer = [&env](const string& var) -> string {
-    EXPECT_TRUE(env.find(var) != env.end()) << "Unknown variable '" << var
-                                            << "'";
+    EXPECT_TRUE(env.find(var) != env.end())
+        << "Unknown variable '" << var << "'";
     return env[var];
   };
 

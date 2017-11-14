@@ -14,8 +14,7 @@ namespace {
 class Bucket {
  public:
   Bucket(std::string name, int64_t upper_boundary) noexcept
-      : name_{std::move(name)},
-        upper_boundary_{upper_boundary} {}
+      : name_{std::move(name)}, upper_boundary_{upper_boundary} {}
 
   std::string Name() const noexcept { return name_; }
   int64_t UpperBoundary() const noexcept { return upper_boundary_; }
@@ -29,8 +28,7 @@ using Buckets = std::vector<Bucket>;
 class BucketsFunction {
  public:
   BucketsFunction(Buckets&& buckets, std::string&& fallback) noexcept
-      : buckets_{buckets},
-        fallback_{fallback} {}
+      : buckets_{buckets}, fallback_{fallback} {}
 
   std::string operator()(int64_t amount) {
     for (const auto& b : buckets_) {
@@ -63,10 +61,8 @@ class ValueFormatter {
   ///     Factor conversion from value to unit for label.
   ///
   ValueFormatter(int64_t max, int width, std::string suffix,
-                 int64_t factor) noexcept : max_{max},
-                                            width_{width},
-                                            suffix_{std::move(suffix)},
-                                            factor_{factor} {}
+                 int64_t factor) noexcept
+      : max_{max}, width_{width}, suffix_{std::move(suffix)}, factor_{factor} {}
 
   /// Get the bucket label for the value v
   std::string GetLabel(int64_t v) const noexcept {

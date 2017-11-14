@@ -147,15 +147,10 @@ void AddCommonTag(const char* key, const char* value) {
 
 }  // namespace atlas
 
-void InitAtlas() {
-  atlas::Init();
-}
+void InitAtlas() { atlas::Init(); }
 
-void ShutdownAtlas() {
-  atlas::Shutdown();
-}
+void ShutdownAtlas() { atlas::Shutdown(); }
 
 void AtlasAddCommonTag(const char* key, const char* value) {
   atlas::AddCommonTag(key, value);
 }
-

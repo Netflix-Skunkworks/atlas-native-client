@@ -8,8 +8,7 @@ namespace meter {
 class ManualClock : public Clock {
  public:
   ManualClock(int64_t wall = 0, int64_t monotonic = 0) noexcept
-      : wall_(wall),
-        monotonic_(monotonic) {}
+      : wall_(wall), monotonic_(monotonic) {}
 
   virtual int64_t WallTime() const noexcept override { return wall_.load(); }
 

@@ -20,7 +20,7 @@ bool Query::IsRegex() const noexcept { return false; }
 HasKeyQuery::HasKeyQuery(std::string key) : AbstractKeyQuery(std::move(key)) {}
 
 bool HasKeyQuery::Matches(const meter::Tags& tags) const {
-  return tags.find(KeyRef()) != tags.end();
+  return tags.has(KeyRef());
 }
 
 std::ostream& HasKeyQuery::Dump(std::ostream& os) const {
@@ -33,11 +33,11 @@ AbstractKeyQuery::AbstractKeyQuery(std::string key) noexcept
 
 const OptionalString AbstractKeyQuery::getvalue(const meter::Tags& tags) const
     noexcept {
-  auto k = tags.find(KeyRef());
-  if (k == tags.end()) {
+  auto k = tags.at(KeyRef());
+  if (*k.get() == '\0') {
     return kNone;
   }
-  return OptionalString{k->second.get()};
+  return OptionalString{k.get()};
 }
 
 const std::string& AbstractKeyQuery::Key() const noexcept { return key_; }
@@ -185,8 +185,7 @@ std::ostream& operator<<(std::ostream& os, const RelOp& op) {
 }
 
 InQuery::InQuery(std::string key, std::unique_ptr<StringRefs> vs) noexcept
-    : AbstractKeyQuery(std::move(key)),
-      vs_(std::move(vs)) {}
+    : AbstractKeyQuery(std::move(key)), vs_(std::move(vs)) {}
 
 bool InQuery::Matches(const meter::Tags& tags) const {
   auto value = getvalue(tags);

@@ -5,100 +5,59 @@
 #include <unordered_map>
 #include "../types.h"
 #include "../util/intern.h"
+#include "../util/small_tag_map.h"
 
 namespace atlas {
 namespace meter {
 
-struct Tag {
-  util::StrRef key;
-  util::StrRef value;
-
-  Tag(util::StrRef k, util::StrRef v) noexcept : key{k}, value{v} {}
-
-  static Tag of(const char* k, const char* v) {
-    return Tag{util::intern_str(k), util::intern_str(v)};
-  }
-  static Tag of(const std::string& k, const std::string& v) {
-    return Tag{util::intern_str(k), util::intern_str(v)};
-  }
-};
-
 class Tags {
   using K = util::StrRef;
-  using table_t = std::unordered_map<K, K>;
-  using value_t = table_t::value_type;
+  using table_t = util::SmallTagMap;
+  using value_t = util::StrRef;
   table_t entries_;
-
-  static inline table_t to_str_refs(
-      std::initializer_list<std::pair<const char*, const char*>>(vs)) {
-    table_t res;
-    for (const auto& pair : vs) {
-      res.insert(std::make_pair(util::intern_str(pair.first),
-                                util::intern_str(pair.second)));
-    }
-    return res;
-  }
 
  public:
   Tags() = default;
 
-  Tags(std::initializer_list<value_t> vs) : entries_(vs) {}
+  Tags(std::initializer_list<Tag> vs) : entries_(vs) {}
 
-  Tags(std::initializer_list<std::pair<const char*, const char*>> vs)
-      : entries_(to_str_refs(vs)) {}
-
-  void add(const Tag& tag) { entries_[tag.key] = tag.value; }
-
-  void add(K k, K v) { entries_[k] = v; }
-
-  void add(const char* k, const char* v) {
-    entries_[util::intern_str(k)] = util::intern_str(v);
-  }
-
-  size_t hash() const {
-    size_t res = 0;
-    for (const auto& tag : entries_) {
-      res += std::hash<K>()(tag.first) ^ std::hash<K>()(tag.second);
+  Tags(std::initializer_list<std::pair<const char*, const char*>> vs) {
+    for (const auto& pair : vs) {
+      add(pair.first, pair.second);
     }
-    return res;
   }
 
-  void add_all(const Tags& source) {
-    entries_.insert(source.entries_.begin(), source.entries_.end());
-  }
+  void add(const Tag& tag) { entries_.add(tag.key, tag.value); }
+
+  void add(K k, K v) { entries_.add(k, v); }
+
+  void add(const char* k, const char* v) { entries_.add(k, v); }
+
+  size_t hash() const { return entries_.hash(); }
+
+  void add_all(const Tags& source) { entries_.add_all(source.entries_); }
 
   bool operator==(const Tags& that) const { return that.entries_ == entries_; }
+
+  bool has(K key) const { return entries_.has(key); }
+
+  K at(K key) const { return entries_.at(key); }
+
+  size_t size() const { return entries_.size(); }
 
   table_t::const_iterator begin() const { return entries_.begin(); }
 
   table_t::const_iterator end() const { return entries_.end(); }
-
-  bool has(K key) const { return entries_.count(key) == 1; }
-
-  table_t::const_iterator find(const K& k) const { return entries_.find(k); }
-
-  K at(K key) const {
-    auto it = entries_.find(key);
-    if (it != entries_.end()) {
-      return it->second;
-    }
-    return util::intern_str("");  // cannot throw exceptions on nodejs
-  }
-
-  size_t size() const { return entries_.size(); }
 };
 
 extern const Tags kEmptyTags;
 
 class Id {
  public:
-  Id(util::StrRef name, Tags tags) noexcept : name_(name),
-                                              tags_(std::move(tags)),
-                                              hash_(0u) {}
+  Id(util::StrRef name, Tags tags) noexcept
+      : name_(name), tags_(std::move(tags)), hash_(0u) {}
   Id(const std::string& name, Tags tags) noexcept
-      : name_(util::intern_str(name)),
-        tags_(std::move(tags)),
-        hash_(0u) {}
+      : name_(util::intern_str(name)), tags_(std::move(tags)), hash_(0u) {}
 
   bool operator==(const Id& rhs) const noexcept;
 

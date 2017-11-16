@@ -36,14 +36,14 @@ std::ostream& GroupBy::Dump(std::ostream& os) const {
   return os;
 }
 
-TagsValuePairs GroupBy::Apply(const TagsValuePairs& tagsValuePairs) {
+std::shared_ptr<TagsValuePairs> GroupBy::Apply(std::shared_ptr<TagsValuePairs> tagsValuePairs) {
   // group metrics by keys
   std::unordered_map<meter::Tags, TagsValuePairs> grouped;
-  for (auto& tagsValuePair : tagsValuePairs) {
+  for (auto& tagsValuePair : *tagsValuePairs) {
     auto should_keep = true;
     meter::Tags group_by_vals;
     for (auto& key : *keys_) {
-      auto value = get_value(tagsValuePair, key);
+      auto value = get_value(*tagsValuePair, key);
       if (value) {
         group_by_vals.add(key, intern_str(value.get()));
       } else {
@@ -56,14 +56,13 @@ TagsValuePairs GroupBy::Apply(const TagsValuePairs& tagsValuePairs) {
     }
   }
 
-  TagsValuePairs results;
+  auto results = std::make_shared<TagsValuePairs>();
   for (auto& entry : grouped) {
     auto tags = entry.first;
     const auto& pairs_for_key = entry.second;
     const auto& expr_results = expr_->Apply(pairs_for_key);
-    tags.add_all(expr_results.tags);
-
-    results.push_back(TagsValuePair{tags, expr_results.value});
+    tags.add_all(expr_results->all_tags());
+    results->push_back(TagsValuePair::of(std::move(tags), expr_results->value()));
   }
 
   return results;

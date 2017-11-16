@@ -8,7 +8,7 @@ namespace interpreter {
 
 class MultipleResults : public Expression {
  public:
-  virtual TagsValuePairs Apply(const TagsValuePairs& tagsValuePairs) = 0;
+  virtual std::shared_ptr<TagsValuePairs> Apply(std::shared_ptr<TagsValuePairs> tagsValuePairs) = 0;
   virtual std::shared_ptr<Query> GetQuery() const noexcept = 0;
 
  protected:

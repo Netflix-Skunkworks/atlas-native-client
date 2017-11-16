@@ -33,14 +33,14 @@ std::ostream& AggregateExpression::Dump(std::ostream& os) const {
 }
 
 static double sum_af(const Query& filter,
-                     const TagsValuePairs& TagsValuePairs) {
+                     const TagsValuePairs& tagsValuePairs) {
   auto total = kNAN;
-  for (const auto& m : TagsValuePairs) {
-    if (!std::isnan(m.value) && filter.Matches(m.tags)) {
+  for (const auto& m : tagsValuePairs) {
+    if (!std::isnan(m->value()) && filter.Matches(*m)) {
       if (std::isnan(total)) {
-        total = m.value;
+        total = m->value();
       } else {
-        total += m.value;
+        total += m->value();
       }
     }
   }
@@ -48,16 +48,16 @@ static double sum_af(const Query& filter,
 }
 
 static double avg_af(const Query& filter,
-                     const TagsValuePairs& TagsValuePairs) {
+                     const TagsValuePairs& tagsValuePairs) {
   auto total = kNAN;
   auto count = 0;
-  for (const auto& m : TagsValuePairs) {
-    if (!std::isnan(m.value) && filter.Matches(m.tags)) {
+  for (const auto& m : tagsValuePairs) {
+    if (!std::isnan(m->value()) && filter.Matches(*m)) {
       ++count;
       if (std::isnan(total)) {
-        total = m.value;
+        total = m->value();
       } else {
-        total += m.value;
+        total += m->value();
       }
     }
   }
@@ -65,10 +65,10 @@ static double avg_af(const Query& filter,
 }
 
 static double count_af(const Query& filter,
-                       const TagsValuePairs& TagsValuePairs) {
+                       const TagsValuePairs& tagsValuePairs) {
   auto count = 0;
-  for (const auto& m : TagsValuePairs) {
-    if (!std::isnan(m.value) && filter.Matches(m.tags)) {
+  for (const auto& m : tagsValuePairs) {
+    if (!std::isnan(m->value()) && filter.Matches(*m)) {
       ++count;
     }
   }
@@ -78,27 +78,27 @@ static double count_af(const Query& filter,
 static const double MAX_VALUE = std::numeric_limits<double>::max();
 static const double LOWEST_VALUE = std::numeric_limits<double>::lowest();
 
-static double min_af(const Query& filter, TagsValuePairs TagsValuePairs) {
+static double min_af(const Query& filter, const TagsValuePairs& tagsValuePairs) {
   auto mn = MAX_VALUE;
-  for (const auto& m : TagsValuePairs) {
-    if (!std::isnan(m.value) && filter.Matches(m.tags)) {
-      mn = std::min(mn, m.value);
+  for (const auto& m : tagsValuePairs) {
+    if (!std::isnan(m->value()) && filter.Matches(*m)) {
+      mn = std::min(mn, m->value());
     }
   }
   return mn == MAX_VALUE ? kNAN : mn;
 }
 
-static double max_af(const Query& filter, TagsValuePairs TagsValuePairs) {
+static double max_af(const Query& filter, const TagsValuePairs& tagsValuePairs) {
   auto mx = LOWEST_VALUE;
-  for (const auto& m : TagsValuePairs) {
-    if (!std::isnan(m.value) && filter.Matches(m.tags)) {
-      mx = std::max(mx, m.value);
+  for (const auto& m : tagsValuePairs) {
+    if (!std::isnan(m->value()) && filter.Matches(*m)) {
+      mx = std::max(mx, m->value());
     }
   }
   return mx == LOWEST_VALUE ? kNAN : mx;
 }
 
-TagsValuePair AggregateExpression::Apply(
+std::unique_ptr<TagsValuePair> AggregateExpression::Apply(
     const TagsValuePairs& tagsValuePairs) const {
   double aggregate =
       kNAN;  // quiets warning on gcc 4.8 about maybe uninitialized
@@ -119,7 +119,7 @@ TagsValuePair AggregateExpression::Apply(
       aggregate = max_af(*filter_, tagsValuePairs);
       break;
   }
-  return TagsValuePair{filter_->Tags(), aggregate};
+  return TagsValuePair::of(filter_->Tags(), aggregate);
 }
 
 // utility functions

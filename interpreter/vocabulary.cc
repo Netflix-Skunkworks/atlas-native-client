@@ -7,7 +7,7 @@
 
 namespace atlas {
 namespace interpreter {
-const OptionalString kNone{nullptr};
+
 namespace {
 // query words
 class HasKeyWord : public Word {

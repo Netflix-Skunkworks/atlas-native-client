@@ -4,6 +4,8 @@ namespace atlas {
 namespace meter {
 
 struct Tag {
+  // for backwards compatibility keep the names first and second
+  // instead of more descriptive key and value
   util::StrRef key;
   util::StrRef value;
 

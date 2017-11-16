@@ -14,7 +14,7 @@ class AggregateExpression : public ValueExpression {
 
   virtual std::ostream& Dump(std::ostream& os) const override;
 
-  virtual TagsValuePair Apply(
+  virtual std::unique_ptr<TagsValuePair> Apply(
       const TagsValuePairs& tagsValuePairs) const override;
 
   std::shared_ptr<Query> GetQuery() const noexcept override { return filter_; }

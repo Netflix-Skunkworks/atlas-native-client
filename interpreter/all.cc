@@ -5,7 +5,7 @@ namespace interpreter {
 
 All::All(std::shared_ptr<ValueExpression> expr) : expr_(std::move(expr)) {}
 
-TagsValuePairs All::Apply(const TagsValuePairs& measurements) {
+std::shared_ptr<TagsValuePairs> All::Apply(std::shared_ptr<TagsValuePairs> measurements) {
   return measurements;
 }
 

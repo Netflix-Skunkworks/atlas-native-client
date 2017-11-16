@@ -393,16 +393,17 @@ rapidjson::Document MeasurementsToJson(
   Value json_metrics{kArrayType};
   for (auto it = first; it < last; it++) {
     const auto& measure = *it;
-    if (std::isnan(measure.value)) {
+    if (std::isnan(measure->value())) {
       continue;
     }
-    if (validate && !validation::IsValid(measure.tags)) {
+    auto tags = measure->all_tags();
+    if (validate && !validation::IsValid(tags)) {
       continue;
     }
     Value json_metric{kObjectType};
     Value json_metric_tags{kObjectType};
 
-    for (const auto& tag : measure.tags) {
+    for (const auto& tag : tags) {
       const char* k_str = util::ToValidCharset(tag.first).get();
       const char* v_str = util::EncodeValueForKey(tag.second, tag.first).get();
 
@@ -414,7 +415,7 @@ rapidjson::Document MeasurementsToJson(
 
     json_metric.AddMember("tags", json_metric_tags, alloc);
     json_metric.AddMember("start", now_millis, alloc);
-    json_metric.AddMember("value", measure.value, alloc);
+    json_metric.AddMember("value", measure->value(), alloc);
     json_metrics.PushBack(json_metric, alloc);
   }
 
@@ -513,15 +514,16 @@ void SubscriptionManager::SendToMain() {
   const auto& clock = atlas_registry.clock();
   auto start = clock.MonotonicTime();
   auto cfg = config_manager_.GetConfig();
-  auto metrics = registry_.GetMainMeasurements(*cfg);
+  const auto common_tags = cfg->CommonTags();
+  auto metrics = registry_.GetMainMeasurements(*cfg, common_tags);
   // all our metrics are normalized, so send them with a timestamp at the start
   // of the step
   auto timestamp =
       clock.WallTime() / kMainFrequencyMillis * kMainFrequencyMillis;
-  PushMeasurements(timestamp, metrics);
+  PushMeasurements(timestamp, *metrics);
   auto nanos = clock.MonotonicTime() - start;
   auto millis = nanos / 1e6;
-  Logger()->info("Sent {} metrics to {} in {}ms", metrics.size(),
+  Logger()->info("Sent {} metrics to {} in {}ms", metrics->size(),
                  cfg->PublishEndpoint(), millis);
   send_timer->Record(nanos);
 }

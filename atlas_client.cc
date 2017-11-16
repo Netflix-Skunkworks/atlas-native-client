@@ -118,6 +118,10 @@ void SetLoggingDirs(const std::vector<std::string>& dirs) {
   atlas::util::SetLoggingDirs(dirs);
 }
 
+void SetLogSizes(size_t max_size, size_t max_files) {
+  atlas::util::SetLogSizes({max_size, max_files});
+}
+
 void UseConsoleLogger(int level) { atlas::util::UseConsoleLogger(level); }
 
 void SetNotifyAlertServer(bool notify) {

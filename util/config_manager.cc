@@ -145,12 +145,20 @@ static std::unique_ptr<Config> DocToConfig(
                            ? document["logVerbosity"].GetInt()
                            : defaults->LogVerbosity();
 
+  auto log_max_size = document.HasMember("logMaxSize")
+                          ? document["logMaxSize"].GetUint()
+                          : defaults->LogMaxSize();
+
+  auto log_max_files = document.HasMember("logMaxFiles")
+                           ? document["logMaxFiles"].GetUint()
+                           : defaults->LogMaxFiles();
+
   return std::make_unique<Config>(
       defaults->DisabledFile(), eval_url, sub_endpoint, publish_endpoint,
       validate_metrics, check_cluster_endpoint, notify_alert_server,
       publish_config, sub_refresh, connect_timeout, read_timeout, batch_size,
       force_start, main_enabled, subs_enabled, dump_metrics, dump_subscriptions,
-      log_verbosity, get_default_common_tags());
+      log_verbosity, log_max_size, log_max_files, get_default_common_tags());
 }
 
 static std::unique_ptr<Config> ParseConfigFile(
@@ -182,6 +190,7 @@ std::unique_ptr<Config> DefaultConfig(bool notify) noexcept {
     disabled_file = kDefaultDisabledFile;
   }
 
+  auto log_num_size = GetLogSizes();
   return std::make_unique<Config>(
       disabled_file, std::string(kEvaluateUrl), std::string(kSubscriptionsUrl),
       std::string(kPublishUrl), kValidateMetrics, std::string(kCheckClusterUrl),
@@ -193,7 +202,8 @@ std::unique_ptr<Config> DefaultConfig(bool notify) noexcept {
       // enable main but not subscriptions yet (need clusters in main account)
       true, false,
       // do not dump main or subs
-      false, false, kDefaultVerbosity, get_default_common_tags());
+      false, false, kDefaultVerbosity, log_num_size.max_size,
+      log_num_size.max_files, get_default_common_tags());
 }
 
 static constexpr const char* const kGlobalFile =
@@ -234,10 +244,20 @@ void ConfigManager::Start() noexcept {
 
 void ConfigManager::Stop() noexcept { should_run_ = false; }
 
+static void do_logging_config(const Config& config) noexcept {
+  SetLoggingLevel(config.LogVerbosity());
+  auto current = GetLogSizes();
+  auto new_size = config.LogMaxSize();
+  auto new_files = config.LogMaxFiles();
+  if (current.max_files != new_files || current.max_size != new_size) {
+    SetLogSizes({new_size, new_files});
+  }
+}
+
 void ConfigManager::refresh_configs() noexcept {
   auto logger = Logger();
   auto new_config = get_current_config();
-  SetLoggingLevel(new_config->LogVerbosity());
+  do_logging_config(*new_config);
   std::lock_guard<std::mutex> lock{config_mutex};
   new_config->AddCommonTags(extra_tags_);
   current_config_ = std::move(new_config);

@@ -353,7 +353,7 @@ SubscriptionRegistry::SubscriptionRegistry(
 std::shared_ptr<interpreter::TagsValuePairs> SubscriptionRegistry::evaluate(
     const std::string& expression,
     std::shared_ptr<interpreter::TagsValuePairs> tagsValuePairs) const {
-  auto results = std::make_unique<interpreter::TagsValuePairs>();
+  auto results = std::make_shared<interpreter::TagsValuePairs>();
 
   if (tagsValuePairs->empty()) {
     return tagsValuePairs;

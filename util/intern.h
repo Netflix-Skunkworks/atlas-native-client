@@ -12,7 +12,10 @@ class StrRef {
  public:
   StrRef() = default;
   bool operator==(const StrRef& rhs) const { return data == rhs.data; }
+  bool operator!=(const StrRef& rhs) const { return data != rhs.data; }
   const char* get() const { return data; }
+  bool empty() const { return data == nullptr; }
+  bool valid() const { return data != nullptr; }
 
  private:
   const char* data = nullptr;

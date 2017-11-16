@@ -23,6 +23,7 @@ class Config {
          int connect_timeout, int read_timeout, int batch_size,
          bool force_start, bool enable_main, bool enable_subscriptions,
          bool dump_metrics, bool dump_subscriptions, int log_verbosity,
+         size_t log_max_size, size_t log_max_files,
          meter::Tags common_tags) noexcept;
 
   std::string EvalEndpoint() const noexcept { return evaluate_endpoint_; }
@@ -47,6 +48,8 @@ class Config {
     return publish_config_;
   }
   int LogVerbosity() const noexcept { return log_verbosity_; }
+  size_t LogMaxSize() const noexcept { return log_max_size_; }
+  size_t LogMaxFiles() const noexcept { return log_max_files_; }
   meter::Tags CommonTags() const noexcept { return common_tags_; }
   void AddCommonTags(const meter::Tags& extra_tags) noexcept {
     common_tags_.add_all(extra_tags);
@@ -74,6 +77,8 @@ class Config {
   bool dump_metrics_;
   bool dump_subscriptions_;
   int log_verbosity_;
+  size_t log_max_size_;
+  size_t log_max_files_;
   meter::Tags common_tags_;
 };
 

@@ -12,6 +12,7 @@ static std::vector<std::string> logging_directories = {"/logs/atlasd",
                                                        "./logs"};
 
 static std::string current_logging_directory;
+static LogNumSize current_log_num_size{1024u * 1024u, 8};
 
 static bool is_writable_dir(const std::string& dir) {
   struct stat dir_stat;
@@ -67,7 +68,8 @@ static void initialize_logger(const std::string& log_dir) {
     });
     auto logger = spdlog::create<spdlog::sinks::rotating_file_sink_mt>(
         kMainLogger, join_path(log_dir, "atlasclient"),
-        SPDLOG_FILENAME_T("log"), 1 * 1024 * 1024, 8);
+        SPDLOG_FILENAME_T("log"), current_log_num_size.max_size,
+        current_log_num_size.max_files);
     current_logging_directory = log_dir;
     logger->flush_on(spdlog::level::info);
   } else {
@@ -130,6 +132,19 @@ void UseConsoleLogger(int level) noexcept {
   logger = spdlog::stdout_color_mt(kMainLogger);
   logger->set_level(level_from_int(level));
   current_logging_directory = "";
+}
+
+LogNumSize GetLogSizes() noexcept { return current_log_num_size; }
+
+void SetLogSizes(const LogNumSize& log_num_size) noexcept {
+  std::lock_guard<std::mutex> lock(logger_mutex);
+  auto logger = spdlog::get(kMainLogger);
+  if (logger) {
+    spdlog::drop(kMainLogger);
+  }
+
+  current_log_num_size = log_num_size;
+  initialize();
 }
 
 std::string GetLoggingDir() noexcept { return current_logging_directory; }

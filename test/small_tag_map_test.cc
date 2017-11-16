@@ -45,3 +45,21 @@ TEST(SmallTagMap, Get) {
     EXPECT_EQ(map.at(buf_ref).get(), buf_ref.get());
   }
 }
+
+TEST(SmallTagMap, AddAll) {
+  auto map1 = SmallTagMap{{"k1", "v1"}, {"k2", "v2"}};
+  auto map2 = SmallTagMap{{"k3", "v1"}, {"k4", "v2"}};
+  auto expected = SmallTagMap{{"k1", "v1"}, {"k2", "v2"}, {"k3", "v1"}, {"k4", "v2"}};
+
+  map1.add_all(map2);
+  EXPECT_EQ(map1, expected);
+}
+
+TEST(SmallTagMap, AddAllOverrides) {
+  auto map1 = SmallTagMap{{"k1", "v1"},{"k2","v2"}};
+  auto map2 = SmallTagMap{{"k3", "v3"},{"k1","v4"}};
+  auto expected = SmallTagMap{{"k1","v4"},{"k2", "v2"},{"k3", "v3"}};
+
+  map1.add_all(map2);
+  EXPECT_EQ(map1, expected);
+}

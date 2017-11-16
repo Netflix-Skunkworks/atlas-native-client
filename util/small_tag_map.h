@@ -1,5 +1,5 @@
 #include "../meter/tag.h"
-#include "logger.h"
+#include <memory>
 
 #pragma once
 
@@ -77,40 +77,18 @@ class SmallTagMap : private detail::prime_number_hash_policy {
     }
   }
 
+  SmallTagMap(std::initializer_list<std::pair<const char*, const char*>> vs) {
+    init();
+    for (const auto& tag : vs) {
+      add(tag.first, tag.second);
+    }
+  }
+
   void add(const char* k, const char* v) noexcept {
     add(util::intern_str(k), util::intern_str(v));
   }
 
-  void add(util::StrRef k_ref, util::StrRef v_ref) noexcept {
-    const auto pos = pos_for_key(k_ref);
-    auto i = pos;
-    auto ki = entries_[i].first;
-    while (ki.get() != nullptr && ki.get() != k_ref.get()) {
-      i = index_for_hash(i + 1);  // avoid expensive mod variable operation
-      if (i == pos) {
-        if (actual_size_ >= detail::kMaxTags) {
-          Logger()->error("cannot add tag({},{}) - Maximum of {} tags reached.",
-                          k_ref.get(), v_ref.get(), detail::kMaxTags);
-          return;
-        }
-        resize(actual_size_ + 1);
-        add(k_ref, v_ref);
-        return;
-      }
-      ki = entries_[i].first;
-    }
-
-    if (ki.get() != nullptr) {
-      entries_[i].second = v_ref;
-    } else {
-      if (entries_[i].first.get() != nullptr) {
-        throw std::runtime_error("position has already been filled");
-      }
-      entries_[i].first = k_ref;
-      entries_[i].second = v_ref;
-      ++actual_size_;
-    }
-  }
+  void add(util::StrRef k_ref, util::StrRef v_ref) noexcept;
 
   void add_all(const SmallTagMap& other) {
     auto other_buckets = other.num_buckets();
@@ -122,52 +100,17 @@ class SmallTagMap : private detail::prime_number_hash_policy {
     }
   }
 
-  util::StrRef at(util::StrRef key) const noexcept {
-    auto pos = pos_for_key(key);
-    auto i = pos;
-    auto ki = entries_[i].first;
-    while (ki.get() != nullptr && ki.get() != key.get()) {
-      i = index_for_hash(i + 1);
-      if (i == pos) {
-        return detail::kNotFound;
-      }
-      ki = entries_[i].first;
-    }
-    return ki.get() == nullptr ? detail::kNotFound : entries_[i].second;
-  }
+  util::StrRef at(util::StrRef key) const noexcept;
 
   bool has(util::StrRef key) const noexcept {
-    return at(key).get() != detail::kNotFound.get();
+    return at(key) != detail::kNotFound;
   }
 
   size_t size() const noexcept { return actual_size_; }
 
-  size_t hash() const noexcept {
-    auto res = 0u;
-    auto N = num_buckets();
-    for (auto i = 0u; i < N; ++i) {
-      const auto& entry = entries_[i];
-      if (entry.first.get() != nullptr) {
-        res += (std::hash<util::StrRef>()(entry.first) << 1) ^
-               std::hash<util::StrRef>()(entry.second);
-      }
-    }
-    return res;
-  }
+  size_t hash() const noexcept;
 
-  bool operator==(const SmallTagMap& other) const noexcept {
-    if (other.size() != size()) return false;
-
-    const auto N = num_buckets();
-    for (auto i = 0u; i < N; ++i) {
-      const auto& entry = entries_[i];
-      if (entry.first.get() != nullptr) {
-        bool eq = entry.second.get() == other.at(entry.first).get();
-        if (!eq) return false;
-      }
-    }
-    return true;
-  }
+  bool operator==(const SmallTagMap& other) const noexcept;
 
   template <typename ValueType>
   struct templated_iterator {
@@ -199,7 +142,7 @@ class SmallTagMap : private detail::prime_number_hash_policy {
     const value_type* entries_;
     size_t num_buckets_;
 
-    bool is_empty(size_t idx) { return entries_[idx].first.get() == nullptr; }
+    bool is_empty(size_t idx) { return entries_[idx].first.empty(); }
   };
 
   using const_iterator = templated_iterator<const value_type>;
@@ -208,7 +151,7 @@ class SmallTagMap : private detail::prime_number_hash_policy {
     auto idx = 0u;
     auto N = num_buckets();
     while (idx < N) {
-      if (entries_[idx].first.get() != nullptr) {
+      if (entries_[idx].first.valid()) {
         break;
       }
       ++idx;
@@ -233,23 +176,7 @@ class SmallTagMap : private detail::prime_number_hash_policy {
     entries_.reset(new value_type[buckets]);
   }
 
-  void resize(size_t new_desired_size) noexcept {
-    auto prev_entries = std::move(entries_);
-    auto prev_buckets = num_buckets();
-
-    auto new_bucket_count = new_desired_size;
-    auto new_idx = next_size_over(&new_bucket_count);
-    entries_.reset(new value_type[new_bucket_count]);
-    commit(new_idx);
-
-    actual_size_ = 0;
-    for (auto i = 0u; i < prev_buckets; ++i) {
-      const auto& entry = prev_entries[i];
-      if (entry.first.get() != nullptr) {
-        add(entry.first, entry.second);
-      }
-    }
-  }
+  void resize(size_t new_desired_size) noexcept;
 };
 
 }  // namespace util

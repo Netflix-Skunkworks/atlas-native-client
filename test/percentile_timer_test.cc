@@ -38,7 +38,7 @@ TEST(PercentileTimer, HasProperStatistic) {
   auto statisticRef = intern_str("statistic");
   for (auto i = ms.begin(); i != ms.end(); ++i) {
     auto tags = (*i)->GetId()->GetTags();
-    if (tags.find(percentileRef) != tags.end()) {
+    if (tags.has(percentileRef)) {
       EXPECT_EQ(tags.at(statisticRef), percentileRef);
     }
   }

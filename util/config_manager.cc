@@ -185,9 +185,9 @@ std::unique_ptr<Config> DefaultConfig(bool notify) noexcept {
   return std::make_unique<Config>(
       disabled_file, std::string(kEvaluateUrl), std::string(kSubscriptionsUrl),
       std::string(kPublishUrl), kValidateMetrics, std::string(kCheckClusterUrl),
-      notify, // whether to notify alert-server about on-instance alert support
-      kPublishConfig, kRefresherMillis, kConnectTimeout,
-      kReadTimeout, kBatchSize,
+      notify,  // whether to notify alert-server about on-instance alert support
+      kPublishConfig, kRefresherMillis, kConnectTimeout, kReadTimeout,
+      kBatchSize,
       // do not run on dev env
       false,
       // enable main but not subscriptions yet (need clusters in main account)

@@ -3,7 +3,6 @@
 #include "meter/subscription_registry.h"
 #include <vector>
 
-
 extern atlas::meter::SubscriptionRegistry atlas_registry;
 
 namespace atlas {
@@ -17,7 +16,8 @@ void UseConsoleLogger(int level);
 void SetNotifyAlertServer(bool notify);
 }  // namespace atlas
 
-/* Deprecated functions. Please use functions in namespace atlasclient instead. */
+/* Deprecated functions. Please use functions in namespace atlasclient instead.
+ */
 extern "C" void InitAtlas();
 extern "C" void ShutdownAtlas();
 extern "C" void AtlasAddCommonTag(const char* key, const char* value);

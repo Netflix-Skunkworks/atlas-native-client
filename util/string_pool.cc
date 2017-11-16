@@ -3,8 +3,8 @@
 namespace atlas {
 namespace util {
 
-StringPool& the_str_pool() {
-  static StringPool* the_pool = new StringPool();
+StringPool& the_str_pool() noexcept {
+  static auto* the_pool = new StringPool();
   return *the_pool;
 }
 

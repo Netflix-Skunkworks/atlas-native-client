@@ -46,7 +46,7 @@ struct prime_number_hash_policy {
 };
 
 static constexpr size_t kMaxTags = 32u;
-}
+}  // namespace detail
 
 class SmallTagMap : private detail::prime_number_hash_policy {
   using value_type = std::pair<util::StrRef, util::StrRef>;

@@ -19,7 +19,7 @@ class GroupBy : public MultipleResults {
     return expr_->GetQuery();
   }
 
-  TagsValuePairs Apply(const TagsValuePairs& tagsValuePairs) override;
+  std::shared_ptr<TagsValuePairs> Apply(std::shared_ptr<TagsValuePairs> tagsValuePairs) override;
 
   virtual std::ostream& Dump(std::ostream& os) const override;
 

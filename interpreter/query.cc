@@ -9,8 +9,6 @@ using util::Logger;
 using util::StrRef;
 using util::intern_str;
 
-const OptionalString kNone{nullptr};
-
 bool Query::IsTrue() const noexcept { return false; }
 
 bool Query::IsFalse() const noexcept { return false; }
@@ -21,6 +19,11 @@ HasKeyQuery::HasKeyQuery(std::string key) : AbstractKeyQuery(std::move(key)) {}
 
 bool HasKeyQuery::Matches(const meter::Tags& tags) const {
   return tags.has(KeyRef());
+}
+
+bool HasKeyQuery::Matches(const TagsValuePair& tv) const {
+  // true if it has a value for KeyRef
+  return tv.get_value(KeyRef());
 }
 
 std::ostream& HasKeyQuery::Dump(std::ostream& os) const {
@@ -49,6 +52,11 @@ RelopQuery::RelopQuery(std::string k, std::string v, RelOp op)
 
 bool RelopQuery::Matches(const meter::Tags& tags) const {
   auto current_value = getvalue(tags);
+  return do_query(current_value, value_, op_);
+}
+
+bool RelopQuery::Matches(const TagsValuePair& tv) const {
+  auto current_value = tv.get_value(KeyRef());
   return do_query(current_value, value_, op_);
 }
 
@@ -110,12 +118,12 @@ RegexQuery::RegexQuery(std::string k, const std::string& pattern,
       str_pattern(pattern) {}
 
 static constexpr size_t kOffsetsMax = 30;
-bool RegexQuery::Matches(const meter::Tags& tags) const {
+
+static bool MatchesRegex(pcre* pattern, const std::string& str_pattern, const OptionalString& value) {
   if (pattern == nullptr) {
     return false;
   }
 
-  auto value = getvalue(tags);
   if (!value) {
     return false;
   }
@@ -148,6 +156,16 @@ bool RegexQuery::Matches(const meter::Tags& tags) const {
   Logger()->error("Error executing regular expression {} against {}: {}",
                   str_pattern, *value, error_msg);
   return false;
+}
+
+bool RegexQuery::Matches(const meter::Tags& tags) const {
+  auto value = getvalue(tags);
+  return MatchesRegex(pattern, str_pattern, value);
+}
+
+bool RegexQuery::Matches(const TagsValuePair& tv) const {
+  auto value = tv.get_value(KeyRef());
+  return MatchesRegex(pattern, str_pattern, value);
 }
 
 std::ostream& RegexQuery::Dump(std::ostream& os) const {
@@ -187,14 +205,23 @@ std::ostream& operator<<(std::ostream& os, const RelOp& op) {
 InQuery::InQuery(std::string key, std::unique_ptr<StringRefs> vs) noexcept
     : AbstractKeyQuery(std::move(key)), vs_(std::move(vs)) {}
 
-bool InQuery::Matches(const meter::Tags& tags) const {
-  auto value = getvalue(tags);
+bool InQuery::matches_value(const OptionalString& value) const {
   if (!value) {
     return false;
   }
   auto valueRef = intern_str(value.get());
   return std::any_of(vs_->begin(), vs_->end(),
                      [valueRef](util::StrRef& s) { return valueRef == s; });
+}
+
+bool InQuery::Matches(const meter::Tags& tags) const {
+  auto value = getvalue(tags);
+  return matches_value(value);
+}
+
+bool InQuery::Matches(const TagsValuePair& tv) const {
+  auto value = tv.get_value(KeyRef());
+  return matches_value(value);
 }
 
 std::ostream& InQuery::Dump(std::ostream& os) const { return os; }
@@ -220,6 +247,10 @@ bool NotQuery::Matches(const meter::Tags& tags) const {
   return !query_->Matches(tags);
 }
 
+bool NotQuery::Matches(const TagsValuePair& tv) const {
+  return !query_->Matches(tv);
+}
+
 std::ostream& NotQuery::Dump(std::ostream& os) const {
   os << "NotQuery(" << *query_ << ")";
   return os;
@@ -235,6 +266,10 @@ std::ostream& AndQuery::Dump(std::ostream& os) const {
 
 bool AndQuery::Matches(const meter::Tags& tags) const {
   return q1_->Matches(tags) && q2_->Matches(tags);
+}
+
+bool AndQuery::Matches(const TagsValuePair& tv) const {
+  return q1_->Matches(tv) && q2_->Matches(tv);
 }
 
 meter::Tags AndQuery::Tags() const noexcept {
@@ -254,6 +289,10 @@ std::ostream& OrQuery::Dump(std::ostream& os) const {
 
 bool OrQuery::Matches(const meter::Tags& tags) const {
   return q1_->Matches(tags) || q2_->Matches(tags);
+}
+
+bool OrQuery::Matches(const TagsValuePair& tv) const {
+  return q1_->Matches(tv) || q2_->Matches(tv);
 }
 
 // helper functions

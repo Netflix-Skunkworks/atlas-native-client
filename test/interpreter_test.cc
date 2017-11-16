@@ -106,16 +106,16 @@ TEST(Interpreter, RegexQuery) {
   ASSERT_FALSE(query->Matches(not_sps));
 }
 
-static TagsValuePairs get_measurements() {
+static std::shared_ptr<TagsValuePairs> get_measurements() {
   Tags id1{{"name", "name1"}, {"k1", "v1"}};
   Tags id2{{"name", "name1"}, {"k1", "v2"}};
   Tags id3{{"name", "name1"}, {"k1", "v1"}, {"k2", "w1"}};
 
-  TagsValuePair m1{id1, 1.0};
-  TagsValuePair m2{id2, 2.0};
-  TagsValuePair m3{id3, 3.0};
-
-  return TagsValuePairs{m1, m2, m3};
+  auto res = std::make_shared<TagsValuePairs>();
+  res->push_back(TagsValuePair::of(std::move(id1), 1.0));
+  res->push_back(TagsValuePair::of(std::move(id2), 2.0));
+  res->push_back(TagsValuePair::of(std::move(id3), 3.0));
+  return res;
 }
 
 TEST(Interpreter, All) {
@@ -129,16 +129,15 @@ TEST(Interpreter, All) {
 
   auto measurements = get_measurements();
   auto res = all->Apply(measurements);
-  EXPECT_EQ(res.size(), 3);
+  EXPECT_EQ(res->size(), 3);
 
   Tags t1{{"name", "name1"}, {"k1", "v1"}};
   Tags t2{{"name", "name1"}, {"k1", "v2"}};
   Tags t3{{"name", "name1"}, {"k1", "v1"}, {"k2", "w1"}};
-  TagsValuePair exp1{t1, 1.0};
-  TagsValuePair exp2{t2, 2.0};
-  TagsValuePair exp3{t3, 3.0};
-  TagsValuePairs expected{exp1, exp2, exp3};
-  EXPECT_EQ(res, expected);
+  TagsValuePairs expected{TagsValuePair::of(std::move(t1), 1.0),
+                          TagsValuePair::of(std::move(t2), 2.0),
+                          TagsValuePair::of(std::move(t3), 3.0)};
+  EXPECT_EQ(*res, expected);
 }
 
 TEST(Interpreter, GroupBy) {
@@ -152,18 +151,18 @@ TEST(Interpreter, GroupBy) {
 
   auto measurements = get_measurements();
   auto res = all->Apply(measurements);
-  EXPECT_EQ(res.size(), 2);
+  EXPECT_EQ(res->size(), 2);
 
   Tags t1{{"name", "name1"}, {"k1", "v1"}};
   Tags t2{{"name", "name1"}, {"k1", "v2"}};
-  TagsValuePair exp1{t1, 4.0};
-  TagsValuePair exp2{t2, 2.0};
-  if (res.at(0).tags.at(intern_str("k1")) == intern_str("v1")) {
-    TagsValuePairs expected{exp1, exp2};
-    EXPECT_EQ(res, expected);
+  auto exp1 = TagsValuePair::of(std::move(t1), 4.0);
+  auto exp2 = TagsValuePair::of(std::move(t2), 2.0);
+  if (res->at(0)->all_tags().at(intern_str("k1")) == intern_str("v1")) {
+    TagsValuePairs expected{std::move(exp1), std::move(exp2)};
+    EXPECT_EQ(*res, expected);
   } else {
-    TagsValuePairs expected{exp2, exp1};
-    EXPECT_EQ(res, expected);
+    TagsValuePairs expected{std::move(exp2), std::move(exp1)};
+    EXPECT_EQ(*res, expected);
   }
 }
 
@@ -178,12 +177,11 @@ TEST(Interpreter, GroupByFiltering) {
 
   auto measurements = get_measurements();
   auto res = all->Apply(measurements);
-  EXPECT_EQ(res.size(), 1);
+  EXPECT_EQ(res->size(), 1);
 
   Tags t1{{"name", "name1"}, {"k2", "w1"}};
-  TagsValuePair exp1{t1, 1.0};
-  TagsValuePairs expected{exp1};
-  EXPECT_EQ(res, expected);
+  TagsValuePairs expected{TagsValuePair::of(std::move(t1), 1.0)};
+  EXPECT_EQ(*res, expected);
 }
 
 TEST(Interpreter, KeepTags) {
@@ -197,12 +195,11 @@ TEST(Interpreter, KeepTags) {
 
   auto measurements = get_measurements();
   auto res = all->Apply(measurements);
-  EXPECT_EQ(res.size(), 1);
+  EXPECT_EQ(res->size(), 1);
 
   Tags t1{{"name", "name1"}, {"k2", "w1"}};
-  TagsValuePair exp1{t1, 1.0};
-  TagsValuePairs expected{exp1};
-  EXPECT_EQ(res, expected);
+  TagsValuePairs expected{TagsValuePair::of(std::move(t1), 1.0)};
+  EXPECT_EQ(*res, expected);
 }
 
 TEST(Interpreter, DropTags) {
@@ -216,19 +213,19 @@ TEST(Interpreter, DropTags) {
 
   auto measurements = get_measurements();
   auto res = all->Apply(measurements);
-  EXPECT_EQ(res.size(), 2);
+  EXPECT_EQ(res->size(), 2);
 
   Tags t1{{"name", "name1"}, {"k1", "v1"}};
   Tags t2{{"name", "name1"}, {"k1", "v2"}};
-  TagsValuePair exp1{t1, 1.0};
-  TagsValuePair exp2{t2, 0.0};
-  EXPECT_EQ(res.size(), 2);
-  if (res.at(0).tags == t1) {
-    TagsValuePairs expected{exp1, exp2};
-    EXPECT_EQ(expected, res);
+  auto exp1 = TagsValuePair::of(std::move(t1), 1.0);
+  auto exp2 = TagsValuePair::of(std::move(t2), 0.0);
+  EXPECT_EQ(res->size(), 2);
+  if (res->at(0)->all_tags() == t1) {
+    TagsValuePairs expected{std::move(exp1), std::move(exp2)};
+    EXPECT_EQ(expected, *res);
   } else {
-    TagsValuePairs expected{exp2, exp1};
-    EXPECT_EQ(expected, res);
+    TagsValuePairs expected{std::move(exp2), std::move(exp1)};
+    EXPECT_EQ(expected, *res);
   }
 }
 

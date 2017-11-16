@@ -55,8 +55,8 @@ class SubscriptionRegistry : public Registry {
   SubscriptionResults GetLwcMetricsForInterval(const util::Config& config,
                                                int64_t frequency) const;
 
-  interpreter::TagsValuePairs GetMainMeasurements(
-      const util::Config& config) const;
+  std::unique_ptr<interpreter::TagsValuePairs> GetMainMeasurements(
+      const util::Config& config, const Tags& common_tags) const;
 
   std::shared_ptr<Counter> counter(std::string name) {
     return counter(CreateId(name, kEmptyTags));
@@ -128,9 +128,9 @@ class SubscriptionRegistry : public Registry {
 
   Measurements GetMeasurements(int64_t frequency) const;
 
-  interpreter::TagsValuePairs evaluate(
+  std::shared_ptr<interpreter::TagsValuePairs> evaluate(
       const std::string& expression,
-      const interpreter::TagsValuePairs& tagsValuePairs) const;
+      std::shared_ptr<interpreter::TagsValuePairs> tagsValuePairs) const;
 };
 }  // namespace meter
 }  // namespace atlas

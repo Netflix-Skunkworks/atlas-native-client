@@ -52,7 +52,6 @@ Interpreter::Interpreter(std::unique_ptr<Vocabulary> vocabulary)
     : vocabulary_(std::move(vocabulary)) {}
 
 const static std::string UNBALANCED = "Unbalanced parenthesis";
-const static OptionalString kNone{nullptr};
 
 static OptionalString do_program(Context* context, const Vocabulary& vocabulary,
                                  Expressions* tokens, int depth) {

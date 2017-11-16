@@ -18,6 +18,8 @@ class Query : public Expression {
 
   virtual bool Matches(const meter::Tags& tags) const = 0;
 
+  virtual bool Matches(const TagsValuePair& tv) const = 0;
+
   virtual meter::Tags Tags() const noexcept { return meter::Tags(); };
 
   virtual bool IsTrue() const noexcept;
@@ -58,6 +60,8 @@ class HasKeyQuery : public AbstractKeyQuery {
 
   bool Matches(const meter::Tags& tags) const override;
 
+  bool Matches(const TagsValuePair& tv) const override;
+
   QueryType GetQueryType() const noexcept override { return QueryType::HasKey; }
 
   bool Equals(const Query& query) const noexcept override {
@@ -79,6 +83,8 @@ class RelopQuery : public AbstractKeyQuery {
   std::ostream& Dump(std::ostream& os) const override;
 
   bool Matches(const meter::Tags& tags) const override;
+
+  bool Matches(const TagsValuePair& tv) const override;
 
   static bool do_query(const OptionalString& cur_value, const std::string& v,
                        RelOp op);
@@ -106,6 +112,8 @@ class RegexQuery : public AbstractKeyQuery {
 
   bool Matches(const meter::Tags& tags) const override;
 
+  bool Matches(const TagsValuePair& tags) const override;
+
   std::ostream& Dump(std::ostream& os) const override;
 
   bool IsRegex() const noexcept override;
@@ -132,6 +140,8 @@ class InQuery : public AbstractKeyQuery {
 
   bool Matches(const meter::Tags& tags) const override;
 
+  bool Matches(const TagsValuePair& tv) const override;
+
   bool Equals(const Query& query) const noexcept override {
     if (query.GetQueryType() != GetQueryType()) return false;
 
@@ -143,6 +153,7 @@ class InQuery : public AbstractKeyQuery {
 
  private:
   std::unique_ptr<StringRefs> vs_;
+  bool matches_value(const OptionalString& value) const;
 };
 
 class TrueQuery : public Query {
@@ -152,6 +163,8 @@ class TrueQuery : public Query {
   std::ostream& Dump(std::ostream& os) const override;
 
   bool Matches(const meter::Tags&) const override { return true; }
+
+  bool Matches(const TagsValuePair&) const override { return true; }
 
   bool IsTrue() const noexcept override { return true; }
 
@@ -172,6 +185,8 @@ class FalseQuery : public Query {
 
   bool Matches(const meter::Tags&) const override { return false; }
 
+  bool Matches(const TagsValuePair&) const override { return false; }
+
   bool Equals(const Query& query) const noexcept override {
     return query.IsFalse();
   }
@@ -184,6 +199,8 @@ class NotQuery : public Query {
   explicit NotQuery(std::shared_ptr<Query> query);
 
   bool Matches(const meter::Tags& tags) const override;
+
+  bool Matches(const TagsValuePair& tv) const override;
 
   std::ostream& Dump(std::ostream& os) const override;
 
@@ -207,6 +224,8 @@ class OrQuery : public Query {
 
   bool Matches(const meter::Tags& tags) const override;
 
+  bool Matches(const TagsValuePair& tv) const override;
+
   bool Equals(const Query& query) const noexcept override {
     if (query.GetQueryType() != QueryType::Or) return false;
     const auto& q = static_cast<const OrQuery&>(query);
@@ -229,6 +248,8 @@ class AndQuery : public Query {
   std::ostream& Dump(std::ostream& os) const override;
 
   bool Matches(const meter::Tags& tags) const override;
+
+  bool Matches(const TagsValuePair& tv) const override;
 
   bool Equals(const Query& query) const noexcept override {
     if (query.GetQueryType() != QueryType::And) return false;

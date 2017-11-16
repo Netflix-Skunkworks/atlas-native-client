@@ -84,30 +84,5 @@ std::ostream& operator<<(std::ostream& os, const Expression& expression) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const TagsValuePair& tagsValuePair) {
-  os << "TagsValuePair{";
-  bool first = true;
-  for (const auto& tag : tagsValuePair.tags) {
-    if (!first) {
-      os << ',';
-    } else {
-      first = false;
-    }
-    os << tag.first.get() << "=" << tag.second.get();
-  }
-  os << ", value=" << tagsValuePair.value << "}";
-  return os;
-}
-
-const auto kNameRef = intern_str("name");
-TagsValuePair TagsValuePair::from(const meter::Measurement& measurement,
-                                  const meter::Tags& common_tags) noexcept {
-  meter::Tags tags{common_tags};
-  tags.add_all(measurement.id->GetTags());
-  tags.add(kNameRef, measurement.id->NameRef());
-
-  return TagsValuePair{tags, measurement.value};
-}
-
 }  // namespace interpreter
 }  // namespace atlas

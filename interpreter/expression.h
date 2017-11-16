@@ -78,7 +78,7 @@ class Query;
 class FalseQuery;
 class ValueExpression : public Expression {
  public:
-  virtual TagsValuePair Apply(const TagsValuePairs& measurements) const = 0;
+  virtual std::unique_ptr<TagsValuePair> Apply(const TagsValuePairs& measurements) const = 0;
 
   virtual std::shared_ptr<Query> GetQuery() const noexcept = 0;
 
@@ -91,8 +91,8 @@ class ConstantExpression : public ValueExpression {
  public:
   explicit ConstantExpression(double value) noexcept;
 
-  TagsValuePair Apply(const TagsValuePairs&) const override {
-    return TagsValuePair{meter::kEmptyTags, value_};
+  std::unique_ptr<TagsValuePair> Apply(const TagsValuePairs&) const override {
+    return TagsValuePair::of(meter::Tags{}, value_);
   };
 
   std::shared_ptr<Query> GetQuery() const noexcept override;

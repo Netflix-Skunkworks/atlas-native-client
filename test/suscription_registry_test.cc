@@ -25,8 +25,8 @@ class SR : public SubscriptionRegistry {
 
   const Clock& clock() const noexcept override { return clock_; }
 
-  TagsValuePairs eval(const std::string& expression,
-                      const TagsValuePairs& measurements) const {
+  std::shared_ptr<TagsValuePairs> eval(const std::string& expression,
+                      std::shared_ptr<TagsValuePairs> measurements) const {
     return SubscriptionRegistry::evaluate(expression, measurements);
   }
 
@@ -44,13 +44,15 @@ TEST(SubscriptionRegistry, Eval) {
   Tags tags1{{"name", "m1"}, {"k1", "v1"}, {"k1", "v2"}};
   Tags tags2{{"name", "m2"}, {"k1", "v1"}, {"k1", "v2"}};
   Tags tags3{{"name", "m3"}, {"k1", "v1"}, {"k1", "v2"}};
-  TagsValuePair m1{tags1, 1.0};
-  TagsValuePair m2{tags2, 2.0};
-  TagsValuePair m3{tags3, 3.0};
-  TagsValuePairs measurements{m1, m2, m3};
+  auto m1 = TagsValuePair::of(std::move(tags1), 1.0);
+  auto m2 = TagsValuePair::of(std::move(tags2), 2.0);
+  auto m3 = TagsValuePair::of(std::move(tags3), 3.0);
+  auto measurements = std::make_shared<TagsValuePairs>();
+  measurements->push_back(std::move(m1));
+  measurements->push_back(std::move(m2));
+  measurements->push_back(std::move(m3));
   const auto& res = registry.eval(s, measurements);
-
-  EXPECT_EQ(res.size(), 3);
+  EXPECT_EQ(res->size(), 3);
 }
 
 TEST(SubscriptionRegistry, MainMetrics) {
@@ -69,6 +71,7 @@ TEST(SubscriptionRegistry, MainMetrics) {
 
   const auto& cfg = DefaultConfig();
   manual_clock.SetWall(60042);
-  const auto& res = registry.GetMainMeasurements(*cfg);
-  EXPECT_EQ(res.size(), 3);
+  auto common_tags = cfg->CommonTags();
+  const auto& res = registry.GetMainMeasurements(*cfg, common_tags);
+  EXPECT_EQ(res->size(), 3);
 }

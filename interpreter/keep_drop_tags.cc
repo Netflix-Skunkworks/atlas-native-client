@@ -13,8 +13,6 @@ using meter::Measurements;
 using util::StrRef;
 using util::intern_str;
 
-const static auto kNameRef = intern_str("name");
-
 KeepOrDropTags::KeepOrDropTags(const List& keys,
                                std::shared_ptr<ValueExpression> expr, bool keep)
     : keys_(keys.ToStrings()), expr_(std::move(expr)), keep_(keep) {
@@ -40,17 +38,17 @@ static StringRefs drop_keys(const meter::Tags& tags, const StringRefs& keys) {
   return res;
 }
 
-TagsValuePairs KeepOrDropTags::Apply(const TagsValuePairs& valuePairs) {
+std::shared_ptr<TagsValuePairs> KeepOrDropTags::Apply(std::shared_ptr<TagsValuePairs> valuePairs) {
   // group metrics by keys
   std::unordered_map<meter::Tags, TagsValuePairs> grouped;
-  for (auto& valuePair : valuePairs) {
+  for (auto& valuePair : *valuePairs) {
     auto should_keep = true;
     meter::Tags group_by_vals;
 
-    const auto& keys = keep_ ? *keys_ : drop_keys(valuePair.tags, *keys_);
+    const auto& keys = keep_ ? *keys_ : drop_keys(valuePair->all_tags(), *keys_);
 
     for (auto& key : keys) {
-      auto value = get_value(valuePair, key);
+      auto value = get_value(*valuePair, key);
       if (value) {
         group_by_vals.add(key, intern_str(value.get()));
       } else {
@@ -63,12 +61,12 @@ TagsValuePairs KeepOrDropTags::Apply(const TagsValuePairs& valuePairs) {
     }
   }
 
-  TagsValuePairs results;
+  auto results = std::make_shared<TagsValuePairs>();
   for (auto& entry : grouped) {
     auto tags = entry.first;
     const auto& measurements_for_tags = entry.second;
     const auto& expr_results = expr_->Apply(measurements_for_tags);
-    results.push_back(TagsValuePair{tags, expr_results.value});
+    results->push_back(TagsValuePair::of(std::move(tags), expr_results->value()));
   }
 
   return results;

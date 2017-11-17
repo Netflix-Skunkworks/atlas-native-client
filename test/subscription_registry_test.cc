@@ -2,13 +2,16 @@
 #include "../meter/manual_clock.h"
 #include "../meter/subscription_registry.h"
 #include "../util/config_manager.h"
+#include "../util/logger.h"
 #include <gtest/gtest.h>
 
 using atlas::util::Config;
 using atlas::util::ConfigManager;
 using atlas::util::DefaultConfig;
 using atlas::util::intern_str;
+using atlas::util::Logger;
 
+using atlas::interpreter::kNameRef;
 using atlas::interpreter::TagsValuePair;
 using atlas::interpreter::TagsValuePairs;
 using atlas::interpreter::Interpreter;
@@ -25,8 +28,9 @@ class SR : public SubscriptionRegistry {
 
   const Clock& clock() const noexcept override { return clock_; }
 
-  std::shared_ptr<TagsValuePairs> eval(const std::string& expression,
-                      std::shared_ptr<TagsValuePairs> measurements) const {
+  std::shared_ptr<TagsValuePairs> eval(
+      const std::string& expression,
+      std::shared_ptr<TagsValuePairs> measurements) const {
     return SubscriptionRegistry::evaluate(expression, measurements);
   }
 
@@ -59,7 +63,7 @@ TEST(SubscriptionRegistry, MainMetrics) {
   SR registry;
   const auto& manual_clock = static_cast<const ManualClock&>(registry.clock());
   manual_clock.SetWall(42);
-  Tags tags{{"k1", "v1"}, {"k1", "v2"}};
+  Tags tags{{"k1", "v1"}, {"k2", "v2"}};
   auto id1 = registry.CreateId("m1", tags);
   auto id3 = registry.CreateId("m3", tags);
 
@@ -69,9 +73,26 @@ TEST(SubscriptionRegistry, MainMetrics) {
   registry.counter(registry.CreateId("m2", tags))->Add(60);
   registry.counter(id3)->Add(60);
 
-  const auto& cfg = DefaultConfig();
+  auto pub_config = std::vector<std::string>{
+      "name,m1,:eq,(,nf.node,),:drop-tags", ":true,:all"};
+  auto cfg = DefaultConfig()->WithPublishConfig(pub_config);
   manual_clock.SetWall(60042);
-  auto common_tags = cfg->CommonTags();
-  const auto& res = registry.GetMainMeasurements(*cfg, common_tags);
+  auto common_tags = cfg.CommonTags();
+  const auto& res = registry.GetMainMeasurements(cfg, common_tags);
   EXPECT_EQ(res->size(), 3);
+
+  auto name_num_tags = std::unordered_map<std::string, size_t>(res->size());
+
+  for (const auto& m : *res) {
+    const auto& t = m->all_tags();
+    const auto& name = t.at(kNameRef).get();
+    name_num_tags[name] = t.size();
+  }
+
+  auto ct = common_tags.size();
+  auto expected_name_num_tags = std::unordered_map<std::string, size_t>(
+      {{"m1", 4u + ct - 1},  // -1 because we drop nf.node for m1
+       {"m2", 4u + ct},
+       {"m3", 4u + ct}});
+  EXPECT_EQ(name_num_tags, expected_name_num_tags);
 }

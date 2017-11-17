@@ -58,6 +58,13 @@ class Config {
     return disabled_file_watcher_.file_name();
   }
 
+  // for testing
+  Config WithPublishConfig(std::vector<std::string> publish_config) {
+    auto cfg = Config(*this);
+    cfg.publish_config_ = std::move(publish_config);
+    return cfg;
+  }
+
  private:
   FileWatcher disabled_file_watcher_;
   std::string evaluate_endpoint_;

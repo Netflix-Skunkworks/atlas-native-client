@@ -153,15 +153,15 @@ static void LogRules(const std::vector<std::string>& rules,
   auto logger = Logger();
   if (logger->should_log(spdlog::level::debug)) {
     std::ostringstream os;
-    os << "Applying [";
+    os << "Applying [\n";
     bool first = true;
     for (const auto& rule : rules) {
       if (!first) {
-        os << ", ";
+        os << "\n";
       } else {
         first = false;
       }
-      os << rule;
+      os << "    " << rule;
     }
     os << "] to " << num_measurements << " measurements";
     logger->debug(os.str());
@@ -179,7 +179,8 @@ static void LogMeasurementsForRule(const std::string& rule,
   }
 }
 
-std::unique_ptr<interpreter::TagsValuePairs> SubscriptionRegistry::GetMainMeasurements(
+std::unique_ptr<interpreter::TagsValuePairs>
+SubscriptionRegistry::GetMainMeasurements(
     const util::Config& config, const meter::Tags& common_tags) const {
   static auto main_measurements_size =
       atlas_registry.gauge("atlas.client.mainMeasurements");
@@ -223,11 +224,14 @@ std::unique_ptr<interpreter::TagsValuePairs> SubscriptionRegistry::GetMainMeasur
 
   // metrics that match each rule
   using TV_Ptr = std::shared_ptr<TagsValuePairs>;
-  auto measurements_for_rule = std::vector<TV_Ptr>(rules.size(), std::make_shared<TagsValuePairs>());
+  auto measurements_for_rule = std::vector<TV_Ptr>(rules.size());
+  for (auto i = 0u; i < rules.size(); ++i) {
+    measurements_for_rule[i] = std::make_shared<TagsValuePairs>();
+  }
 
   for (const auto& m : all) {
     auto tagsValue = TagsValuePair::from(m, &common_tags);
-    for (size_t i = 0; i < rules.size(); ++i) {
+    for (auto i = 0u; i < rules.size(); ++i) {
       const auto& query = queries[i];
 
       if (query->Matches(*tagsValue)) {
@@ -245,7 +249,7 @@ std::unique_ptr<interpreter::TagsValuePairs> SubscriptionRegistry::GetMainMeasur
     // create a dummy subscription to re-use the evaluation engine in the
     // subscription_registry
     LogMeasurementsForRule(rule, *(measurements_for_rule[i]));
-    auto rule_result = evaluate(rule, std::move(measurements_for_rule[i]));
+    auto rule_result = evaluate(rule, measurements_for_rule[i]);
     ++i;
     // add all resulting measurements to our overall result
     std::move(rule_result->begin(), rule_result->end(),
@@ -286,10 +290,11 @@ SubscriptionResults SubscriptionRegistry::GetLwcMetricsForInterval(
                      return TagsValuePair::from(m, &common_tags);
                    });
     auto pairs = evaluate(s.expression, tagsValuePairs);
-    std::transform(pairs->begin(), pairs->end(), std::back_inserter(result),
-                   [&s](const std::shared_ptr<TagsValuePair>& pair) {
-                     return SubscriptionMetric{s.id, pair->all_tags(), pair->value()};
-                   });
+    std::transform(
+        pairs->begin(), pairs->end(), std::back_inserter(result),
+        [&s](const std::shared_ptr<TagsValuePair>& pair) {
+          return SubscriptionMetric{s.id, pair->all_tags(), pair->value()};
+        });
   }
   atlas_registry.gauge(measurementsId->WithTag(Tag::of("freq", frequency_str)))
       ->Update(result.size());

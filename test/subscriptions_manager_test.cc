@@ -3,16 +3,18 @@
 
 #include "../meter/subscription_manager.h"
 #include "../util/json.h"
-/*
 namespace atlas {
 namespace meter {
 Subscriptions* ParseSubscriptions(const std::string& subs_str);
 rapidjson::Document MeasurementsToJson(
-    int64_t now_millis, const interpreter::TagsValuePairs& measurements,
+    int64_t now_millis,
+    const interpreter::TagsValuePairs::const_iterator& first,
+    const interpreter::TagsValuePairs::const_iterator& last,
     bool validate, int64_t* added);
 
 rapidjson::Document SubResultsToJson(
-    int64_t now_millis, const SubscriptionResults& subscriptionResults);
+    int64_t now_millis, const SubscriptionResults::const_iterator& first,
+    const SubscriptionResults::const_iterator& last);
 }  // namespace meter
 }  // namespace atlas
 
@@ -49,9 +51,10 @@ static std::string json_to_str(const rapidjson::Document& json) {
 
 static void expect_eq_json(rapidjson::Document& expected,
                            rapidjson::Document& actual) {
-  auto expectedStr = json_to_str(expected);
-  auto actualStr = json_to_str(actual);
-  EXPECT_EQ(expectedStr, actualStr);
+
+  EXPECT_EQ(expected, actual)
+            << "expected: " << json_to_str(expected)
+            << ", actual: " << json_to_str(actual);
 }
 
 TEST(SubscriptionManager, MeasurementsToJsonInvalid) {
@@ -62,13 +65,13 @@ TEST(SubscriptionManager, MeasurementsToJsonInvalid) {
   Tags t2{{"name", "name2"}, {"", "v1"}, {"k2", "v2.0"}};
   Tags t3{{"k1", "v1"}, {"k2", "v2.1"}};
 
-  TagsValuePair m1{t1, 1.1};
-  TagsValuePair m2{t2, 2.2};
-  TagsValuePair m3{t3, 3.3};
-  TagsValuePairs ms{m1, m2, m3};
+  auto m1 = TagsValuePair::of(std::move(t1), 1.1);
+  auto m2 = TagsValuePair::of(std::move(t2), 2.2);
+  auto m3 = TagsValuePair::of(std::move(t3), 3.3);
+  TagsValuePairs ms{std::move(m1), std::move(m2), std::move(m3)};
 
   int64_t added;
-  auto json = atlas::meter::MeasurementsToJson(1, ms, true, &added);
+  auto json = atlas::meter::MeasurementsToJson(1, ms.begin(), ms.end(), true, &added);
   EXPECT_EQ(added, 0);
 }
 
@@ -80,13 +83,13 @@ TEST(SubscriptionManager, MeasurementsToJson) {
   Tags t2{{"name", "name2"}, {"k1", "v1"}, {"k2", "v2.0"}};
   Tags t3{{"name", "name3"}, {"k1", "v1"}, {"k2", "v2.1"}};
 
-  TagsValuePair m1{t1, 1.1};
-  TagsValuePair m2{t2, 2.2};
-  TagsValuePair m3{t3, 3.3};
-  TagsValuePairs ms{m1, m2, m3};
+  auto m1 = TagsValuePair::of(std::move(t1), 1.1);
+  auto m2 = TagsValuePair::of(std::move(t2), 2.2);
+  auto m3 = TagsValuePair::of(std::move(t3), 3.3);
+  TagsValuePairs ms{std::move(m1), std::move(m2), std::move(m3)};
 
   int64_t added;
-  auto json = atlas::meter::MeasurementsToJson(1, ms, true, &added);
+  auto json = atlas::meter::MeasurementsToJson(1, ms.begin(), ms.end(), true, &added);
   EXPECT_EQ(added, 3);
 
   const char* expected =
@@ -111,7 +114,7 @@ TEST(SubscriptionManager, SubResToJson) {
   SubscriptionMetric e2{"id1", Tags{{"name", "n1"}, {"k1", "v2"}}, 24.0};
   SubscriptionResults sub_results{e1, e2};
 
-  auto json = SubResultsToJson(123, sub_results);
+  auto json = SubResultsToJson(123, sub_results.begin(), sub_results.end());
   const char* expected =
       "{\"timestamp\":123,\"metrics\":[{\"id\":\"id1\",\"tags\":{\"k1\":\"v1\","
       "\"name\":\"n1\"},\"value\":42.0},{\"id\":\"id1\",\"tags\":{\"k1\":"
@@ -121,4 +124,4 @@ TEST(SubscriptionManager, SubResToJson) {
   expected_json.Parse<kParseCommentsFlag | kParseNanAndInfFlag>(expected);
   expect_eq_json(expected_json, json);
 }
- */
+

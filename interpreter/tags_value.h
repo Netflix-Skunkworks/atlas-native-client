@@ -3,7 +3,6 @@
 #include "../meter/measurement.h"
 #include "../util/optional.h"
 #include "../util/dump.h"
-#include "../util/logger.h"
 #include <cstdlib>
 #include <cmath>
 

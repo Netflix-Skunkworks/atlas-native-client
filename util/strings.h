@@ -45,9 +45,8 @@ StrRef EncodeValueForKey(StrRef value, StrRef key) noexcept;
 
 std::string join_path(const std::string& dir, const char* file_name) noexcept;
 
-inline bool StartsWith(const std::string& s,
-                       const std::string& prefix) noexcept {
-  return strncmp(s.c_str(), prefix.c_str(), prefix.size()) == 0;
+inline bool StartsWith(StrRef ref, const char* prefix) noexcept {
+  return strncmp(ref.get(), prefix, strlen(prefix)) == 0;
 }
 
 bool IStartsWith(const std::string& s, const std::string& prefix) noexcept;

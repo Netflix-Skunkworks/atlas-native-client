@@ -14,20 +14,30 @@ static constexpr size_t MAX_VAL_LENGTH = 120;
 static constexpr size_t MAX_USER_TAGS = 20;
 static constexpr size_t MAX_NAME_LENGTH = 255;
 
+using util::intern_str;
 using util::StartsWith;
+using util::StrRef;
 
-static bool is_key_restricted(const std::string& k) noexcept {
+static bool is_key_restricted(util::StrRef k) noexcept {
   return StartsWith(k, "nf.") || StartsWith(k, "atlas.");
 }
 
-static std::unordered_set<std::string> kValidNfTags = {
-    "nf.node",    "nf.cluster", "nf.app",           "nf.asg",    "nf.stack",
-    "nf.ami",     "nf.vmtype",  "nf.zone",          "nf.region", "nf.account",
-    "nf.country", "nf.task",    "nf.country.rollup"};
+static std::unordered_set<util::StrRef> kValidNfTags = {
+    intern_str("nf.node"),          intern_str("nf.cluster"),
+    intern_str("nf.app"),           intern_str("nf.asg"),
+    intern_str("nf.stack"),         intern_str("nf.ami"),
+    intern_str("nf.vmtype"),        intern_str("nf.zone"),
+    intern_str("nf.region"),        intern_str("nf.account"),
+    intern_str("nf.country"),       intern_str("nf.task"),
+    intern_str("nf.country.rollup")};
 
-static bool is_user_key_invalid(const std::string& k) noexcept {
+static auto kDsType = intern_str("atlas.dstype");
+static auto kLegacy = intern_str("atlas.legacy");
+static auto kNameRef = intern_str("name");
+
+static bool is_user_key_invalid(util::StrRef k) noexcept {
   if (StartsWith(k, "atlas.")) {
-    return k != "atlas.dstype" && k != "atlas.legacy";
+    return k != kDsType && k != kLegacy;
   }
 
   if (StartsWith(k, "nf.")) {
@@ -36,6 +46,8 @@ static bool is_user_key_invalid(const std::string& k) noexcept {
 
   return false;
 }
+
+bool empty_or_null(util::StrRef r) { return r.empty() || r.length() == 0; }
 
 bool IsValid(const Tags& tags) noexcept {
   std::string err_msg;
@@ -46,20 +58,19 @@ bool IsValid(const Tags& tags) noexcept {
   for (const auto& kv : tags) {
     const auto& k_ref = kv.first;
     const auto& v_ref = kv.second;
-    const std::string k = k_ref.get();
-    const std::string v = v_ref.get();
 
-    if (k.empty() || v.empty()) {
+    if (empty_or_null(k_ref) || empty_or_null(v_ref)) {
       err_msg = "Tag keys or values cannot be empty";
       goto invalid;
     }
 
-    if (k == "name") {
+    if (k_ref == kNameRef) {
       name_seen = true;
       ++user_tags;
-      if (v.length() > MAX_NAME_LENGTH) {
+      auto v_length = v_ref.length();
+      if (v_length > MAX_NAME_LENGTH) {
         std::ostringstream os;
-        os << "value for name exceeds length limit (" << v.length() << ">"
+        os << "value for name exceeds length limit (" << v_length << ">"
            << MAX_NAME_LENGTH << ")";
         err_msg = os.str();
         goto invalid;
@@ -67,21 +78,24 @@ bool IsValid(const Tags& tags) noexcept {
       continue;
     }
 
-    if (k.length() > MAX_KEY_LENGTH || v.length() > MAX_VAL_LENGTH) {
+    auto k_length = k_ref.length();
+    auto v_length = v_ref.length();
+    if (k_length > MAX_KEY_LENGTH || v_length > MAX_VAL_LENGTH) {
       std::ostringstream os;
-      os << "Tag " << k << "=" << v << " exceeds length limits (" << k.length()
-         << "-" << MAX_KEY_LENGTH << ", " << v.length() << "-" << MAX_VAL_LENGTH
-         << ")";
+      os << "Tag " << k_ref.get() << "=" << v_ref.get()
+         << " exceeds length limits (" << k_length << "-" << MAX_KEY_LENGTH
+         << ", " << v_length << "-" << MAX_VAL_LENGTH << ")";
       err_msg = os.str();
       goto invalid;
     }
 
-    if (!is_key_restricted(k)) {
+    if (!is_key_restricted(k_ref)) {
       ++user_tags;
     }
 
-    if (is_user_key_invalid(k)) {
-      err_msg = k + " is using a reserved namespace";
+    if (is_user_key_invalid(k_ref)) {
+      err_msg = k_ref.get();
+      err_msg += " is using a reserved namespace";
       goto invalid;
     }
   }

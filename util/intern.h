@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <cstring>
 
 namespace atlas {
 namespace util {
@@ -16,6 +17,7 @@ class StrRef {
   const char* get() const { return data; }
   bool empty() const { return data == nullptr; }
   bool valid() const { return data != nullptr; }
+  size_t length() const { return std::strlen(data); }
 
  private:
   const char* data = nullptr;

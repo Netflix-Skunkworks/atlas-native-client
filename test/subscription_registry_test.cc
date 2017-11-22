@@ -66,15 +66,18 @@ TEST(SubscriptionRegistry, MainMetrics) {
   Tags tags{{"k1", "v1"}, {"k2", "v2"}};
   auto id1 = registry.CreateId("m1", tags);
   auto id3 = registry.CreateId("m3", tags);
+  Tags tags_for_4{{"k1", "v1"}, {"k2", "v3"}};
+  auto id4 = registry.CreateId("m3", tags_for_4);
 
   registry.counter(id1)->Increment();
   // make sure we re-use ids
   registry.counter(registry.CreateId("m2", tags))->Add(60);
   registry.counter(registry.CreateId("m2", tags))->Add(60);
   registry.counter(id3)->Add(60);
+  registry.counter(id4)->Add(60);
 
   auto pub_config = std::vector<std::string>{
-      "name,m1,:eq,(,nf.node,),:drop-tags", ":true,:all"};
+      "name,m1,:eq,:all", ":true,(,k2,nf.node,nf.region,),:drop-tags"};
   auto cfg = DefaultConfig()->WithPublishConfig(pub_config);
   manual_clock.SetWall(60042);
   auto common_tags = cfg.CommonTags();
@@ -82,17 +85,25 @@ TEST(SubscriptionRegistry, MainMetrics) {
   EXPECT_EQ(res->size(), 3);
 
   auto name_num_tags = std::unordered_map<std::string, size_t>(res->size());
+  auto name_value = std::unordered_map<std::string, double>(res->size());
 
   for (const auto& m : *res) {
     const auto& t = m->all_tags();
     const auto& name = t.at(kNameRef).get();
     name_num_tags[name] = t.size();
+    name_value[name] = m->value();
   }
 
   auto ct = common_tags.size();
   auto expected_name_num_tags = std::unordered_map<std::string, size_t>(
-      {{"m1", 4u + ct - 1},  // -1 because we drop nf.node for m1
-       {"m2", 4u + ct},
-       {"m3", 4u + ct}});
+      {{"m1", 4u + ct},
+       {"m2", 3u + ct - 2},
+       {"m3", 3u + ct - 2}});
   EXPECT_EQ(name_num_tags, expected_name_num_tags);
+
+  auto expected_name_value = std::unordered_map<std::string, double>(
+      {{"m1", 1/60.0},
+       {"m2", 120/60.0},
+       {"m3", 120/60.0}});
+  EXPECT_EQ(name_value, expected_name_value);
 }

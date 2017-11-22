@@ -3,8 +3,6 @@
 #include "../meter/measurement.h"
 #include "../util/dump.h"
 #include <algorithm>
-#include <unordered_set>
-#include <iostream>
 
 namespace atlas {
 namespace interpreter {
@@ -26,12 +24,11 @@ KeepOrDropTags::KeepOrDropTags(const List& keys,
 
 using StringRefs = std::vector<StrRef>;
 static StringRefs drop_keys(const meter::Tags& tags, const StringRefs& keys) {
-  std::unordered_set<StrRef> keys_set(keys.begin(), keys.end());
   StringRefs res{kNameRef};
 
   // add all tag keys that are not in the set of keys to be dropped
   for (const auto& tag : tags) {
-    if (keys_set.find(tag.first) == end(keys_set)) {
+    if (tag.first != kNameRef && std::find(keys.begin(), keys.end(), tag.first) == keys.end()) {
       res.push_back(tag.first);
     }
   }

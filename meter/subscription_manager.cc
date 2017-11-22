@@ -451,7 +451,7 @@ static void SendBatch(const util::http& client, const util::Config& config,
   // TODO(dmuino): retries
   int64_t added = 0;
   auto num_metrics = static_cast<int64_t>(num_measurements);
-  auto payload = MeasurementsToJson(now_millis, first, last, true, &added);
+  auto payload = MeasurementsToJson(now_millis, first, last, config.ShouldValidateMetrics(), &added);
   if (added != num_metrics) {
     validationErrors->Add(num_metrics - added);
   }

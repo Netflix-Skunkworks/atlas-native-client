@@ -15,7 +15,7 @@ class StrRef {
   bool operator==(const StrRef& rhs) const { return data == rhs.data; }
   bool operator!=(const StrRef& rhs) const { return data != rhs.data; }
   const char* get() const { return data; }
-  bool empty() const { return data == nullptr; }
+  bool is_null() const { return data == nullptr; }
   bool valid() const { return data != nullptr; }
   size_t length() const { return std::strlen(data); }
 

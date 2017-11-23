@@ -142,7 +142,7 @@ class SmallTagMap : private detail::prime_number_hash_policy {
     const value_type* entries_;
     size_t num_buckets_;
 
-    bool is_empty(size_t idx) { return entries_[idx].first.empty(); }
+    bool is_empty(size_t idx) { return entries_[idx].first.is_null(); }
   };
 
   using const_iterator = templated_iterator<const value_type>;

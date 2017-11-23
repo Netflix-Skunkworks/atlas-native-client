@@ -47,7 +47,7 @@ static bool is_user_key_invalid(util::StrRef k) noexcept {
   return false;
 }
 
-bool empty_or_null(util::StrRef r) { return r.empty() || r.length() == 0; }
+bool empty_or_null(util::StrRef r) { return r.is_null() || r.length() == 0; }
 
 bool IsValid(const Tags& tags) noexcept {
   std::string err_msg;

@@ -203,7 +203,7 @@ TEST(Interpreter, KeepTags) {
 }
 
 TEST(Interpreter, DropTags) {
-  auto context = exec("name,name1,:eq,k2,w1,:eq,:and,:count,(,k2,),:drop-tags");
+  auto context = exec("name,name1,:eq,k2,w1,:eq,:and,:count,(,k2,does.not.exist.tag,),:drop-tags");
   ASSERT_EQ(1, context->StackSize());
 
   auto expr = context->PopExpression();

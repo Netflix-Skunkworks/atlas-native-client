@@ -16,6 +16,8 @@ namespace meter {
 ///
 class LongTaskTimer {
  public:
+  virtual ~LongTaskTimer() = default;
+
   /// Start keeping time for a task and return a task id that can be used to
   /// look up how long
   /// it has been running.

@@ -1,5 +1,6 @@
 #include "small_tag_map.h"
 #include "logger.h"
+#include <cassert>
 
 namespace atlas {
 namespace util {
@@ -26,9 +27,7 @@ void SmallTagMap::add(util::StrRef k_ref, util::StrRef v_ref) noexcept {
   if (ki.get() != nullptr) {
     entries_[i].second = v_ref;
   } else {
-    if (entries_[i].first.valid()) {
-      throw std::runtime_error("position has already been filled");
-    }
+    assert(entries_[i].first.is_null());
     entries_[i].first = k_ref;
     entries_[i].second = v_ref;
     ++actual_size_;
@@ -63,14 +62,18 @@ size_t SmallTagMap::hash() const noexcept {
 }
 
 bool SmallTagMap::operator==(const SmallTagMap& other) const noexcept {
-  if (other.size() != size()) return false;
+  if (other.size() != size()) {
+    return false;
+  }
 
   const auto N = num_buckets();
   for (auto i = 0u; i < N; ++i) {
     const auto& entry = entries_[i];
     if (entry.first.valid()) {
       bool eq = entry.second == other.at(entry.first);
-      if (!eq) return false;
+      if (!eq) {
+        return false;
+      }
     }
   }
   return true;

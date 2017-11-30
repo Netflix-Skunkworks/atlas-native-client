@@ -16,6 +16,8 @@ class Registry {
  public:
   using Meters = std::vector<std::shared_ptr<Meter>>;
 
+  virtual ~Registry() = default;
+
   virtual const Clock& clock() const noexcept = 0;
 
   virtual std::shared_ptr<Timer> timer(IdPtr id) noexcept = 0;

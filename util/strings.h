@@ -15,7 +15,7 @@ inline std::string first_nonempty(
     std::initializer_list<std::string> list) noexcept {
   using namespace std;
   auto found = find_if(begin(list), end(list),
-                       [](const std::string& elt) { return !elt.empty(); });
+                       [](const string& elt) { return !elt.empty(); });
   return found != end(list) ? *found : "";
 }
 

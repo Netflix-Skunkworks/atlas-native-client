@@ -1,5 +1,4 @@
 #include "http.h"
-#include "../types.h"
 #include "gzip.h"
 #include "json.h"
 #include "logger.h"

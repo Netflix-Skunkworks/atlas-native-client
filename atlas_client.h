@@ -12,7 +12,7 @@ void AddCommonTag(const char* key, const char* value);
 util::Config GetConfig();
 void PushMeasurements(const atlas::meter::Measurements& measurements);
 void SetLoggingDirs(const std::vector<std::string>& dirs);
-void SetLogSizes(size_t max_files, size_t max_size);
+void SetLogSizes(size_t max_size, size_t max_files);
 void UseConsoleLogger(int level);
 void SetNotifyAlertServer(bool notify);
 }  // namespace atlas

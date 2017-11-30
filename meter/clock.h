@@ -10,6 +10,8 @@ class Clock {
   virtual int64_t WallTime() const noexcept = 0;
 
   virtual int64_t MonotonicTime() const noexcept = 0;
+
+  virtual ~Clock() = default;
 };
 
 class SystemClock : public Clock {

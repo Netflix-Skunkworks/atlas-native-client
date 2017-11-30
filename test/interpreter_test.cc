@@ -1,15 +1,14 @@
 #include "../interpreter/interpreter.h"
 #include "../interpreter/all.h"
 #include "../util/logger.h"
-#include "../types.h"
 #include <gtest/gtest.h>
 
-using ::atlas::Strings;
-using atlas::util::intern_str;
 using atlas::util::Logger;
+using atlas::util::intern_str;
 
 using namespace atlas::interpreter;
 using namespace atlas::meter;
+using Strings = std::vector<std::string>;
 
 TEST(Interpreter, SplitEmpty) {
   Expressions result;
@@ -203,7 +202,9 @@ TEST(Interpreter, KeepTags) {
 }
 
 TEST(Interpreter, DropTags) {
-  auto context = exec("name,name1,:eq,k2,w1,:eq,:and,:count,(,k2,does.not.exist.tag,),:drop-tags");
+  auto context = exec(
+      "name,name1,:eq,k2,w1,:eq,:and,:count,(,k2,does.not.exist.tag,),:drop-"
+      "tags");
   ASSERT_EQ(1, context->StackSize());
 
   auto expr = context->PopExpression();

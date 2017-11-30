@@ -3,8 +3,8 @@
 #include <map>
 #include <ostream>
 #include <unordered_map>
-#include "../types.h"
 #include "../util/intern.h"
+#include "../util/memory.h"
 #include "../util/small_tag_map.h"
 
 namespace atlas {

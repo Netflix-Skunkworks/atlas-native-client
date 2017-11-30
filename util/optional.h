@@ -2,12 +2,9 @@
 
 class OptionalString {
  public:
-  explicit OptionalString(const char* string) noexcept {
-    has_value = string != nullptr;
-    if (has_value) {
-      s = string;
-    }
-  }
+  explicit OptionalString(const char* string) noexcept
+      : has_value(string != nullptr), s(string != nullptr ? string : "") {}
+
   explicit OptionalString(const std::string& string)
       : has_value{true}, s{string} {}
 

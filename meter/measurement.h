@@ -1,6 +1,7 @@
 #pragma once
 
 #include "id.h"
+#include <vector>
 
 namespace atlas {
 namespace meter {

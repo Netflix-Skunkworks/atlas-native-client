@@ -9,3 +9,4 @@ npm-debug.log
 .newt.netflix_environment.sh
 cmake-build-*
 logs/
+.idea/

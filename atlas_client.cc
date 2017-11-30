@@ -5,13 +5,13 @@
 #include "util/logger.h"
 #include <iostream>
 
+using atlas::interpreter::ClientVocabulary;
+using atlas::interpreter::Interpreter;
 using atlas::meter::SubscriptionManager;
 using atlas::meter::SubscriptionRegistry;
 using atlas::meter::SystemClockWithOffset;
 using atlas::util::ConfigManager;
 using atlas::util::Logger;
-using atlas::interpreter::Interpreter;
-using atlas::interpreter::ClientVocabulary;
 
 static SystemClockWithOffset clockWithOffset;
 SubscriptionRegistry atlas_registry{
@@ -29,10 +29,10 @@ inline bool is_sane_environment() {
 
 class AtlasClient {
  public:
-  AtlasClient() noexcept : started{false} {
-    subscription_manager.reset(
-        new SubscriptionManager(config_manager, atlas_registry));
-  }
+  AtlasClient() noexcept
+      : started{false},
+        subscription_manager{
+            new SubscriptionManager(config_manager, atlas_registry)} {}
 
   void Start() {
     if (started) {
@@ -69,8 +69,8 @@ class AtlasClient {
   }
 
   void Push(const atlas::meter::Measurements& measurements) {
-    using atlas::interpreter::TagsValuePairs;
     using atlas::interpreter::TagsValuePair;
+    using atlas::interpreter::TagsValuePairs;
     using atlas::meter::Measurement;
 
     TagsValuePairs tagsValuePairs;
@@ -132,7 +132,7 @@ void SetNotifyAlertServer(bool notify) {
 
 void Init() {
   if (!atlas_client) {
-    atlas_client.reset(new AtlasClient());
+    atlas_client = std::make_unique<AtlasClient>();
   }
   atlas_client->Start();
 }

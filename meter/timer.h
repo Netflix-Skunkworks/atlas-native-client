@@ -6,6 +6,8 @@ namespace atlas {
 namespace meter {
 class Timer {
  public:
+  virtual ~Timer() = default;
+
   virtual void Record(std::chrono::nanoseconds nanos) = 0;
 
   virtual void Record(int64_t nanos) {

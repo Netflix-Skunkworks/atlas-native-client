@@ -2,7 +2,6 @@
 
 #include <memory>
 #include <stack>
-#include "../types.h"
 #include "expression.h"
 #include "query.h"
 
@@ -32,5 +31,5 @@ class Context {
 };
 
 std::ostream& operator<<(std::ostream& os, const Context& context);
-}  // interpreter
-}  // atlas
+}  // namespace interpreter
+}  // namespace atlas

@@ -23,6 +23,9 @@ class http {
 
   int post(const std::string& url, int connect_timeout, int read_timeout,
            const rapidjson::Document& payload) const;
+
+  static void global_init() noexcept;
+  static void global_shutdown() noexcept;
 };
 }
 }

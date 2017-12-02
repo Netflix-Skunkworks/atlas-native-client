@@ -2,6 +2,7 @@
 #include "interpreter/interpreter.h"
 #include "meter/subscription_manager.h"
 #include "util/config_manager.h"
+#include "util/http.h"
 #include "util/logger.h"
 #include <iostream>
 
@@ -12,6 +13,7 @@ using atlas::meter::SubscriptionRegistry;
 using atlas::meter::SystemClockWithOffset;
 using atlas::util::ConfigManager;
 using atlas::util::Logger;
+using atlas::util::http;
 
 static SystemClockWithOffset clockWithOffset;
 SubscriptionRegistry atlas_registry{
@@ -38,6 +40,7 @@ class AtlasClient {
     if (started) {
       return;
     }
+    http::global_init();
     auto logger = Logger();
     auto cfg = GetConfig();
     if (cfg->ShouldForceStart() || is_sane_environment()) {
@@ -61,6 +64,7 @@ class AtlasClient {
       subscription_manager->Stop(&clockWithOffset);
       config_manager.Stop();
       started = false;
+      http::global_shutdown();
     }
   }
 

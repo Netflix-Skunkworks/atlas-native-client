@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <zlib.h>
 
+#include "../util/config_manager.h"
 #include "../util/gzip.h"
 #include "../util/http.h"
 #include "../util/logger.h"
@@ -234,7 +235,8 @@ TEST(HttpTest, Post) {
   auto logger = Logger();
   logger->info("Server started on port {}", port);
 
-  http client{1, 1};
+  auto cfg = atlas::util::DefaultConfig();
+  http client{*cfg};
   std::ostringstream os;
   os << "http://localhost:" << port << "/foo";
   auto url = os.str();
@@ -277,7 +279,8 @@ TEST(HttpTest, Timeout) {
   auto logger = Logger();
   logger->info("Server started on port {}", port);
 
-  http client{1, 1};
+  auto cfg = atlas::util::DefaultConfig();
+  http client{*cfg};
   std::ostringstream os;
   os << "http://localhost:" << port << "/foo";
   auto url = os.str();

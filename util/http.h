@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config.h"
 #include <rapidjson/document.h>
 #include <spdlog/spdlog.h>
 #include <memory>
@@ -10,9 +11,9 @@ namespace util {
 
 class http {
  public:
-  http(int connect_timeout_seconds, int read_timeout_seconds)
-      : connect_timeout_(connect_timeout_seconds),
-        read_timeout_(read_timeout_seconds) {}
+  explicit http(const Config& config)
+      : connect_timeout_(config.ConnectTimeout()),
+        read_timeout_(config.ReadTimeout()) {}
 
   int conditional_get(const std::string& url, std::string& etag,
                       std::string* res) const;

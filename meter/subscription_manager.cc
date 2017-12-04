@@ -61,9 +61,9 @@ void SubscriptionManager::MainSender(
   }
 }
 
-static void updateAlertServer(const std::string& endpoint, int connect_timeout,
-                              int read_timeout) {
-  util::http client(connect_timeout, read_timeout);
+static void updateAlertServer(const std::string& endpoint,
+                              const util::Config& config) {
+  util::http client(config);
   auto res =
       client.post(endpoint, "Content-type: application/octet-stream", "", 0);
   Logger()->debug("Got {} from alert server {}", res, endpoint);
@@ -89,8 +89,7 @@ void SubscriptionManager::SubRefresher() noexcept {
             "Notifying alert server about our lack of on-instance alerts "
             "support {}",
             check_cluster_endpoint);
-        updateAlertServer(check_cluster_endpoint, config->ConnectTimeout(),
-                          config->ReadTimeout());
+        updateAlertServer(check_cluster_endpoint, *config);
       }
       ++refresher_runs;
       auto end = system_clock::now();
@@ -213,7 +212,7 @@ void SubscriptionManager::RefreshSubscriptions(
   auto logger = Logger();
 
   auto cfg = config_manager_.GetConfig();
-  util::http http_client(cfg->ConnectTimeout(), cfg->ReadTimeout());
+  util::http http_client(*cfg);
   auto start = atlas_registry.clock().MonotonicTime();
   auto http_res =
       http_client.conditional_get(subs_endpoint, current_etag, &subs_str);
@@ -352,7 +351,7 @@ void SubscriptionManager::SendMetricsForInterval(int64_t millis) noexcept {
   auto timer = atlas_registry.timer(sendId->WithTag(freq_tag));
   auto cfg = config_manager_.GetConfig();
   const auto& sub_results = registry_.GetLwcMetricsForInterval(*cfg, millis);
-  util::http http_client(cfg->ConnectTimeout(), cfg->ReadTimeout());
+  util::http http_client(*cfg);
 
   auto batch_size =
       static_cast<SubscriptionResults::difference_type>(cfg->BatchSize());
@@ -482,7 +481,7 @@ void SubscriptionManager::PushMeasurements(
   using interpreter::TagsValuePairs;
 
   auto cfg = config_manager_.GetConfig();
-  util::http client(cfg->ConnectTimeout(), cfg->ReadTimeout());
+  util::http client(*cfg);
   auto batch_size =
       static_cast<TagsValuePairs::difference_type>(cfg->BatchSize());
 

@@ -7,7 +7,7 @@ void dump_array(std::ostream& os, const std::string& name,
   os.setf(std::ios::boolalpha);
 
   os << chars[0];
-  for (int i = 1; i < chars.size(); ++i) {
+  for (auto i = 1u; i < chars.size(); ++i) {
     os << ", " << chars[i];
   }
 

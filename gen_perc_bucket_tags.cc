@@ -8,7 +8,7 @@ void output_array(std::ostream& os, size_t size, char prefix,
   os << "const std::array<std::string, 276>"
      << " " << name << " = {{";
   bool first = true;
-  char tag[6];
+  char tag[64];
   for (size_t i = 0; i < size; ++i) {
     if (!first) {
       os << ",\n";

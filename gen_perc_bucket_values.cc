@@ -1,4 +1,5 @@
 #include <fstream>
+#include <limits>
 #include <vector>
 
 // Number of positions of base-2 digits to shift when iterating over the long

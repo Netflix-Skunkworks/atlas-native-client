@@ -17,9 +17,7 @@ namespace {
 class CurlHeaders {
  public:
   CurlHeaders() = default;
-  ~CurlHeaders() {
-    curl_slist_free_all(list_);
-  }
+  ~CurlHeaders() { curl_slist_free_all(list_); }
   CurlHeaders(const CurlHeaders&) = delete;
   CurlHeaders(CurlHeaders&&) = delete;
   CurlHeaders& operator=(const CurlHeaders&) = delete;
@@ -27,9 +25,8 @@ class CurlHeaders {
   void append(const std::string& string) {
     list_ = curl_slist_append(list_, string.c_str());
   }
-  curl_slist* headers() {
-    return list_;
-  }
+  curl_slist* headers() { return list_; }
+
  private:
   curl_slist* list_{nullptr};
 };
@@ -56,13 +53,9 @@ class CurlHandle {
     curl_easy_cleanup(handle_);
   }
 
-  CURL* handle() const noexcept {
-    return handle_;
-  }
+  CURL* handle() const noexcept { return handle_; }
 
-  CURLcode perform() {
-    return curl_easy_perform(handle());
-  }
+  CURLcode perform() { return curl_easy_perform(handle()); }
 
   CURLcode set_opt(CURLoption option, const void* param) {
     return curl_easy_setopt(handle(), option, param);
@@ -75,9 +68,7 @@ class CurlHandle {
     return static_cast<int>(http_code);
   }
 
-  void set_url(const std::string& url) {
-    set_opt(CURLOPT_URL, url.c_str());
-  }
+  void set_url(const std::string& url) { set_opt(CURLOPT_URL, url.c_str()); }
 
   void set_headers(std::unique_ptr<CurlHeaders> headers) {
     headers_ = std::move(headers);
@@ -85,7 +76,8 @@ class CurlHandle {
   }
 
   void set_connect_timeout(int connect_timeout_seconds) {
-     curl_easy_setopt(handle_, CURLOPT_CONNECTTIMEOUT, (long)connect_timeout_seconds);
+    curl_easy_setopt(handle_, CURLOPT_CONNECTTIMEOUT,
+                     (long)connect_timeout_seconds);
   }
 
   void set_read_timeout(int read_timeout_seconds) {
@@ -97,6 +89,7 @@ class CurlHandle {
     curl_easy_setopt(handle_, CURLOPT_POSTFIELDS, payload);
     curl_easy_setopt(handle_, CURLOPT_POSTFIELDSIZE, size);
   }
+
  private:
   CURL* handle_;
   std::unique_ptr<CurlHeaders> headers_;
@@ -104,10 +97,8 @@ class CurlHandle {
 
 class Buffer {
  public:
-  Buffer(): memory(static_cast<char*>(malloc(1))) {}
-  ~Buffer() {
-    free(memory);
-  }
+  Buffer() : memory(static_cast<char*>(malloc(1))) {}
+  ~Buffer() { free(memory); }
   Buffer(const Buffer&) = delete;
   Buffer& operator=(const Buffer&) = delete;
   Buffer& operator=(Buffer&&) = delete;
@@ -122,9 +113,8 @@ class Buffer {
     size += data_size;
     memory[size] = 0;
   }
-  void assign(std::string* s) {
-    s->assign(memory, size);
-  }
+  void assign(std::string* s) { s->assign(memory, size); }
+
  private:
   char* memory;
   size_t size = 0;
@@ -139,7 +129,7 @@ size_t write_memory_callback(void* contents, size_t size, size_t nmemb,
 }
 
 size_t header_callback(char* buffer, size_t size, size_t n_items,
-                              void* userdata) {
+                       void* userdata) {
   std::string header{buffer, size * n_items};
   if (util::IStartsWith(header, "Etag: ")) {
     header.erase(0, 6);  // remove Etag:
@@ -154,15 +144,15 @@ size_t header_callback(char* buffer, size_t size, size_t n_items,
 }  // namespace
 
 int http::conditional_get(const std::string& url, std::string& etag,
-                          int connect_timeout, int read_timeout,
-                          std::string& res) const {
+                          std::string* res) const {
   auto logger = Logger();
   logger->debug("Conditionally getting url: {} etag: {}", url, etag);
   CurlHandle curl;
   // url to get
   curl.set_url(url);
   // send all data to this function
-  curl.set_opt(CURLOPT_WRITEFUNCTION, reinterpret_cast<const void*>(write_memory_callback));
+  curl.set_opt(CURLOPT_WRITEFUNCTION,
+               reinterpret_cast<const void*>(write_memory_callback));
   if (!etag.empty()) {
     std::string ifNone = std::string("If-None-Match: ") + etag;
     auto headers = std::make_unique<CurlHeaders>();
@@ -171,12 +161,13 @@ int http::conditional_get(const std::string& url, std::string& etag,
   }
 
   Buffer buffer;
-  curl.set_connect_timeout(connect_timeout);
-  curl.set_read_timeout(read_timeout);
+  curl.set_connect_timeout(connect_timeout_);
+  curl.set_read_timeout(read_timeout_);
   // pass chunk to the callback function
   curl.set_opt(CURLOPT_WRITEDATA, &buffer);
   curl.set_opt(CURLOPT_HEADERDATA, &etag);
-  curl.set_opt(CURLOPT_HEADERFUNCTION, reinterpret_cast<void*>(header_callback));
+  curl.set_opt(CURLOPT_HEADERFUNCTION,
+               reinterpret_cast<void*>(header_callback));
   auto curl_res = curl.perform();
   int http_code = 400;
   bool error = false;
@@ -187,7 +178,7 @@ int http::conditional_get(const std::string& url, std::string& etag,
   } else {
     http_code = curl.status_code();
     if (http_code != 304) {  // if we got something back
-      buffer.assign(&res);
+      buffer.assign(res);
     }
   }
   if (!error) {
@@ -199,21 +190,21 @@ int http::conditional_get(const std::string& url, std::string& etag,
   return http_code;
 }
 
-int http::get(const std::string& url, int connect_timeout, int read_timeout,
-              std::string& res) const {
+int http::get(const std::string& url, std::string* res) const {
   auto logger = Logger();
   logger->debug("Getting url: {}", url);
   CurlHandle curl;
   // url to get
   curl.set_url(url);
   // send all data to this function
-  curl.set_opt(CURLOPT_WRITEFUNCTION, reinterpret_cast<const void*>(write_memory_callback));
+  curl.set_opt(CURLOPT_WRITEFUNCTION,
+               reinterpret_cast<const void*>(write_memory_callback));
 
   Buffer buffer;
   // pass chunk to the callback function
   curl.set_opt(CURLOPT_WRITEDATA, &buffer);
-  curl.set_connect_timeout(connect_timeout);
-  curl.set_read_timeout(read_timeout);
+  curl.set_connect_timeout(connect_timeout_);
+  curl.set_read_timeout(read_timeout_);
   auto curl_res = curl.perform();
   auto http_code = 400;
   auto error = false;
@@ -223,7 +214,7 @@ int http::get(const std::string& url, int connect_timeout, int read_timeout,
     error = true;
   } else {
     http_code = curl.status_code();
-    buffer.assign(&res);
+    buffer.assign(res);
   }
   if (!error) {
     logger->debug("Was able to fetch {} - status code: {}", url, http_code);
@@ -235,8 +226,8 @@ int http::get(const std::string& url, int connect_timeout, int read_timeout,
   return http_code;
 }
 
-static int do_post(const std::string& url, int connect_timeout, int read_timeout,
-                   std::unique_ptr<CurlHeaders> headers,
+static int do_post(const std::string& url, int connect_timeout,
+                   int read_timeout, std::unique_ptr<CurlHeaders> headers,
                    const Bytef* payload, size_t size) {
   CurlHandle curl;
   curl.set_connect_timeout(connect_timeout);
@@ -265,14 +256,13 @@ static int do_post(const std::string& url, int connect_timeout, int read_timeout
   return http_code;
 }
 
-int http::post(const std::string& url, int connect_timeout, int read_timeout,
-               const char* content_type, const char* payload,
-               size_t size) const {
+int http::post(const std::string& url, const char* content_type,
+               const char* payload, size_t size) const {
   auto headers = std::make_unique<CurlHeaders>();
   headers->append(content_type);
 
   if (size <= 16) {
-    return do_post(url, connect_timeout, read_timeout, std::move(headers),
+    return do_post(url, connect_timeout_, read_timeout_, std::move(headers),
                    reinterpret_cast<const Bytef*>(payload), size);
   }
 
@@ -291,26 +281,21 @@ int http::post(const std::string& url, int connect_timeout, int read_timeout,
     return 400;
   }
 
-  return do_post(url, connect_timeout, read_timeout, std::move(headers),
+  return do_post(url, connect_timeout_, read_timeout_, std::move(headers),
                  compressed_payload.get(), compressed_size);
 }
 
 static constexpr const char* const json_type = "Content-Type: application/json";
-int http::post(const std::string& url, int connect_timeout, int read_timeout,
+int http::post(const std::string& url,
                const rapidjson::Document& payload) const {
   rapidjson::StringBuffer buffer;
   auto c_str = JsonGetString(buffer, payload);
-  return post(url, connect_timeout, read_timeout, json_type, c_str,
-              strlen(c_str));
+  return post(url, json_type, c_str, strlen(c_str));
 }
 
-void http::global_init() noexcept {
-  curl_global_init(CURL_GLOBAL_ALL);
-}
+void http::global_init() noexcept { curl_global_init(CURL_GLOBAL_ALL); }
 
-void http::global_shutdown() noexcept {
-  curl_global_cleanup();
-}
+void http::global_shutdown() noexcept { curl_global_cleanup(); }
 
 }  // namespace util
 }  // namespace atlas

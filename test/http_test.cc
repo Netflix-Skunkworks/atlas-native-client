@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <zlib.h>
 
+#include "../util/config_manager.h"
 #include "../util/gzip.h"
 #include "../util/http.h"
 #include "../util/logger.h"
@@ -234,12 +235,13 @@ TEST(HttpTest, Post) {
   auto logger = Logger();
   logger->info("Server started on port {}", port);
 
-  http client;
+  auto cfg = atlas::util::DefaultConfig();
+  http client{*cfg};
   std::ostringstream os;
   os << "http://localhost:" << port << "/foo";
   auto url = os.str();
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-  client.post(url, 1, 1, "Content-type: application/json", post_data.c_str(),
+  client.post(url, "Content-type: application/json", post_data.c_str(),
               post_data.length());
 
   server.stop();
@@ -277,12 +279,13 @@ TEST(HttpTest, Timeout) {
   auto logger = Logger();
   logger->info("Server started on port {}", port);
 
-  http client;
+  auto cfg = atlas::util::DefaultConfig();
+  http client{*cfg};
   std::ostringstream os;
   os << "http://localhost:" << port << "/foo";
   auto url = os.str();
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-  client.post(url, 1, 1, "Content-type: application/json", post_data.c_str(),
+  client.post(url, "Content-type: application/json", post_data.c_str(),
               post_data.length());
 
   server.stop();

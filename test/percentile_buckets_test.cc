@@ -2,13 +2,6 @@
 #include <gtest/gtest.h>
 #include <random>
 
-namespace atlas {
-namespace meter {
-namespace percentile_buckets {
-size_t leadingZeros(uint64_t v);
-}  // namespace percentile_buckets
-}  // namespace meter
-}  // namespace atlas
 using namespace atlas::meter;
 
 TEST(PercentileBuckets, IndexOf) {
@@ -21,13 +14,6 @@ TEST(PercentileBuckets, IndexOf) {
   EXPECT_EQ(25, percentile_buckets::IndexOf(87));
   EXPECT_EQ(percentile_buckets::Length() - 1,
             percentile_buckets::IndexOf(std::numeric_limits<int64_t>::max()));
-}
-
-TEST(PercentileBuckets, LeadingZeros) {
-  for (int i = 0; i < 64; i++) {
-    uint64_t l = uint64_t{1} << i;
-    EXPECT_EQ(63 - i, percentile_buckets::leadingZeros(l));
-  }
 }
 
 TEST(PercentileBuckets, IndexOfSanityCheck) {

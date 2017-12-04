@@ -54,7 +54,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCURL_STATICLIB -Werror -fno-rtti -Wall
 if(CMAKE_SYSTEM_NAME STREQUAL Linux)
   configure_file(${CMAKE_SOURCE_DIR}/bundle/libcurl-linux.a libcurl.a COPYONLY)
   configure_file(${CMAKE_SOURCE_DIR}/bundle/libpcre-linux.a libpcre.a COPYONLY)
-  add_library(atlasclientStatic STATIC ${LIB_SOURCE_FILES})
+  add_library(atlasclientStatic STATIC ${LIB_SOURCE_FILES}
+    ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_tags.inc
+    ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_values.inc
+    ${CMAKE_CURRENT_BINARY_DIR}/valid_chars.inc)
+  )
   set_target_properties(atlasclientStatic PROPERTIES OUTPUT_NAME atlasclient)
   target_link_libraries(atlasclientStatic ${CMAKE_BINARY_DIR}/libpcre.a ${CMAKE_BINARY_DIR}/libcurl.a z)
 else()

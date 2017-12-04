@@ -21,13 +21,13 @@ SubscriptionManager::SubscriptionManager(
     const util::ConfigManager& config_manager, SubscriptionRegistry& registry)
     : config_manager_(config_manager), registry_(registry) {}
 
-using util::kMainFrequencyMillis;
 using util::Logger;
 using util::intern_str;
+using util::kMainFrequencyMillis;
 
-using std::chrono::system_clock;
 using std::chrono::duration_cast;
 using std::chrono::milliseconds;
+using std::chrono::system_clock;
 
 static constexpr int64_t kMinWaitMillis = 1;
 
@@ -63,9 +63,9 @@ void SubscriptionManager::MainSender(
 
 static void updateAlertServer(const std::string& endpoint, int connect_timeout,
                               int read_timeout) {
-  util::http client;
-  auto res = client.post(endpoint, connect_timeout, read_timeout,
-                         "Content-type: application/octet-stream", "", 0);
+  util::http client(connect_timeout, read_timeout);
+  auto res =
+      client.post(endpoint, "Content-type: application/octet-stream", "", 0);
   Logger()->debug("Got {} from alert server {}", res, endpoint);
 }
 
@@ -132,10 +132,10 @@ rapidjson::Document SubResultsToJson(
     int64_t now_millis, const SubscriptionResults::const_iterator& first,
     const SubscriptionResults::const_iterator& last) {
   using rapidjson::Document;
-  using rapidjson::kArrayType;
-  using rapidjson::kObjectType;
   using rapidjson::SizeType;
   using rapidjson::Value;
+  using rapidjson::kArrayType;
+  using rapidjson::kObjectType;
 
   Document ret{kObjectType};
   auto& alloc = ret.GetAllocator();
@@ -209,16 +209,14 @@ void SubscriptionManager::RefreshSubscriptions(
   static auto refresh_http_errors =
       atlas_registry.counter(atlas_registry.CreateId(
           "atlas.client.refreshSubsErrors", Tags{{"error", "http"}}));
-  util::http http_client;
   std::string subs_str;
   auto logger = Logger();
 
   auto cfg = config_manager_.GetConfig();
-  auto connect_timeout = cfg->ConnectTimeout();
-  auto read_timeout = cfg->ReadTimeout();
+  util::http http_client(cfg->ConnectTimeout(), cfg->ReadTimeout());
   auto start = atlas_registry.clock().MonotonicTime();
-  auto http_res = http_client.conditional_get(
-      subs_endpoint, current_etag, connect_timeout, read_timeout, subs_str);
+  auto http_res =
+      http_client.conditional_get(subs_endpoint, current_etag, &subs_str);
   timer_refresh_subs->Record(atlas_registry.clock().MonotonicTime() - start);
   if (http_res == 200) {
     auto subscriptions = ParseSubscriptions(subs_str);
@@ -334,8 +332,7 @@ static void SendBatchToLwc(const util::http& client, const util::Config& config,
     std::string file_name{"lwc_"};
     DumpJson("/tmp", file_name + msecs_str + "_", metrics);
   }
-  auto res = client.post(config.EvalEndpoint(), config.ConnectTimeout(),
-                         config.ReadTimeout(), metrics);
+  auto res = client.post(config.EvalEndpoint(), metrics);
   if (res != 200) {
     Logger()->error("Failed to POST: {}", res);
     atlas_registry.counter(errorId->WithTag(freq_tag))->Increment();
@@ -355,7 +352,7 @@ void SubscriptionManager::SendMetricsForInterval(int64_t millis) noexcept {
   auto timer = atlas_registry.timer(sendId->WithTag(freq_tag));
   auto cfg = config_manager_.GetConfig();
   const auto& sub_results = registry_.GetLwcMetricsForInterval(*cfg, millis);
-  util::http http_client;
+  util::http http_client(cfg->ConnectTimeout(), cfg->ReadTimeout());
 
   auto batch_size =
       static_cast<SubscriptionResults::difference_type>(cfg->BatchSize());
@@ -379,10 +376,10 @@ rapidjson::Document MeasurementsToJson(
     const interpreter::TagsValuePairs::const_iterator& last, bool validate,
     int64_t* metrics_added) {
   using rapidjson::Document;
-  using rapidjson::kArrayType;
-  using rapidjson::kObjectType;
   using rapidjson::SizeType;
   using rapidjson::Value;
+  using rapidjson::kArrayType;
+  using rapidjson::kObjectType;
 
   int64_t added = 0;
   Document payload{kObjectType};
@@ -451,7 +448,8 @@ static void SendBatch(const util::http& client, const util::Config& config,
   // TODO(dmuino): retries
   int64_t added = 0;
   auto num_metrics = static_cast<int64_t>(num_measurements);
-  auto payload = MeasurementsToJson(now_millis, first, last, config.ShouldValidateMetrics(), &added);
+  auto payload = MeasurementsToJson(now_millis, first, last,
+                                    config.ShouldValidateMetrics(), &added);
   if (added != num_metrics) {
     validationErrors->Add(num_metrics - added);
   }
@@ -461,8 +459,7 @@ static void SendBatch(const util::http& client, const util::Config& config,
   }
 
   auto start = atlas_registry.clock().MonotonicTime();
-  auto http_res = client.post(config.PublishEndpoint(), config.ConnectTimeout(),
-                              config.ReadTimeout(), payload);
+  auto http_res = client.post(config.PublishEndpoint(), payload);
   timer->Record(atlas_registry.clock().MonotonicTime() - start);
   if (config.ShouldDumpMetrics()) {
     DumpJson("/tmp", "main_batch_", payload);
@@ -484,8 +481,8 @@ void SubscriptionManager::PushMeasurements(
     int64_t now_millis, const interpreter::TagsValuePairs& measurements) const {
   using interpreter::TagsValuePairs;
 
-  util::http client;
   auto cfg = config_manager_.GetConfig();
+  util::http client(cfg->ConnectTimeout(), cfg->ReadTimeout());
   auto batch_size =
       static_cast<TagsValuePairs::difference_type>(cfg->BatchSize());
 

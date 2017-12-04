@@ -234,12 +234,12 @@ TEST(HttpTest, Post) {
   auto logger = Logger();
   logger->info("Server started on port {}", port);
 
-  http client;
+  http client{1, 1};
   std::ostringstream os;
   os << "http://localhost:" << port << "/foo";
   auto url = os.str();
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-  client.post(url, 1, 1, "Content-type: application/json", post_data.c_str(),
+  client.post(url, "Content-type: application/json", post_data.c_str(),
               post_data.length());
 
   server.stop();
@@ -277,12 +277,12 @@ TEST(HttpTest, Timeout) {
   auto logger = Logger();
   logger->info("Server started on port {}", port);
 
-  http client;
+  http client{1, 1};
   std::ostringstream os;
   os << "http://localhost:" << port << "/foo";
   auto url = os.str();
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-  client.post(url, 1, 1, "Content-type: application/json", post_data.c_str(),
+  client.post(url, "Content-type: application/json", post_data.c_str(),
               post_data.length());
 
   server.stop();

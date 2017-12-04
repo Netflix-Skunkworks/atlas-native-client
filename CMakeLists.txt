@@ -58,7 +58,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL Linux)
     ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_tags.inc
     ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_values.inc
     ${CMAKE_CURRENT_BINARY_DIR}/valid_chars.inc)
-  )
+  
   set_target_properties(atlasclientStatic PROPERTIES OUTPUT_NAME atlasclient)
   target_link_libraries(atlasclientStatic ${CMAKE_BINARY_DIR}/libpcre.a ${CMAKE_BINARY_DIR}/libcurl.a z)
 else()

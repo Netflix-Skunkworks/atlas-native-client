@@ -26,7 +26,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS "ON")
 add_library(atlasclient SHARED ${LIB_SOURCE_FILES})
 set_target_properties(atlasclient PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -Wextra -Wno-missing-braces")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCURL_STATICLIB -pedantic -Werror -fno-rtti -Wall -Wno-missing-braces -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCURL_STATICLIB -Werror -fno-rtti -Wall -Wno-missing-braces -std=c++11")
 
 if(CMAKE_SYSTEM_NAME STREQUAL Linux)
   configure_file(${CMAKE_SOURCE_DIR}/bundle/libcurl-linux.a libcurl.a COPYONLY)

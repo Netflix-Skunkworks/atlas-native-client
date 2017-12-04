@@ -1,4 +1,5 @@
-#include <iostream>
+#include <fstream>
+#include <limits>
 #include <vector>
 
 // Number of positions of base-2 digits to shift when iterating over the long
@@ -30,33 +31,38 @@ static void init() {
   bucketValues.push_back(std::numeric_limits<int64_t>::max());
 }
 
-int main() {
+int main(int argc, char* argv[]) {
   init();
-  std::cout << "// Do not modify - auto-generated\n//\n"
-            << "const std::array<int64_t, " << bucketValues.size()
-            << "> kBucketValues = {{";
-  std::string padding{' ', 50};
+  std::ofstream of;
+  if (argc > 1) {
+    of.open(argv[1]);
+  } else {
+    of.open("/dev/stdout");
+  }
+  of << "// Do not modify - auto-generated\n//\n"
+     << "const std::array<int64_t, " << bucketValues.size()
+     << "> kBucketValues = {{";
   bool first = true;
   for (auto v : bucketValues) {
     if (!first) {
-      std::cout << ",\n";
+      of << ",\n";
     } else {
       first = false;
     }
-    std::cout << padding << v;
+    of << "  " << v << "LL";
   }
-  std::cout << "}};\n";
+  of << "}};\n";
 
-  std::cout << "const std::array<size_t, " << powerOf4Index.size()
-            << "> kPowerOf4Index = {{\n";
+  of << "const std::array<size_t, " << powerOf4Index.size()
+     << "> kPowerOf4Index = {{\n";
   first = true;
   for (auto v : powerOf4Index) {
     if (!first) {
-      std::cout << ",\n";
+      of << ",\n";
     } else {
       first = false;
     }
-    std::cout << "  " << v;
+    of << "  " << v << "u";
   }
-  std::cout << "\n}};\n";
+  of << "\n}};\n";
 }

@@ -5,7 +5,7 @@ namespace atlas {
 namespace meter {
 namespace percentile_buckets {
 
-#include "percentile_buckets_generated.inc"
+#include "percentile_bucket_values.inc"
 
 // maybe we could use the intrinsics __builtin_clz (gcc) or __lzcnt64 for clang
 // but that requires cpu support for LZCNT - TODO(dmuino): check

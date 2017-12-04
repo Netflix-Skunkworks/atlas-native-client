@@ -8,7 +8,7 @@
 namespace atlas {
 namespace util {
 
-#include "valid_chars_generated.inc"
+#include "valid_chars.inc"
 
 static pcre* get_var_pattern() {
   const char* error;

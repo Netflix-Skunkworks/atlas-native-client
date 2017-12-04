@@ -4,7 +4,7 @@
 namespace atlas {
 namespace meter {
 
-#include "percentile_buckets_tags_generated.inc"
+#include "percentile_bucket_tags.inc"
 
 PercentileTimer::PercentileTimer(Registry* registry, IdPtr id)
     : Meter{id, registry->clock()},

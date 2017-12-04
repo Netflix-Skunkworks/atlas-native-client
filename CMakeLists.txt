@@ -4,8 +4,27 @@ set(PROJECT_NAME_STR libatlasclient)
 set(CMAKE_MACOSX_RPATH 1)
 project(${PROJECT_NAME_STR})
 
-include_directories(3rd-party /usr/local/include)
-link_directories(/usr/local/lib)
+include_directories(3rd-party ${CMAKE_CURRENT_BINARY_DIR})
+add_executable(gen_perc_bucket_tags ./gen_perc_bucket_tags.cc)
+add_executable(gen_perc_bucket_values ./gen_perc_bucket_values.cc)
+add_executable(gen_valid_chars ./gen_valid_chars.cc)
+
+# add the commands to generate the include files
+add_custom_command (
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_tags.inc
+  COMMAND gen_perc_bucket_tags ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_tags.inc
+  DEPENDS gen_perc_bucket_tags
+)
+add_custom_command (
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_values.inc
+  COMMAND gen_perc_bucket_values ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_values.inc
+  DEPENDS gen_perc_bucket_values
+)
+add_custom_command (
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/valid_chars.inc
+  COMMAND gen_valid_chars ${CMAKE_CURRENT_BINARY_DIR}/valid_chars.inc
+  DEPENDS gen_valid_chars
+)
 
 if(CMAKE_SYSTEM_NAME STREQUAL Linux)
     link_directories(/usr/lib/x86_64-linux-gnu)
@@ -23,7 +42,11 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pedantic -Werror -Wall -std=c99 -fpic -D_GN
 set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native")
 set(CMAKE_EXPORT_COMPILE_COMMANDS "ON")
 
-add_library(atlasclient SHARED ${LIB_SOURCE_FILES})
+add_library(atlasclient SHARED ${LIB_SOURCE_FILES}
+  ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_tags.inc
+  ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_values.inc
+  ${CMAKE_CURRENT_BINARY_DIR}/valid_chars.inc)
+
 set_target_properties(atlasclient PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -Wextra -Wno-missing-braces")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCURL_STATICLIB -Werror -fno-rtti -Wall -Wno-missing-braces -std=c++11")

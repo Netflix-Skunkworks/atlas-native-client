@@ -1,20 +1,27 @@
 #include <array>
-#include <iostream>
+#include <fstream>
 
-void dump_array(const std::string& name, const std::array<bool, 128>& chars) {
-  using std::cout;
-  cout << "const std::array<bool, 128> " << name << " = {{";
-  cout.setf(std::ios::boolalpha);
+void dump_array(std::ostream& os, const std::string& name,
+                const std::array<bool, 128>& chars) {
+  os << "const std::array<bool, 128> " << name << " = {{";
+  os.setf(std::ios::boolalpha);
 
-  cout << chars[0];
+  os << chars[0];
   for (int i = 1; i < chars.size(); ++i) {
-    cout << ", " << chars[i];
+    os << ", " << chars[i];
   }
 
-  cout << "}};\n";
+  os << "}};\n";
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+  std::ofstream of;
+  if (argc > 1) {
+    of.open(argv[1]);
+  } else {
+    of.open("/dev/stdout");
+  }
+
   std::array<bool, 128> charsAllowed;
   for (int i = 0; i < 128; ++i) {
     charsAllowed[i] = false;
@@ -34,9 +41,9 @@ int main() {
     charsAllowed[ch] = true;
   }
 
-  dump_array("kCharsAllowed", charsAllowed);
+  dump_array(of, "kCharsAllowed", charsAllowed);
 
   charsAllowed['~'] = true;
   charsAllowed['^'] = true;
-  dump_array("kGroupCharsAllowed", charsAllowed);
+  dump_array(of, "kGroupCharsAllowed", charsAllowed);
 };

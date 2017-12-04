@@ -7,38 +7,6 @@ namespace percentile_buckets {
 
 #include "percentile_bucket_values.inc"
 
-// maybe we could use the intrinsics __builtin_clz (gcc) or __lzcnt64 for clang
-// but that requires cpu support for LZCNT - TODO(dmuino): check
-size_t leadingZeros(uint64_t i) {
-  if (i == 0) {
-    return 64;
-  }
-  size_t n = 1;
-  auto x = static_cast<uint32_t>(i >> 32);
-  if (x == 0) {
-    n += 32;
-    x = static_cast<uint32_t>(i);
-  }
-  if (x >> 16 == 0) {
-    n += 16;
-    x <<= 16;
-  }
-  if (x >> 24 == 0) {
-    n += 8;
-    x <<= 8;
-  }
-  if (x >> 28 == 0) {
-    n += 4;
-    x <<= 4;
-  }
-  if (x >> 30 == 0) {
-    n += 2;
-    x <<= 2;
-  }
-  n -= x >> 31;
-  return n;
-}
-
 int64_t Get(size_t i) { return kBucketValues.at(i); }
 
 size_t IndexOf(int64_t v) {
@@ -48,7 +16,13 @@ size_t IndexOf(int64_t v) {
   if (v <= 4) {
     return static_cast<size_t>(v);
   }
-  auto lz = leadingZeros(static_cast<uint64_t>(v));
+  size_t lz;
+
+#ifdef __LZCNT__
+  lz = __lzcnt64(v);
+#else
+  lz = __builtin_clzll(v);
+#endif
   size_t shift = 64 - lz - 1;
   int64_t prevPowerOf2 = (v >> shift) << shift;
   int64_t prevPowerOf4 = prevPowerOf2;

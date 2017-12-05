@@ -96,10 +96,6 @@ static std::unique_ptr<Config> DocToConfig(
           ? document["checkClusterUrl"].GetString()
           : defaults->CheckClusterEndpoint();
 
-  auto notify_alert_server = document.HasMember("notifyAlertServer")
-                                 ? document["notifyAlertServer"].GetBool()
-                                 : defaults->ShouldNotifyAlertServer();
-
   std::vector<std::string> publish_config =
       document.HasMember("publishConfig")
           ? vector_from(document["publishConfig"])
@@ -155,10 +151,10 @@ static std::unique_ptr<Config> DocToConfig(
 
   return std::make_unique<Config>(
       defaults->DisabledFile(), eval_url, sub_endpoint, publish_endpoint,
-      validate_metrics, check_cluster_endpoint, notify_alert_server,
-      publish_config, sub_refresh, connect_timeout, read_timeout, batch_size,
-      force_start, main_enabled, subs_enabled, dump_metrics, dump_subscriptions,
-      log_verbosity, log_max_size, log_max_files, get_default_common_tags());
+      validate_metrics, check_cluster_endpoint, publish_config, sub_refresh,
+      connect_timeout, read_timeout, batch_size, force_start, main_enabled,
+      subs_enabled, dump_metrics, dump_subscriptions, log_verbosity,
+      log_max_size, log_max_files, get_default_common_tags());
 }
 
 static std::unique_ptr<Config> ParseConfigFile(
@@ -184,7 +180,7 @@ static std::unique_ptr<Config> ParseConfigFile(
   return defaults;
 }
 
-std::unique_ptr<Config> DefaultConfig(bool notify) noexcept {
+std::unique_ptr<Config> DefaultConfig() noexcept {
   const char* disabled_file = std::getenv("ATLAS_DISABLED_FILE");
   if (disabled_file == nullptr) {
     disabled_file = kDefaultDisabledFile;
@@ -194,7 +190,6 @@ std::unique_ptr<Config> DefaultConfig(bool notify) noexcept {
   return std::make_unique<Config>(
       disabled_file, std::string(kEvaluateUrl), std::string(kSubscriptionsUrl),
       std::string(kPublishUrl), kValidateMetrics, std::string(kCheckClusterUrl),
-      notify,  // whether to notify alert-server about on-instance alert support
       kPublishConfig, kRefresherMillis, kConnectTimeout, kReadTimeout,
       kBatchSize,
       // do not run on dev env
@@ -211,7 +206,7 @@ static constexpr const char* const kGlobalFile =
 static constexpr const char* const kLocalFile = "./atlas-config.json";
 
 std::unique_ptr<Config> ConfigManager::get_current_config() noexcept {
-  auto my_global = ParseConfigFile(kGlobalFile, DefaultConfig(default_notify_));
+  auto my_global = ParseConfigFile(kGlobalFile, DefaultConfig());
   return ParseConfigFile(kLocalFile, std::move(my_global));
 }
 
@@ -267,9 +262,7 @@ void ConfigManager::AddCommonTag(const char* key, const char* value) noexcept {
   extra_tags_.add(key, value);
 }
 
-void ConfigManager::SetNotifyAlertServer(bool notify) noexcept {
-  default_notify_ = notify;
-}
+void ConfigManager::SetNotifyAlertServer(bool /*unused*/) noexcept {}
 
 }  // namespace util
 }  // namespace atlas

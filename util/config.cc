@@ -13,7 +13,7 @@ Config::Config(const std::string& disabled_file,
                const std::string& subscriptions_endpoint,
                const std::string& publish_endpoint, bool validate_metrics,
                const std::string& check_cluster_endpoint,
-               bool notifyAlertServer, std::vector<std::string> publish_config,
+               std::vector<std::string> publish_config,
                int64_t subscription_refresh, int connect_timeout,
                int read_timeout, int batch_size, bool force_start,
                bool enable_main, bool enable_subscriptions, bool dump_metrics,
@@ -25,7 +25,6 @@ Config::Config(const std::string& disabled_file,
       publish_endpoint_(ExpandEnvVars(publish_endpoint)),
       validate_metrics_(validate_metrics),
       check_cluster_endpoint_(ExpandEnvVars(check_cluster_endpoint)),
-      notify_alert_server_(notifyAlertServer),
       publish_config_(std::move(publish_config)),
       subscription_refresh_(subscription_refresh),
       connect_timeout_(connect_timeout),
@@ -58,16 +57,14 @@ bool Config::AreSubsEnabled() const noexcept {
 std::string ConfigToString(const Config& config) noexcept {
   std::ostringstream os;
   os << std::boolalpha;
-  os << "Config{eval_endpoint=" << config.EvalEndpoint() << '\n'
-     << ", subs_endpoint=" << config.SubsEndpoint() << '\n'
-     << ", subs_refresh=" << config.SubRefreshMillis() << "ms"
-     << ", publish=" << config.PublishEndpoint() << '\n'
-     << ", notifyAlertServer=" << config.ShouldNotifyAlertServer() << '\n'
-     << ", validateMetrics=" << config.ShouldValidateMetrics() << '\n'
+  os << "Config{eval_endpoint=" << config.EvalEndpoint()
+     << ", subs_endpoint=" << config.SubsEndpoint()
+     << ", subs_refresh=" << config.SubRefreshMillis()
+     << ", publish=" << config.PublishEndpoint()
+     << ", validateMetrics=" << config.ShouldValidateMetrics()
      << ", forceStart=" << config.ShouldForceStart()
-     << ", mainEnabled=" << config.IsMainEnabled() << '\n'
-     << ", subsEnabled=" << config.AreSubsEnabled() << '\n'
-     << ", publish_cfg=";
+     << ", mainEnabled=" << config.IsMainEnabled()
+     << ", subsEnabled=" << config.AreSubsEnabled() << ", publish_cfg=";
   const auto& pub_cfg = config.PublishConfig();
   dump_vector(os, pub_cfg);
   os << ", dump_metrics=" << config.ShouldDumpMetrics()

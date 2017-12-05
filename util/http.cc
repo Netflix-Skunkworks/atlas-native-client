@@ -5,9 +5,12 @@
 #include "memory.h"
 #include "strings.h"
 
+#include <algorithm>
 #include <curl/curl.h>
+#include <curl/multi.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#include <sstream>
 
 namespace atlas {
 namespace util {
@@ -256,6 +259,9 @@ static int do_post(const std::string& url, int connect_timeout,
   return http_code;
 }
 
+static constexpr const char* const kJsonType = "Content-Type: application/json";
+static constexpr const char* const kGzipEncoding = "Content-Encoding: gzip";
+
 int http::post(const std::string& url, const char* content_type,
                const char* payload, size_t size) const {
   auto headers = std::make_unique<CurlHeaders>();
@@ -266,7 +272,7 @@ int http::post(const std::string& url, const char* content_type,
                    reinterpret_cast<const Bytef*>(payload), size);
   }
 
-  headers->append("Content-Encoding: gzip");
+  headers->append(kGzipEncoding);
   auto compressed_size = compressBound(size) + 16;
   auto compressed_payload =
       std::unique_ptr<Bytef[]>(new Bytef[compressed_size]);
@@ -285,12 +291,131 @@ int http::post(const std::string& url, const char* content_type,
                  compressed_payload.get(), compressed_size);
 }
 
-static constexpr const char* const json_type = "Content-Type: application/json";
 int http::post(const std::string& url,
                const rapidjson::Document& payload) const {
   rapidjson::StringBuffer buffer;
   auto c_str = JsonGetString(buffer, payload);
-  return post(url, json_type, c_str, strlen(c_str));
+  return post(url, kJsonType, c_str, std::strlen(c_str));
+}
+
+class CurlMultiHandle {
+ public:
+  CurlMultiHandle() : multi_handle_(curl_multi_init()) {}
+  CurlMultiHandle(const CurlMultiHandle&) = delete;
+  CurlMultiHandle(CurlMultiHandle&&) = delete;
+  CurlMultiHandle& operator=(const CurlMultiHandle&) = delete;
+  CurlMultiHandle& operator=(CurlMultiHandle&&) = delete;
+  ~CurlMultiHandle() { curl_multi_cleanup(multi_handle_); }
+
+  std::vector<int> perform_all(
+      const std::vector<std::unique_ptr<CurlHandle>>& easy_handles) {
+    for (const auto& h : easy_handles) {
+      curl_multi_add_handle(multi_handle_, h->handle());
+    }
+
+    auto still_running = 0;
+    auto repeats = 0;
+    do {
+      auto mc = curl_multi_perform(multi_handle_, &still_running);
+      auto numfds = 0;
+      if (mc == CURLM_OK) {
+        // wait for activity, timeout, or "nothing"
+        mc = curl_multi_wait(multi_handle_, nullptr, 0, 1000, &numfds);
+      }
+      if (mc != CURLM_OK) {
+        Logger()->warn("curl_multi failed: {}", curl_multi_strerror(mc));
+        break;
+      }
+
+      // 'numfds' being zero means either a timeout or no file descriptors to
+      // wait for. Try timeout on first occurrence, then assume no file
+      // descriptors and no file descriptors to wait for means wait for 100
+      // milliseconds.
+      if (numfds == 0) {
+        repeats++;  // count number of repeated zero numfds
+        if (repeats > 1) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+      } else {
+        repeats = 0;
+      }
+    } while (still_running > 0);
+
+    CURLMsg* msg; /* for picking up messages with the transfer status */
+    int msgs_left;
+    std::vector<int> res(easy_handles.size());
+    std::fill(res.begin(), res.end(), 400);
+    while ((msg = curl_multi_info_read(multi_handle_, &msgs_left)) != nullptr) {
+      if (msg->msg == CURLMSG_DONE) {
+        // Find out which handle this message is about
+        for (auto i = 0u; i < easy_handles.size(); i++) {
+          auto easy_handle = easy_handles[i]->handle();
+          bool found = (msg->easy_handle == easy_handle);
+          if (found) {
+            auto easy_code = msg->data.result;
+            if (easy_code == CURLE_OK) {
+              res.at(i) = easy_handles[i]->status_code();
+            } else {
+              Logger()->warn("Failed batch: {}", curl_easy_strerror(easy_code));
+              res.at(i) = 400;
+            }
+            curl_multi_remove_handle(multi_handle_, easy_handle);
+            break;
+          }
+        }
+      }
+    }
+    return res;
+  }
+
+ private:
+  CURLM* multi_handle_;
+};
+
+static bool setup_handle_for_post(CurlHandle* handle, const std::string& url,
+                                  const rapidjson::Document& doc) {
+  rapidjson::StringBuffer buffer;
+  auto payload = JsonGetString(buffer, doc);
+  auto size = std::strlen(payload);
+  auto headers = std::make_unique<CurlHeaders>();
+  headers->append(kJsonType);
+  headers->append(kGzipEncoding);
+
+  auto compressed_size = compressBound(size) + 16;
+  auto compressed_payload =
+      std::unique_ptr<Bytef[]>(new Bytef[compressed_size]);
+  auto compress_res =
+      gzip_compress(compressed_payload.get(), &compressed_size,
+                    reinterpret_cast<const Bytef*>(payload), size);
+  if (compress_res != Z_OK) {
+    Logger()->error(
+        "Failed to compress payload: {}, while posting to {} - uncompressed "
+        "size: {}",
+        compress_res, url, size);
+    return false;
+  }
+
+  auto logger = Logger();
+  handle->set_url(url);
+  handle->set_headers(std::move(headers));
+  handle->post_payload(compressed_payload.get(), size);
+  return true;
+}
+
+std::vector<int> http::post_batches(
+    const std::string& url, const std::vector<rapidjson::Document>& batches) {
+  CurlMultiHandle multi_handle;
+
+  std::vector<std::unique_ptr<CurlHandle>> easy_handles;
+  for (const auto& doc : batches) {
+    auto handle = std::make_unique<CurlHandle>();
+    handle->set_read_timeout(read_timeout_);
+    handle->set_connect_timeout(connect_timeout_);
+    setup_handle_for_post(handle.get(), url, doc);
+    easy_handles.push_back(std::move(handle));
+  }
+
+  return multi_handle.perform_all(easy_handles);
 }
 
 void http::global_init() noexcept { curl_global_init(CURL_GLOBAL_ALL); }

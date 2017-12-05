@@ -21,6 +21,7 @@ SubscriptionManager::SubscriptionManager(
     const util::ConfigManager& config_manager, SubscriptionRegistry& registry)
     : config_manager_(config_manager), registry_(registry) {}
 
+using interpreter::TagsValuePairs;
 using util::Logger;
 using util::intern_str;
 using util::kMainFrequencyMillis;
@@ -422,37 +423,58 @@ rapidjson::Document MeasurementsToJson(
   return payload;
 }
 
+const static Tags atlas_client_tags{
+    {intern_str("class"), intern_str("NetflixAtlasObserver")},
+    {intern_str("id"), intern_str("main-vip")}};
+
+static void UpdateSentStat(int64_t delta) {
+  static auto sent = atlas_registry.counter(
+      atlas_registry.CreateId("numMetricsSent", atlas_client_tags));
+  sent->Add(delta);
+}
+
+static void UpdateHttpErrorsStat(int status_code, int64_t errors) {
+  static auto httpErrorsId =
+      atlas_registry.CreateId("numMetricsDropped", atlas_client_tags)
+          ->WithTag(Tag::of("error", "httpError"));
+  atlas_registry
+      .counter(httpErrorsId->WithTag(
+          Tag::of("statusCode", std::to_string(status_code))))
+      ->Add(errors);
+}
+
+static void UpdateTotalSentStat(int64_t total_sent) {
+  static auto total = atlas_registry.counter(
+      atlas_registry.CreateId("numMetricsTotal", atlas_client_tags));
+  total->Add(total_sent);
+}
+
+static void UpdateValidationErrorStats(int64_t errors) {
+  static auto validationErrors = atlas_registry.counter(
+      atlas_registry.CreateId("numMetricsDropped", atlas_client_tags)
+          ->WithTag(Tag::of("error", "validationFailed")));
+
+  validationErrors->Add(errors);
+}
+
 static void SendBatch(const util::http& client, const util::Config& config,
                       int64_t now_millis,
                       const interpreter::TagsValuePairs::const_iterator& first,
                       const interpreter::TagsValuePairs::const_iterator& last) {
   static auto timer = atlas_registry.timer("atlas.client.mainBatch");
-  const static Tags atlas_client_tags{
-      {intern_str("class"), intern_str("NetflixAtlasObserver")},
-      {intern_str("id"), intern_str("main-vip")}};
-  static auto total = atlas_registry.counter(
-      atlas_registry.CreateId("numMetricsTotal", atlas_client_tags));
-  static auto sent = atlas_registry.counter(
-      atlas_registry.CreateId("numMetricsSent", atlas_client_tags));
-  static auto errorsId =
-      atlas_registry.CreateId("numMetricsDropped", atlas_client_tags);
-  static Tag httpErr = Tag::of("error", "httpError");
-  static auto validationErrors = atlas_registry.counter(
-      errorsId->WithTag(Tag::of("error", "validationFailed")));
   auto logger = Logger();
 
   auto num_measurements = std::distance(first, last);
   logger->info("Sending batch of {} metrics to {}", num_measurements,
                config.PublishEndpoint());
-  // TODO(dmuino): retries
   int64_t added = 0;
   auto num_metrics = static_cast<int64_t>(num_measurements);
   auto payload = MeasurementsToJson(now_millis, first, last,
                                     config.ShouldValidateMetrics(), &added);
   if (added != num_metrics) {
-    validationErrors->Add(num_metrics - added);
+    UpdateValidationErrorStats(num_metrics - added);
   }
-  total->Add(num_metrics);
+  UpdateTotalSentStat(num_metrics);
   if (added == 0) {
     return;
   }
@@ -467,23 +489,68 @@ static void SendBatch(const util::http& client, const util::Config& config,
     logger->error("Unable to send batch of {} measurements to publish: {}",
                   num_measurements, http_res);
 
-    atlas_registry
-        .counter(errorsId->WithTag(httpErr)->WithTag(
-            Tag::of("statusCode", std::to_string(http_res))))
-        ->Add(added);
+    UpdateHttpErrorsStat(http_res, added);
   } else {
-    sent->Add(added);
+    UpdateSentStat(added);
   }
 }
 
-void SubscriptionManager::PushMeasurements(
-    int64_t now_millis, const interpreter::TagsValuePairs& measurements) const {
-  using interpreter::TagsValuePairs;
+static void PushInParallel(const util::Config& config, int64_t now_millis,
+                           const interpreter::TagsValuePairs& measurements) {
+  static auto timer = atlas_registry.timer("atlas.client.parallelPost");
 
-  auto cfg = config_manager_.GetConfig();
-  util::http client(*cfg);
+  util::http client(config);
   auto batch_size =
-      static_cast<TagsValuePairs::difference_type>(cfg->BatchSize());
+      static_cast<TagsValuePairs::difference_type>(config.BatchSize());
+  std::vector<rapidjson::Document> batches;
+  std::vector<int64_t> batch_sizes;
+  auto from = measurements.begin();
+  auto end = measurements.end();
+  int64_t total_valid_metrics = 0;
+  int64_t validation_errors = 0;
+  while (from != end) {
+    auto to_end = std::distance(from, end);
+    auto to_advance = std::min(batch_size, to_end);
+    auto to = from;
+    std::advance(to, to_advance);
+
+    int64_t added;
+    batches.emplace_back(MeasurementsToJson(
+        now_millis, from, to, config.ShouldValidateMetrics(), &added));
+    if (config.ShouldDumpMetrics()) {
+      DumpJson("/tmp", "main_batch_", batches.back());
+    }
+    total_valid_metrics += added;
+    validation_errors += to_advance - added;
+    batch_sizes.push_back(added);
+    from = to;
+  }
+
+  auto start = atlas_registry.clock().MonotonicTime();
+  auto http_codes = client.post_batches(config.PublishEndpoint(), batches);
+  UpdateValidationErrorStats(validation_errors);
+  UpdateTotalSentStat(static_cast<int64_t>(measurements.size()));
+  for (auto i = 0u; i < http_codes.size(); ++i) {
+    auto http_code = http_codes[i];
+    auto num_measurements = batch_sizes[i];
+    if (http_code != 200) {
+      Logger()->error("Unable to send batch of {} measurements to publish: {}",
+                      num_measurements, http_code);
+
+      UpdateHttpErrorsStat(http_code, num_measurements);
+    } else {
+      UpdateSentStat(num_measurements);
+    }
+  }
+
+  timer->Record(atlas_registry.clock().MonotonicTime() - start);
+}
+
+static void PushSerially(const util::Config& config, int64_t now_millis,
+                         const interpreter::TagsValuePairs& measurements) {
+  util::http client(config);
+  auto batch_size =
+      static_cast<TagsValuePairs::difference_type>(config.BatchSize());
 
   auto from = measurements.begin();
   auto end = measurements.end();
@@ -492,8 +559,18 @@ void SubscriptionManager::PushMeasurements(
     auto to_advance = std::min(batch_size, to_end);
     auto to = from;
     std::advance(to, to_advance);
-    SendBatch(client, *cfg, now_millis, from, to);
+    SendBatch(client, config, now_millis, from, to);
     from = to;
+  }
+}
+
+void SubscriptionManager::PushMeasurements(
+    int64_t now_millis, const interpreter::TagsValuePairs& measurements) const {
+  auto cfg = config_manager_.GetConfig();
+  if (cfg->SendInParallel()) {
+    PushInParallel(*cfg, now_millis, measurements);
+  } else {
+    PushSerially(*cfg, now_millis, measurements);
   }
 }
 

@@ -141,6 +141,10 @@ static std::unique_ptr<Config> DocToConfig(
                         ? document["batchSize"].GetInt()
                         : defaults->BatchSize();
 
+  auto send_in_parallel = document.HasMember("sendInParallel")
+                              ? document["sendInParallel"].GetBool()
+                              : defaults->SendInParallel();
+
   auto log_verbosity = document.HasMember("logVerbosity")
                            ? document["logVerbosity"].GetInt()
                            : defaults->LogVerbosity();
@@ -158,7 +162,8 @@ static std::unique_ptr<Config> DocToConfig(
       validate_metrics, check_cluster_endpoint, notify_alert_server,
       publish_config, sub_refresh, connect_timeout, read_timeout, batch_size,
       force_start, main_enabled, subs_enabled, dump_metrics, dump_subscriptions,
-      log_verbosity, log_max_size, log_max_files, get_default_common_tags());
+      log_verbosity, send_in_parallel, log_max_size, log_max_files,
+      get_default_common_tags());
 }
 
 static std::unique_ptr<Config> ParseConfigFile(
@@ -202,8 +207,10 @@ std::unique_ptr<Config> DefaultConfig(bool notify) noexcept {
       // enable main but not subscriptions yet (need clusters in main account)
       true, false,
       // do not dump main or subs
-      false, false, kDefaultVerbosity, log_num_size.max_size,
-      log_num_size.max_files, get_default_common_tags());
+      false, false, kDefaultVerbosity,
+      // do not send metrics in parallel to reduce memory footprint used
+      false, log_num_size.max_size, log_num_size.max_files,
+      get_default_common_tags());
 }
 
 static constexpr const char* const kGlobalFile =

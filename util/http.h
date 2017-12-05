@@ -25,6 +25,7 @@ class http {
 
   int post(const std::string& url, const rapidjson::Document& payload) const;
 
+  std::vector<int> post_batches(const std::string& url, const std::vector<rapidjson::Document>& batches);
   static void global_init() noexcept;
   static void global_shutdown() noexcept;
 

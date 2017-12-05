@@ -18,7 +18,7 @@ class Config {
   Config(const std::string& disabled_file, const std::string& evaluate_endpoint,
          const std::string& subscriptions_endpoint,
          const std::string& publish_endpoint, bool validate_metrics,
-         const std::string& check_cluster_endpoint, bool notifyAlertServer,
+         const std::string& check_cluster_endpoint,
          std::vector<std::string> publish_config, int64_t subscription_refresh,
          int connect_timeout, int read_timeout, int batch_size,
          bool force_start, bool enable_main, bool enable_subscriptions,
@@ -38,7 +38,6 @@ class Config {
   std::string LoggingDirectory() const noexcept;
   bool ShouldValidateMetrics() const noexcept { return validate_metrics_; }
   bool ShouldForceStart() const noexcept { return force_start_; }
-  bool ShouldNotifyAlertServer() const noexcept { return notify_alert_server_; }
   bool IsMainEnabled() const noexcept;
   bool AreSubsEnabled() const noexcept;
   bool ShouldDumpMetrics() const noexcept { return dump_metrics_; }
@@ -72,7 +71,6 @@ class Config {
   std::string publish_endpoint_;
   bool validate_metrics_;
   std::string check_cluster_endpoint_;
-  bool notify_alert_server_;
   std::vector<std::string> publish_config_;
   int64_t subscription_refresh_;
   int connect_timeout_;

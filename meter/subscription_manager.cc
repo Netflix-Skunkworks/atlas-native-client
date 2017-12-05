@@ -61,17 +61,7 @@ void SubscriptionManager::MainSender(
   }
 }
 
-static void updateAlertServer(const std::string& endpoint,
-                              const util::Config& config) {
-  util::http client(config);
-  auto res =
-      client.post(endpoint, "Content-type: application/octet-stream", "", 0);
-  Logger()->debug("Got {} from alert server {}", res, endpoint);
-}
-
 void SubscriptionManager::SubRefresher() noexcept {
-  static uint64_t refresher_runs = 0;
-
   while (should_run_) {
     try {
       auto start = system_clock::now();
@@ -81,17 +71,6 @@ void SubscriptionManager::SubRefresher() noexcept {
         Logger()->info("Refreshing subscriptions from {}", subs_endpoint);
         RefreshSubscriptions(subs_endpoint);
       }
-      // HACK (temporary until lwc does alerts)
-      // notify alert server that we do not support on-instance alerts
-      if (config->ShouldNotifyAlertServer() && refresher_runs % 30 == 0) {
-        auto check_cluster_endpoint = config->CheckClusterEndpoint();
-        Logger()->debug(
-            "Notifying alert server about our lack of on-instance alerts "
-            "support {}",
-            check_cluster_endpoint);
-        updateAlertServer(check_cluster_endpoint, *config);
-      }
-      ++refresher_runs;
       auto end = system_clock::now();
       auto elapsed_millis = duration_cast<milliseconds>(end - start).count();
       auto refresh_millis = config->SubRefreshMillis();

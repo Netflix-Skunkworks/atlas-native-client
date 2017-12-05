@@ -11,7 +11,7 @@
 namespace atlas {
 namespace util {
 
-std::unique_ptr<Config> DefaultConfig(bool notify = true) noexcept;
+std::unique_ptr<Config> DefaultConfig() noexcept;
 
 class ConfigManager {
  public:
@@ -25,18 +25,19 @@ class ConfigManager {
 
   void AddCommonTag(const char* key, const char* value) noexcept;
 
-  void SetNotifyAlertServer(bool notify) noexcept;
+  // deprecated - alert server uses the streaming path to check on-instance
+  // alerts so this is no longer needed
+  void SetNotifyAlertServer(bool /*unused*/) noexcept;
 
  private:
   mutable std::mutex config_mutex;
   std::shared_ptr<Config> current_config_;
   std::atomic<bool> should_run_{false};
   meter::Tags extra_tags_;
-  bool default_notify_ = true;
 
   void refresher() noexcept;
   void refresh_configs() noexcept;
   std::unique_ptr<Config> get_current_config() noexcept;
 };
-}
-}
+}  // namespace util
+}  // namespace atlas

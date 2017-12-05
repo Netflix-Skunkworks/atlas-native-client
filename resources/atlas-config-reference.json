@@ -6,7 +6,6 @@
   "subscriptionsUrl": "http://atlas-lwcapi-iep.$EC2_REGION.iep$NETFLIX_ENVIRONMENT.netflix.net/lwc/api/v1/$NETFLIX_AUTO_SCALE_GROUP",
   "publishUrl": "http://atlas-pub-$EC2_OWNER_ID.$EC2_REGION.$NETFLIX_ACCOUNT.netflix.net/api/v1/publish-fast",
   "checkClusterUrl": "http://atlas-alert-api-$EC2_OWNER_ID.$EC2_REGION.$NETFLIX_ENVIRONMENT.netflix.net/alertchecker/checkCluster/$NETFLIX_CLUSTER",
-  "notifyAlertServer": true,
   "publishConfig": [
     ":true,:all"
   ],

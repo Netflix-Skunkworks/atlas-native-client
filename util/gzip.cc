@@ -7,6 +7,10 @@
 namespace atlas {
 namespace util {
 
+static constexpr int kWindowBits =
+    15 + kGzipHeaderSize;            // 32k window (max size)
+static constexpr int kMemLevel = 9;  // max memory for optimal speed
+
 int gzip_compress(Bytef* dest, uLongf* destLen, const Bytef* source,
                   uLong sourceLen) {
   // no initialization due to gcc 4.8 bug
@@ -20,8 +24,8 @@ int gzip_compress(Bytef* dest, uLongf* destLen, const Bytef* source,
   stream.zfree = static_cast<free_func>(nullptr);
   stream.opaque = static_cast<voidpf>(nullptr);
 
-  auto err = deflateInit2(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 31, 9,
-                          Z_DEFAULT_STRATEGY);
+  auto err = deflateInit2(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
+                          kWindowBits, kMemLevel, Z_DEFAULT_STRATEGY);
   if (err != Z_OK) {
     return err;
   }
@@ -47,7 +51,7 @@ int gzip_uncompress(Bytef* dest, uLongf* destLen, const Bytef* source,
   stream.zalloc = static_cast<alloc_func>(nullptr);
   stream.zfree = static_cast<free_func>(nullptr);
 
-  auto err = inflateInit2(&stream, 31);
+  auto err = inflateInit2(&stream, kWindowBits);
   if (err != Z_OK) {
     return err;
   }

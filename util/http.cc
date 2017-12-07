@@ -10,7 +10,6 @@
 #include <curl/multi.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
-#include <sstream>
 
 namespace atlas {
 namespace util {
@@ -87,15 +86,17 @@ class CurlHandle {
     curl_easy_setopt(handle_, CURLOPT_TIMEOUT, (long)read_timeout_seconds);
   }
 
-  void post_payload(const Bytef* payload, size_t size) {
+  void post_payload(std::unique_ptr<Bytef[]> payload, size_t size) {
+    payload_ = std::move(payload);
     curl_easy_setopt(handle_, CURLOPT_POST, 1L);
-    curl_easy_setopt(handle_, CURLOPT_POSTFIELDS, payload);
+    curl_easy_setopt(handle_, CURLOPT_POSTFIELDS, payload_.get());
     curl_easy_setopt(handle_, CURLOPT_POSTFIELDSIZE, size);
   }
 
  private:
   CURL* handle_;
   std::unique_ptr<CurlHeaders> headers_;
+  std::unique_ptr<Bytef[]> payload_;
 };
 
 class Buffer {
@@ -231,7 +232,7 @@ int http::get(const std::string& url, std::string* res) const {
 
 static int do_post(const std::string& url, int connect_timeout,
                    int read_timeout, std::unique_ptr<CurlHeaders> headers,
-                   const Bytef* payload, size_t size) {
+                   std::unique_ptr<Bytef[]> payload, size_t size) {
   CurlHandle curl;
   curl.set_connect_timeout(connect_timeout);
   curl.set_read_timeout(read_timeout);
@@ -240,7 +241,7 @@ static int do_post(const std::string& url, int connect_timeout,
   logger->info("POSTing to url: {}", url);
   curl.set_url(url);
   curl.set_headers(std::move(headers));
-  curl.post_payload(payload, size);
+  curl.post_payload(std::move(payload), size);
 
   auto curl_res = curl.perform();
   auto error = false;
@@ -267,13 +268,8 @@ int http::post(const std::string& url, const char* content_type,
   auto headers = std::make_unique<CurlHeaders>();
   headers->append(content_type);
 
-  if (size <= 16) {
-    return do_post(url, connect_timeout_, read_timeout_, std::move(headers),
-                   reinterpret_cast<const Bytef*>(payload), size);
-  }
-
   headers->append(kGzipEncoding);
-  auto compressed_size = compressBound(size) + 16;
+  auto compressed_size = compressBound(size) + kGzipHeaderSize;
   auto compressed_payload =
       std::unique_ptr<Bytef[]>(new Bytef[compressed_size]);
   auto compress_res =
@@ -288,7 +284,7 @@ int http::post(const std::string& url, const char* content_type,
   }
 
   return do_post(url, connect_timeout_, read_timeout_, std::move(headers),
-                 compressed_payload.get(), compressed_size);
+                 std::move(compressed_payload), compressed_size);
 }
 
 int http::post(const std::string& url,
@@ -381,7 +377,7 @@ static bool setup_handle_for_post(CurlHandle* handle, const std::string& url,
   headers->append(kJsonType);
   headers->append(kGzipEncoding);
 
-  auto compressed_size = compressBound(size) + 16;
+  auto compressed_size = compressBound(size) + kGzipHeaderSize;
   auto compressed_payload =
       std::unique_ptr<Bytef[]>(new Bytef[compressed_size]);
   auto compress_res =
@@ -398,7 +394,7 @@ static bool setup_handle_for_post(CurlHandle* handle, const std::string& url,
   auto logger = Logger();
   handle->set_url(url);
   handle->set_headers(std::move(headers));
-  handle->post_payload(compressed_payload.get(), size);
+  handle->post_payload(std::move(compressed_payload), size);
   return true;
 }
 

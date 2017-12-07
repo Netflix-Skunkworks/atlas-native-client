@@ -11,6 +11,7 @@
 #include "../util/http.h"
 #include "../util/logger.h"
 #include "../util/strings.h"
+#include "../interpreter/tags_value.h"
 #include <thread>
 
 using atlas::util::Logger;
@@ -47,7 +48,7 @@ class http_server {
     serv_addr.sin_port = 0;
 
     ASSERT_TRUE(bind(sockfd_, (sockaddr*)&serv_addr, sizeof serv_addr) >= 0);
-    ASSERT_TRUE(listen(sockfd_, 5) == 0);
+    ASSERT_TRUE(listen(sockfd_, 32) == 0);
 
     socklen_t serv_len = sizeof serv_addr;
     ASSERT_TRUE(getsockname(sockfd_, (sockaddr*)&serv_addr, &serv_len) >= 0);
@@ -265,6 +266,78 @@ TEST(HttpTest, Post) {
 
   std::string body_str{dest, dest_len};
   EXPECT_EQ(post_data, body_str);
+}
+
+namespace atlas {
+namespace meter {
+rapidjson::Document MeasurementsToJson(
+    int64_t now_millis,
+    const interpreter::TagsValuePairs::const_iterator& first,
+    const interpreter::TagsValuePairs::const_iterator& last, bool validate,
+    int64_t* metrics_added);
+}  // namespace meter
+}  // namespace atlas
+
+static rapidjson::Document get_json_doc() {
+  using atlas::interpreter::TagsValuePair;
+  using atlas::interpreter::TagsValuePairs;
+  using atlas::meter::Tags;
+
+  Tags t1{{"name", "name1"}, {"k1", "v1"}};
+  Tags t2{{"name", "name1"}, {"k1", "v2"}};
+  auto exp1 = TagsValuePair::of(std::move(t1), 1.0);
+  auto exp2 = TagsValuePair::of(std::move(t2), 0.0);
+
+  TagsValuePairs tag_values;
+  tag_values.push_back(std::move(exp1));
+  tag_values.push_back(std::move(exp2));
+
+  int64_t n;
+  return atlas::meter::MeasurementsToJson(1000, tag_values.begin(),
+                                          tag_values.end(), false, &n);
+}
+
+TEST(HttpTest, PostBatches) {
+  using atlas::util::http;
+
+  http_server server;
+  server.start();
+
+  auto port = server.get_port();
+  ASSERT_TRUE(port > 0) << "Port = " << port;
+  auto logger = Logger();
+  logger->info("Server started on port {}", port);
+
+  auto cfg = atlas::util::DefaultConfig();
+  http client{*cfg};
+  std::ostringstream os;
+  os << "http://localhost:" << port << "/foo";
+  auto url = os.str();
+  const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
+  constexpr size_t kBatches = 16;
+  std::vector<rapidjson::Document> batches(kBatches);
+  for (auto& batch : batches) {
+    batch = get_json_doc();
+  }
+
+  auto res = client.post_batches(url, batches);
+
+  server.stop();
+
+  const auto& requests = server.get_requests();
+  EXPECT_EQ(requests.size(), kBatches);
+  EXPECT_EQ(res.size(), kBatches);
+  for (auto i = 0u; i < kBatches; ++i) {
+    EXPECT_EQ(res[i], 200);
+  }
+
+  for (const auto& r : requests) {
+    EXPECT_EQ(r.method(), "POST");
+    EXPECT_EQ(r.path(), "/foo");
+    EXPECT_EQ(r.get_header("Content-Encoding"), "gzip");
+    EXPECT_EQ(r.get_header("Content-Type"), "application/json");
+  }
 }
 
 TEST(HttpTest, Timeout) {

@@ -23,7 +23,7 @@ class Config {
          int connect_timeout, int read_timeout, int batch_size,
          bool force_start, bool enable_main, bool enable_subscriptions,
          bool dump_metrics, bool dump_subscriptions, int log_verbosity,
-         size_t log_max_size, size_t log_max_files,
+         bool send_in_parallel, size_t log_max_size, size_t log_max_files,
          meter::Tags common_tags) noexcept;
 
   std::string EvalEndpoint() const noexcept { return evaluate_endpoint_; }
@@ -57,6 +57,7 @@ class Config {
   std::string DisabledFile() const noexcept {
     return disabled_file_watcher_.file_name();
   }
+  bool SendInParallel() const noexcept { return send_in_parallel_; }
 
   // for testing
   Config WithPublishConfig(std::vector<std::string> publish_config) {
@@ -84,6 +85,7 @@ class Config {
   bool dump_metrics_;
   bool dump_subscriptions_;
   int log_verbosity_;
+  bool send_in_parallel_;
   size_t log_max_size_;
   size_t log_max_files_;
   meter::Tags common_tags_;

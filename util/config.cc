@@ -17,8 +17,9 @@ Config::Config(const std::string& disabled_file,
                int64_t subscription_refresh, int connect_timeout,
                int read_timeout, int batch_size, bool force_start,
                bool enable_main, bool enable_subscriptions, bool dump_metrics,
-               bool dump_subscriptions, int log_verbosity, size_t log_max_size,
-               size_t log_max_files, meter::Tags common_tags) noexcept
+               bool dump_subscriptions, int log_verbosity,
+               bool send_in_parallel, size_t log_max_size, size_t log_max_files,
+               meter::Tags common_tags) noexcept
     : disabled_file_watcher_(disabled_file),
       evaluate_endpoint_(ExpandEnvVars(evaluate_endpoint)),
       subscriptions_endpoint_(ExpandEnvVars(subscriptions_endpoint)),
@@ -37,6 +38,7 @@ Config::Config(const std::string& disabled_file,
       dump_metrics_(dump_metrics),
       dump_subscriptions_(dump_subscriptions),
       log_verbosity_(log_verbosity),
+      send_in_parallel_(send_in_parallel),
       log_max_size_(log_max_size),
       log_max_files_(log_max_files),
       common_tags_(std::move(common_tags)) {}
@@ -73,6 +75,7 @@ std::string ConfigToString(const Config& config) noexcept {
   os << ", dump_metrics=" << config.ShouldDumpMetrics()
      << ", dump_subs=" << config.ShouldDumpSubs()
      << ", batch=" << config.BatchSize()
+     << ", send_in_parallel=" << config.SendInParallel()
      << ", Timeouts(C=" << config.ConnectTimeout()
      << ",R=" << config.ReadTimeout()
      << "), logVerbosity=" << config.LogVerbosity() << ")\n"

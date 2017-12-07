@@ -3,7 +3,8 @@ CMakeFiles/
 CTestTestfile.cmake
 Makefile
 cmake_install.cmake
-build/
+build
+build-*
 node_modules/
 npm-debug.log
 .newt.netflix_environment.sh

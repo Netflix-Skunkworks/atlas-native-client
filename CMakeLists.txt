@@ -58,7 +58,7 @@ add_library(atlasclient SHARED ${LIB_SOURCE_FILES}
   ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_values.inc
   ${CMAKE_CURRENT_BINARY_DIR}/valid_chars.inc)
 
-set_target_properties(atlasclient PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -Wextra -Wno-missing-braces")
+set_target_properties(atlasclient PROPERTIES COMPILE_FLAGS "-Wextra -Wno-missing-braces")
 
 
 if(CMAKE_SYSTEM_NAME STREQUAL Linux)

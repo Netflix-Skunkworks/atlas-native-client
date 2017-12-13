@@ -7,9 +7,12 @@ project(${PROJECT_NAME_STR})
 set(CMAKE_CXX_STANDARD 11)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
-if(CMAKE_CXX_COMPILER_ID STREQUAL GNU)
+if(CMAKE_CXX_COMPILER_ID STREQUAL GNU AND CMAKE_BUILD_TYPE MATCHES DEBUG)
   include(CodeCoverage)
   setup_target_for_coverage(${PROJECT_NAME}_coverage runtests coverage)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCURL_STATICLIB -Werror -fno-rtti -Wall -Wno-missing-braces -fprofile-arcs -ftest-coverage")
+else()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCURL_STATICLIB -Werror -fno-rtti -Wall -Wno-missing-braces")
 endif()
 
 include_directories(3rd-party ${CMAKE_CURRENT_BINARY_DIR})
@@ -57,7 +60,6 @@ add_library(atlasclient SHARED ${LIB_SOURCE_FILES}
 
 set_target_properties(atlasclient PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -Wextra -Wno-missing-braces")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCURL_STATICLIB -Werror -fno-rtti -Wall -Wno-missing-braces -fprofile-arcs -ftest-coverage")
 
 if(CMAKE_SYSTEM_NAME STREQUAL Linux)
   configure_file(${CMAKE_SOURCE_DIR}/bundle/libcurl-linux.a libcurl.a COPYONLY)

@@ -4,6 +4,12 @@ set(PROJECT_NAME_STR libatlasclient)
 set(CMAKE_MACOSX_RPATH 1)
 project(${PROJECT_NAME_STR})
 
+set(CMAKE_CXX_STANDARD 11)
+
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
+include(CodeCoverage)
+setup_target_for_coverage(${PROJECT_NAME}_coverage runtests coverage)
+
 include_directories(3rd-party ${CMAKE_CURRENT_BINARY_DIR})
 add_executable(gen_perc_bucket_tags ./gen_perc_bucket_tags.cc)
 add_executable(gen_perc_bucket_values ./gen_perc_bucket_values.cc)
@@ -49,7 +55,7 @@ add_library(atlasclient SHARED ${LIB_SOURCE_FILES}
 
 set_target_properties(atlasclient PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -Wextra -Wno-missing-braces")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCURL_STATICLIB -Werror -fno-rtti -Wall -Wno-missing-braces -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCURL_STATICLIB -Werror -fno-rtti -Wall -Wno-missing-braces -fprofile-arcs -ftest-coverage")
 
 if(CMAKE_SYSTEM_NAME STREQUAL Linux)
   configure_file(${CMAKE_SOURCE_DIR}/bundle/libcurl-linux.a libcurl.a COPYONLY)
@@ -112,3 +118,4 @@ if(RUN_BENCHMARKS STREQUAL "ON")
   add_executable(runbench ${BENCH_SOURCE_FILES})
   target_link_libraries(runbench atlasclient pthread benchmark)
 endif()
+

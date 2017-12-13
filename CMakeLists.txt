@@ -5,9 +5,11 @@ set(CMAKE_MACOSX_RPATH 1)
 project(${PROJECT_NAME_STR})
 
 set(CMAKE_CXX_STANDARD 11)
-
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
-if(CMAKE_CXX_COMPILER_ID STREQUAL GNU AND CMAKE_BUILD_TYPE MATCHES DEBUG)
+
+string(TOLOWER ${CMAKE_BUILD_TYPE} LC_CMAKE_BUILD_TYPE)
+if(CMAKE_CXX_COMPILER_ID STREQUAL GNU AND LC_CMAKE_BUILD_TYPE STREQUAL debug)
+  MESSAGE(STATUS "Setting up CodeCoverage")
   include(CodeCoverage)
   setup_target_for_coverage(${PROJECT_NAME}_coverage runtests coverage)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCURL_STATICLIB -Werror -fno-rtti -Wall -Wno-missing-braces -fprofile-arcs -ftest-coverage")

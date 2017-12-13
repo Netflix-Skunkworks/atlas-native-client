@@ -14,7 +14,13 @@ allert () { echo -e "${RED}$1${NC}"; }
 # Building project
 mkdir -p build
 cd build
-cmake -DCMAKE_BUILD_TYPE=Debug ..
+
+if [ $CC = gcc ] ; then
+  cmake -DCMAKE_BUILD_TYPE=Debug ..
+else
+  cmake -CMAKE_BUILD_TYPE=RelWithDebInfo ..
+fi
+
 make -j8
 # Checks if last comand didn't output 0
 # $? checks what last command outputed
@@ -27,7 +33,11 @@ if [ $? -ne 0 ]; then
 fi
 
 showinfo "Running tests ..."
-make -j8 libatlasclient_coverage
+
+if [ $CC = gcc ]; then
+  make -j8 libatlasclient_coverage
+fi
+
 ctest
 if [ $? -ne 0 ]; then
     error "Error: there are failed tests!"

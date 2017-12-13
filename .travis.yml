@@ -1,7 +1,25 @@
 language: cpp
 dist: trusty
 sudo: false
-script: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=RELWITHDEBINFO -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .. && make && ./runtests
+script: ./run-build.sh
 compiler:
   - clang
   - gcc
+
+addons:
+  apt:
+    packages:
+      - lcov
+
+after_success:
+  # Creating report
+  - cd ${TRAVIS_BUILD_DIR}
+  - lcov --directory . --capture --output-file coverage.info # capture coverage info
+  - lcov --remove coverage.info '/usr/*' '*/usr/*' '*/3rd-party/*' --output-file coverage.info # filter out system and 3rd-party stuff
+  - lcov --list coverage.info #debug info
+  # Uploading report to CodeCov
+  - bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
+
+env:
+  global:
+    - LANG="en_US.UTF-8"

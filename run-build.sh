@@ -18,7 +18,7 @@ cd build
 if [ $CC = gcc ] ; then
   cmake -DCMAKE_BUILD_TYPE=Debug ..
 else
-  cmake -CMAKE_BUILD_TYPE=RelWithDebInfo ..
+  cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
 fi
 
 make -j8

@@ -7,8 +7,10 @@ project(${PROJECT_NAME_STR})
 set(CMAKE_CXX_STANDARD 11)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
-include(CodeCoverage)
-setup_target_for_coverage(${PROJECT_NAME}_coverage runtests coverage)
+if(CMAKE_CXX_COMPILER_ID STREQUAL GNU)
+  include(CodeCoverage)
+  setup_target_for_coverage(${PROJECT_NAME}_coverage runtests coverage)
+endif()
 
 include_directories(3rd-party ${CMAKE_CURRENT_BINARY_DIR})
 add_executable(gen_perc_bucket_tags ./gen_perc_bucket_tags.cc)

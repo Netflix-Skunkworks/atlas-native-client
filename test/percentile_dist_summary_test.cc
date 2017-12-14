@@ -1,19 +1,16 @@
 #include "../interpreter/interpreter.h"
 #include "../meter/percentile_dist_summary.h"
-#include "../meter/subscription_registry.h"
+#include "test_registry.h"
 
 #include <gtest/gtest.h>
 
 using namespace atlas::meter;
-using atlas::interpreter::Interpreter;
-using atlas::interpreter::ClientVocabulary;
 using atlas::util::intern_str;
 
 TEST(PercentileDistributionSummary, Percentile) {
-  SubscriptionRegistry atlas_registry{
-      std::make_unique<Interpreter>(std::make_unique<ClientVocabulary>())};
-  PercentileDistributionSummary d{&atlas_registry,
-                                  atlas_registry.CreateId("foo", kEmptyTags)};
+  TestRegistry registry;
+  PercentileDistributionSummary d{&registry,
+                                  registry.CreateId("foo", kEmptyTags)};
 
   for (auto i = 0; i < 100000; ++i) {
     d.Record(i);
@@ -27,20 +24,32 @@ TEST(PercentileDistributionSummary, Percentile) {
 }
 
 TEST(PercentileDistributionSummary, HasProperStatistic) {
-  SubscriptionRegistry atlas_registry{
-      std::make_unique<Interpreter>(std::make_unique<ClientVocabulary>())};
-  PercentileDistributionSummary t{&atlas_registry,
-                                  atlas_registry.CreateId("foo", kEmptyTags)};
+  TestRegistry registry;
+  PercentileDistributionSummary t{&registry,
+                                  registry.CreateId("foo", kEmptyTags)};
 
   t.Record(42);
 
-  auto ms = atlas_registry.meters();
+  auto ms = registry.meters();
   auto percentileRef = intern_str("percentile");
   auto statisticRef = intern_str("statistic");
-  for (auto i = ms.begin(); i != ms.end(); ++i) {
-    auto tags = (*i)->GetId()->GetTags();
+  for (const auto& m : ms) {
+    auto tags = m->GetId()->GetTags();
     if (tags.has(percentileRef)) {
       EXPECT_EQ(tags.at(statisticRef), percentileRef);
     }
   }
+}
+
+TEST(PercentileDistributionSummary, CountTotal) {
+  TestRegistry registry;
+  PercentileDistributionSummary d{&registry,
+                                  registry.CreateId("foo", kEmptyTags)};
+
+  for (auto i = 0; i < 100; ++i) {
+    d.Record(i);
+  }
+
+  EXPECT_EQ(d.Count(), 100);
+  EXPECT_EQ(d.TotalAmount(), 100 * 99 / 2);  // sum(1,n) = n * (n - 1) / 2
 }

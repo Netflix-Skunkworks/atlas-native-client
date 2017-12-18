@@ -16,8 +16,6 @@ TEST(BucketDistributionSummary, Init) {
 
   auto id = r.CreateId("test", kEmptyTags);
   BucketDistributionSummary ds(&r, id, Age(seconds{60}));
-  Logger()->info("Created: {}", ds);
-
   auto ms = r.AllMeasurements();
   EXPECT_EQ(ms.size(), 0);
 }

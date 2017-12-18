@@ -16,7 +16,6 @@ TEST(BucketCounter, Init) {
 
   auto id = r.CreateId("test", kEmptyTags);
   BucketCounter b(&r, id, Age(microseconds{100}));
-  Logger()->info("BucketCounter: {}", b);
 
   auto ms = r.AllMeasurements();
   EXPECT_EQ(ms.size(), 0);

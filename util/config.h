@@ -6,6 +6,25 @@
 #include <vector>
 #include "../meter/id.h"
 #include "file_watcher.h"
+#include "strings.h"
+
+namespace rapidjson {
+
+template <typename CharType>
+struct UTF8;
+
+class CrtAllocator;
+
+template <typename BaseAllocator>
+class MemoryPoolAllocator;
+
+template <typename Encoding, typename Allocator, typename StackAllocator>
+class GenericDocument;
+
+typedef GenericDocument<UTF8<char>, MemoryPoolAllocator<CrtAllocator>,
+                        CrtAllocator>
+    Document;
+}  // namespace rapidjson
 
 namespace atlas {
 namespace util {
@@ -13,85 +32,121 @@ namespace util {
 // step-size for main in milliseconds
 static constexpr int kMainFrequencyMillis{60000};
 
+struct HttpConfig {
+  // timeout in seconds
+  int connect_timeout = 6;
+  int read_timeout = 20;
+  int batch_size = 10000;
+  bool send_in_parallel = false;
+
+  static HttpConfig FromJson(const rapidjson::Document& json,
+                             const HttpConfig& defaults) noexcept;
+};
+std::ostream& operator<<(std::ostream& os, const HttpConfig& http_config);
+
+struct EndpointConfig {
+  std::string subscriptions = ExpandEnvVars(
+      "http://atlas-lwcapi-iep.$EC2_REGION.iep$NETFLIX_ENVIRONMENT.netflix.net/"
+      "lwc/api/"
+      "v1/expressions/$NETFLIX_CLUSTER");
+  std::string publish = ExpandEnvVars(
+      "http://"
+      "atlas-pub-$EC2_OWNER_ID.$EC2_REGION.iep$NETFLIX_ENVIRONMENT.netflix.net/"
+      "api/v1/publish-fast");
+  std::string evaluate = ExpandEnvVars(
+      "http://atlas-lwcapi-iep.$EC2_REGION.iep$NETFLIX_ENVIRONMENT.netflix.net/"
+      "lwc/api/"
+      "v1/evaluate");
+  std::string check_cluster = ExpandEnvVars(
+      "http://"
+      "atlas-alert-api-$EC2_OWNER_ID.$EC2_REGION.$NETFLIX_ENVIRONMENT.netflix."
+      "net/"
+      "alertchecker/checkCluster/$NETFLIX_CLUSTER");
+
+  static EndpointConfig FromJson(const rapidjson::Document& json,
+                                 const EndpointConfig& defaults) noexcept;
+};
+std::ostream& operator<<(std::ostream& os, const EndpointConfig& endpoints);
+
+struct LogConfig {
+  int verbosity = 2;
+  size_t max_size = 1024u * 1024u;
+  size_t max_files = 8;
+  bool dump_metrics = false;
+  bool dump_subscriptions = false;
+
+  static LogConfig FromJson(const rapidjson::Document& json,
+                            const LogConfig& defaults) noexcept;
+};
+
+std::ostream& operator<<(std::ostream& os, const LogConfig& log_config);
+
+struct FeaturesConfig {
+  bool force_start = false;
+  bool validate = true;
+  bool notify_alert_server = true;
+  bool main = true;
+  bool subscriptions = false;
+  int64_t subscription_refresh_ms = 10000;
+  std::vector<std::string> publish_config = {":true,:all"};
+  std::string disabled_file = "/mnt/data/atlas.disabled";
+
+  static FeaturesConfig FromJson(const rapidjson::Document& json,
+                                 const FeaturesConfig& defaults) noexcept;
+};
+
 class Config {
  public:
-  Config(const std::string& disabled_file, const std::string& evaluate_endpoint,
-         const std::string& subscriptions_endpoint,
-         const std::string& publish_endpoint, bool validate_metrics,
-         const std::string& check_cluster_endpoint, bool notifyAlertServer,
-         std::vector<std::string> publish_config, int64_t subscription_refresh,
-         int connect_timeout, int read_timeout, int batch_size,
-         bool force_start, bool enable_main, bool enable_subscriptions,
-         bool dump_metrics, bool dump_subscriptions, int log_verbosity,
-         bool send_in_parallel, size_t log_max_size, size_t log_max_files,
-         meter::Tags common_tags) noexcept;
+  Config() noexcept;
+  static std::unique_ptr<Config> FromJson(const rapidjson::Document& json,
+                                          const Config& defaults) noexcept;
+  std::string ToString() const noexcept;
 
-  std::string EvalEndpoint() const noexcept { return evaluate_endpoint_; }
-  std::string SubsEndpoint() const noexcept { return subscriptions_endpoint_; }
-  std::string CheckClusterEndpoint() const noexcept {
-    return check_cluster_endpoint_;
+  const LogConfig& LogConfiguration() const noexcept { return logs; }
+  const HttpConfig& HttpConfiguration() const noexcept { return http; }
+  const EndpointConfig& EndpointConfiguration() const noexcept {
+    return endpoints;
   }
-  int64_t SubRefreshMillis() const noexcept { return subscription_refresh_; }
-  int ConnectTimeout() const noexcept { return connect_timeout_; }
-  int ReadTimeout() const noexcept { return read_timeout_; }
-  int BatchSize() const noexcept { return batch_size_; }
+
+  void SetNotify(bool notify) noexcept {
+    features.notify_alert_server = notify;
+  }
+
+  const std::vector<std::string>& PublishConfig() const noexcept {
+    return features.publish_config;
+  }
+  int64_t SubRefreshMillis() const noexcept {
+    return features.subscription_refresh_ms;
+  }
   std::string LoggingDirectory() const noexcept;
-  bool ShouldValidateMetrics() const noexcept { return validate_metrics_; }
-  bool ShouldForceStart() const noexcept { return force_start_; }
-  bool ShouldNotifyAlertServer() const noexcept { return notify_alert_server_; }
+  bool ShouldValidateMetrics() const noexcept { return features.validate; }
+  bool ShouldForceStart() const noexcept { return features.force_start; }
+  bool ShouldNotifyAlertServer() const noexcept {
+    return features.notify_alert_server;
+  }
   bool IsMainEnabled() const noexcept;
   bool AreSubsEnabled() const noexcept;
-  bool ShouldDumpMetrics() const noexcept { return dump_metrics_; }
-  bool ShouldDumpSubs() const noexcept { return dump_subscriptions_; }
-  std::string PublishEndpoint() const noexcept { return publish_endpoint_; }
-  const std::vector<std::string>& PublishConfig() const noexcept {
-    return publish_config_;
-  }
-  int LogVerbosity() const noexcept { return log_verbosity_; }
-  size_t LogMaxSize() const noexcept { return log_max_size_; }
-  size_t LogMaxFiles() const noexcept { return log_max_files_; }
   meter::Tags CommonTags() const noexcept { return common_tags_; }
   void AddCommonTags(const meter::Tags& extra_tags) noexcept {
     common_tags_.add_all(extra_tags);
   }
-  std::string DisabledFile() const noexcept {
-    return disabled_file_watcher_.file_name();
-  }
-  bool SendInParallel() const noexcept { return send_in_parallel_; }
 
   // for testing
   Config WithPublishConfig(std::vector<std::string> publish_config) {
     auto cfg = Config(*this);
-    cfg.publish_config_ = std::move(publish_config);
+    cfg.features.publish_config = std::move(publish_config);
     return cfg;
   }
 
  private:
+  FeaturesConfig features;
+  EndpointConfig endpoints;
+  LogConfig logs;
+  HttpConfig http;
+
   FileWatcher disabled_file_watcher_;
-  std::string evaluate_endpoint_;
-  std::string subscriptions_endpoint_;
-  std::string publish_endpoint_;
-  bool validate_metrics_;
-  std::string check_cluster_endpoint_;
-  bool notify_alert_server_;
-  std::vector<std::string> publish_config_;
-  int64_t subscription_refresh_;
-  int connect_timeout_;
-  int read_timeout_;
-  int batch_size_;
-  bool force_start_;
-  bool enable_main_;
-  bool enable_subscriptions_;
-  bool dump_metrics_;
-  bool dump_subscriptions_;
-  int log_verbosity_;
-  bool send_in_parallel_;
-  size_t log_max_size_;
-  size_t log_max_files_;
   meter::Tags common_tags_;
 };
-
-std::string ConfigToString(const Config& config) noexcept;
 
 }  // namespace util
 }  // namespace atlas

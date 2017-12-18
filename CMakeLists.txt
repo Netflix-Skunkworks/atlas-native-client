@@ -93,9 +93,10 @@ set_target_properties(runtests PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -Wno
 
 add_library(gtest 3rd-party/src/gtest/gtest-all.cc)
 
-configure_file(test/resources/metadata.json metadata.json COPYONLY)
-configure_file(test/resources/subs1.json subs1.json COPYONLY)
-configure_file(test/resources/many-subs.json many-subs.json COPYONLY)
+
+add_custom_command(TARGET runtests POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/test/resources $<TARGET_FILE_DIR:runtests>/resources)
 
 target_link_libraries(runtests
         atlasclient

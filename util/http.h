@@ -11,9 +11,9 @@ namespace util {
 
 class http {
  public:
-  explicit http(const Config& config)
-      : connect_timeout_(config.ConnectTimeout()),
-        read_timeout_(config.ReadTimeout()) {}
+  explicit http(const HttpConfig& config)
+      : connect_timeout_(config.connect_timeout),
+        read_timeout_(config.read_timeout) {}
 
   int conditional_get(const std::string& url, std::string& etag,
                       std::string* res) const;
@@ -25,7 +25,8 @@ class http {
 
   int post(const std::string& url, const rapidjson::Document& payload) const;
 
-  std::vector<int> post_batches(const std::string& url, const std::vector<rapidjson::Document>& batches);
+  std::vector<int> post_batches(
+      const std::string& url, const std::vector<rapidjson::Document>& batches);
   static void global_init() noexcept;
   static void global_shutdown() noexcept;
 

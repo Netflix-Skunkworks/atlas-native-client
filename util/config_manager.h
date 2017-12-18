@@ -1,21 +1,24 @@
 #pragma once
 
 #include <atomic>
-#include <rapidjson/document.h>
 #include <memory>
 #include <mutex>
 #include <string>
 #include "config.h"
-#include "environment.h"
 
 namespace atlas {
 namespace util {
 
-std::unique_ptr<Config> DefaultConfig(bool notify = true) noexcept;
+static constexpr const char* kLocalFileName = "./atlas-config.json";
+static constexpr int kConfigRefreshMillis = 10000;
 
 class ConfigManager {
  public:
-  ConfigManager() noexcept;
+  ConfigManager(std::string local_file_name = kLocalFileName,
+                int refresh_ms = kConfigRefreshMillis) noexcept
+      : local_file_name_{std::move(local_file_name)},
+        refresh_ms_{refresh_ms},
+        current_config_{std::shared_ptr<Config>(get_current_config())} {}
   ~ConfigManager() { Stop(); }
   std::shared_ptr<Config> GetConfig() const noexcept;
 
@@ -29,6 +32,8 @@ class ConfigManager {
 
  private:
   mutable std::mutex config_mutex;
+  std::string local_file_name_;
+  int refresh_ms_;
   std::shared_ptr<Config> current_config_;
   std::atomic<bool> should_run_{false};
   meter::Tags extra_tags_;
@@ -38,5 +43,5 @@ class ConfigManager {
   void refresh_configs() noexcept;
   std::unique_ptr<Config> get_current_config() noexcept;
 };
-}
-}
+}  // namespace util
+}  // namespace atlas

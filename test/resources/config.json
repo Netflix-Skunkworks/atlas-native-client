@@ -1,0 +1,9 @@
+{
+  "forceStart": true,
+  "publishUrl": "http://atlas.example.com/pub",
+  "evaluateUrl": "http://atlas.example.com/eval",
+  "subscriptionsUrl": "http://atlas.example.com/subs",
+  "checkClusterUrl": "http://atlas.example.com/check",
+  "notifyAlertServer": false,
+  "dumpMetrics": true
+}

@@ -19,10 +19,25 @@ class FileWatcher {
       : file_name_(other.file_name_),
         last_updated_(other.last_updated_.load(std::memory_order_relaxed)),
         exists_(other.exists_.load(std::memory_order_relaxed)) {}
+
+  FileWatcher& operator=(const FileWatcher& other) noexcept {
+    file_name_ = other.file_name_;
+    exists_.store(other.exists_, std::memory_order_relaxed);
+    last_updated_.store(other.last_updated_, std::memory_order_relaxed);
+    return *this;
+  }
+
   FileWatcher(FileWatcher&& other) noexcept
       : file_name_(std::move(other.file_name_)),
         last_updated_(other.last_updated_.load(std::memory_order_relaxed)),
         exists_(other.exists_.load(std::memory_order_relaxed)) {}
+
+  FileWatcher& operator=(FileWatcher&& other) noexcept {
+    file_name_ = std::move(other.file_name_);
+    exists_.store(other.exists_, std::memory_order_relaxed);
+    last_updated_.store(other.last_updated_, std::memory_order_relaxed);
+    return *this;
+  }
 
   bool exists() const noexcept {
     auto last = last_updated_.load(std::memory_order_relaxed);

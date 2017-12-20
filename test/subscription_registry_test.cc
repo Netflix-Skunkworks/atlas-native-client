@@ -7,15 +7,14 @@
 
 using atlas::util::Config;
 using atlas::util::ConfigManager;
-using atlas::util::DefaultConfig;
-using atlas::util::intern_str;
 using atlas::util::Logger;
+using atlas::util::intern_str;
 
-using atlas::interpreter::kNameRef;
+using atlas::interpreter::ClientVocabulary;
+using atlas::interpreter::Interpreter;
 using atlas::interpreter::TagsValuePair;
 using atlas::interpreter::TagsValuePairs;
-using atlas::interpreter::Interpreter;
-using atlas::interpreter::ClientVocabulary;
+using atlas::interpreter::kNameRef;
 using namespace atlas::meter;
 
 class SR : public SubscriptionRegistry {
@@ -78,7 +77,7 @@ TEST(SubscriptionRegistry, MainMetrics) {
 
   auto pub_config = std::vector<std::string>{
       "name,m1,:eq,:all", ":true,(,k2,nf.node,nf.region,),:drop-tags"};
-  auto cfg = DefaultConfig()->WithPublishConfig(pub_config);
+  auto cfg = Config().WithPublishConfig(pub_config);
   manual_clock.SetWall(60042);
   auto common_tags = cfg.CommonTags();
   const auto& res = registry.GetMainMeasurements(cfg, common_tags);
@@ -96,14 +95,10 @@ TEST(SubscriptionRegistry, MainMetrics) {
 
   auto ct = common_tags.size();
   auto expected_name_num_tags = std::unordered_map<std::string, size_t>(
-      {{"m1", 4u + ct},
-       {"m2", 3u + ct - 2},
-       {"m3", 3u + ct - 2}});
+      {{"m1", 4u + ct}, {"m2", 3u + ct - 2}, {"m3", 3u + ct - 2}});
   EXPECT_EQ(name_num_tags, expected_name_num_tags);
 
   auto expected_name_value = std::unordered_map<std::string, double>(
-      {{"m1", 1/60.0},
-       {"m2", 120/60.0},
-       {"m3", 120/60.0}});
+      {{"m1", 1 / 60.0}, {"m2", 120 / 60.0}, {"m3", 120 / 60.0}});
   EXPECT_EQ(name_value, expected_name_value);
 }

@@ -1,47 +1,13 @@
 #include "config.h"
 #include "dump.h"
 #include "logger.h"
-#include "strings.h"
+#include "environment.h"
+#include <rapidjson/document.h>
 #include <iomanip>
 #include <sstream>
 
 namespace atlas {
 namespace util {
-
-Config::Config(const std::string& disabled_file,
-               const std::string& evaluate_endpoint,
-               const std::string& subscriptions_endpoint,
-               const std::string& publish_endpoint, bool validate_metrics,
-               const std::string& check_cluster_endpoint,
-               bool notifyAlertServer, std::vector<std::string> publish_config,
-               int64_t subscription_refresh, int connect_timeout,
-               int read_timeout, int batch_size, bool force_start,
-               bool enable_main, bool enable_subscriptions, bool dump_metrics,
-               bool dump_subscriptions, int log_verbosity,
-               bool send_in_parallel, size_t log_max_size, size_t log_max_files,
-               meter::Tags common_tags) noexcept
-    : disabled_file_watcher_(disabled_file),
-      evaluate_endpoint_(ExpandEnvVars(evaluate_endpoint)),
-      subscriptions_endpoint_(ExpandEnvVars(subscriptions_endpoint)),
-      publish_endpoint_(ExpandEnvVars(publish_endpoint)),
-      validate_metrics_(validate_metrics),
-      check_cluster_endpoint_(ExpandEnvVars(check_cluster_endpoint)),
-      notify_alert_server_(notifyAlertServer),
-      publish_config_(std::move(publish_config)),
-      subscription_refresh_(subscription_refresh),
-      connect_timeout_(connect_timeout),
-      read_timeout_(read_timeout),
-      batch_size_(batch_size),
-      force_start_(force_start),
-      enable_main_(enable_main),
-      enable_subscriptions_(enable_subscriptions),
-      dump_metrics_(dump_metrics),
-      dump_subscriptions_(dump_subscriptions),
-      log_verbosity_(log_verbosity),
-      send_in_parallel_(send_in_parallel),
-      log_max_size_(log_max_size),
-      log_max_files_(log_max_files),
-      common_tags_(std::move(common_tags)) {}
 
 std::string Config::LoggingDirectory() const noexcept {
   return GetLoggingDir();
@@ -49,41 +15,217 @@ std::string Config::LoggingDirectory() const noexcept {
 
 bool Config::IsMainEnabled() const noexcept {
   bool disabled = disabled_file_watcher_.exists();
-  return !disabled && enable_main_;
+  return !disabled && features.main;
 }
 
 bool Config::AreSubsEnabled() const noexcept {
   bool disabled = disabled_file_watcher_.exists();
-  return !disabled && enable_subscriptions_;
+  return !disabled && features.subscriptions;
 }
 
-std::string ConfigToString(const Config& config) noexcept {
+static inline void put_if_nonempty(meter::Tags* tags, const char* key,
+                                   std::string&& val) {
+  if (!val.empty()) {
+    tags->add(key, val.c_str());
+  }
+}
+
+static meter::Tags get_default_common_tags() {
+  meter::Tags common_tags_;
+  put_if_nonempty(&common_tags_, "nf.node", env::instance_id());
+  put_if_nonempty(&common_tags_, "nf.cluster", env::cluster());
+  put_if_nonempty(&common_tags_, "nf.app", env::app());
+  put_if_nonempty(&common_tags_, "nf.asg", env::asg());
+  put_if_nonempty(&common_tags_, "nf.stack", env::stack());
+  put_if_nonempty(&common_tags_, "nf.vmtype", env::vmtype());
+  put_if_nonempty(&common_tags_, "nf.task", env::taskid());
+  put_if_nonempty(&common_tags_, "nf.zone", env::zone());
+  put_if_nonempty(&common_tags_, "nf.region", env::region());
+  put_if_nonempty(&common_tags_, "nf.account", env::account());
+  return common_tags_;
+}
+
+Config::Config() noexcept
+    : disabled_file_watcher_(features.disabled_file),
+      common_tags_(get_default_common_tags()) {}
+
+std::unique_ptr<Config> Config::FromJson(const rapidjson::Document& json,
+                                         const Config& defaults) noexcept {
+  auto config = std::make_unique<Config>();
+
+  config->features = FeaturesConfig::FromJson(json, defaults.features);
+  config->http = HttpConfig::FromJson(json, defaults.http);
+  config->endpoints = EndpointConfig::FromJson(json, defaults.endpoints);
+  config->logs = LogConfig::FromJson(json, defaults.logs);
+
+  config->disabled_file_watcher_ = FileWatcher(config->features.disabled_file);
+  config->common_tags_ = defaults.common_tags_;
+
+  return config;
+}
+
+std::string Config::ToString() const noexcept {
   std::ostringstream os;
   os << std::boolalpha;
-  os << "Config{eval_endpoint=" << config.EvalEndpoint() << '\n'
-     << ", subs_endpoint=" << config.SubsEndpoint() << '\n'
-     << ", subs_refresh=" << config.SubRefreshMillis() << "ms"
-     << ", publish=" << config.PublishEndpoint() << '\n'
-     << ", notifyAlertServer=" << config.ShouldNotifyAlertServer() << '\n'
-     << ", validateMetrics=" << config.ShouldValidateMetrics() << '\n'
-     << ", forceStart=" << config.ShouldForceStart()
-     << ", mainEnabled=" << config.IsMainEnabled() << '\n'
-     << ", subsEnabled=" << config.AreSubsEnabled() << '\n'
-     << ", publish_cfg=";
-  const auto& pub_cfg = config.PublishConfig();
+  os << "Config{endpoints=" << EndpointConfiguration() << '\n'
+     << ", subsRefresh=" << SubRefreshMillis() << "ms"
+     << ", notifyAlertServer=" << ShouldNotifyAlertServer() << '\n'
+     << ", validateMetrics=" << ShouldValidateMetrics() << '\n'
+     << ", forceStart=" << ShouldForceStart()
+     << ", mainEnabled=" << IsMainEnabled() << '\n'
+     << ", subsEnabled=" << AreSubsEnabled() << '\n'
+     << ", publishCfg=";
+  const auto& pub_cfg = PublishConfig();
   dump_vector(os, pub_cfg);
-  os << ", dump_metrics=" << config.ShouldDumpMetrics()
-     << ", dump_subs=" << config.ShouldDumpSubs()
-     << ", batch=" << config.BatchSize()
-     << ", send_in_parallel=" << config.SendInParallel()
-     << ", Timeouts(C=" << config.ConnectTimeout()
-     << ",R=" << config.ReadTimeout()
-     << "), logVerbosity=" << config.LogVerbosity() << ")\n"
-     << ", common-tags=";
-  dump_tags(os, config.CommonTags());
+  os << "\n, log=" << LogConfiguration() << "\n, http=" << HttpConfiguration()
+     << "\n, commonTags=";
+  dump_tags(os, CommonTags());
   os << "}";
   os << std::noboolalpha;
   return os.str();
+}
+
+std::ostream& operator<<(std::ostream& os, const HttpConfig& http_config) {
+  os << std::boolalpha;
+  os << "H(C=" << http_config.connect_timeout
+     << ",R=" << http_config.read_timeout << ",B=" << http_config.batch_size
+     << ",P=" << http_config.send_in_parallel << ")";
+  os << std::noboolalpha;
+
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const LogConfig& log_config) {
+  os << std::boolalpha;
+  os << "L(V=" << log_config.verbosity << ",S=" << log_config.max_size
+     << ",N=" << log_config.max_files << ",DM=" << log_config.dump_metrics
+     << ",DS=" << log_config.dump_subscriptions << ")";
+  os << std::noboolalpha;
+
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const EndpointConfig& endpoints) {
+  os << "E(P=" << endpoints.publish << ",S=" << endpoints.subscriptions
+     << ",E=" << endpoints.evaluate << ",C=" << endpoints.check_cluster << ")";
+  return os;
+}
+
+HttpConfig HttpConfig::FromJson(const rapidjson::Document& document,
+                                const HttpConfig& defaults) noexcept {
+  HttpConfig config;
+  config.connect_timeout = document.HasMember("connectTimeout")
+                               ? document["connectTimeout"].GetInt()
+                               : defaults.connect_timeout;
+
+  config.read_timeout = document.HasMember("readTimeout")
+                            ? document["readTimeout"].GetInt()
+                            : defaults.read_timeout;
+
+  config.batch_size = document.HasMember("batchSize")
+                          ? document["batchSize"].GetInt()
+                          : defaults.batch_size;
+
+  config.send_in_parallel = document.HasMember("sendInParallel")
+                                ? document["sendInParallel"].GetBool()
+                                : defaults.send_in_parallel;
+
+  return config;
+}
+
+EndpointConfig EndpointConfig::FromJson(
+    const rapidjson::Document& document,
+    const EndpointConfig& defaults) noexcept {
+  EndpointConfig config;
+  config.evaluate = document.HasMember("evaluateUrl")
+                        ? ExpandEnvVars(document["evaluateUrl"].GetString())
+                        : defaults.evaluate;
+
+  config.subscriptions =
+      document.HasMember("subscriptionsUrl")
+          ? ExpandEnvVars(document["subscriptionsUrl"].GetString())
+          : defaults.subscriptions;
+
+  config.publish = document.HasMember("publishUrl")
+                       ? ExpandEnvVars(document["publishUrl"].GetString())
+                       : defaults.publish;
+
+  config.check_cluster =
+      document.HasMember("checkClusterUrl")
+          ? ExpandEnvVars(document["checkClusterUrl"].GetString())
+          : defaults.check_cluster;
+  return config;
+}
+
+LogConfig LogConfig::FromJson(const rapidjson::Document& json,
+                              const LogConfig& defaults) noexcept {
+  LogConfig config;
+  config.verbosity = json.HasMember("logVerbosity")
+                         ? json["logVerbosity"].GetInt()
+                         : defaults.verbosity;
+
+  config.max_size = json.HasMember("logMaxSize") ? json["logMaxSize"].GetUint()
+                                                 : defaults.max_size;
+
+  config.max_files = json.HasMember("logMaxFiles")
+                         ? json["logMaxFiles"].GetUint()
+                         : defaults.max_files;
+
+  config.dump_metrics = json.HasMember("dumpMetrics")
+                            ? json["dumpMetrics"].GetBool()
+                            : defaults.dump_metrics;
+
+  config.dump_subscriptions = json.HasMember("dumpSubscriptions")
+                                  ? json["dumpSubscriptions"].GetBool()
+                                  : defaults.dump_subscriptions;
+  return config;
+}
+
+static std::vector<std::string> vector_from(const rapidjson::Value& array) {
+  std::vector<std::string> res;
+  for (auto& v : array.GetArray()) {
+    res.emplace_back(v.GetString());
+  }
+  return res;
+}
+
+FeaturesConfig FeaturesConfig::FromJson(
+    const rapidjson::Document& json, const FeaturesConfig& defaults) noexcept {
+  FeaturesConfig config;
+  config.validate = json.HasMember("validateMetrics")
+                        ? json["validateMetrics"].GetBool()
+                        : defaults.validate;
+
+  config.notify_alert_server = json.HasMember("notifyAlertServer")
+                                   ? json["notifyAlertServer"].GetBool()
+                                   : defaults.notify_alert_server;
+
+  config.publish_config = json.HasMember("publishConfig")
+                              ? vector_from(json["publishConfig"])
+                              : defaults.publish_config;
+
+  config.force_start = json.HasMember("forceStart")
+                           ? json["forceStart"].GetBool()
+                           : defaults.force_start;
+
+  config.main = json.HasMember("publishEnabled")
+                    ? json["publishEnabled"].GetBool()
+                    : defaults.main;
+
+  config.subscriptions = json.HasMember("subscriptionsEnabled")
+                             ? json["subscriptionsEnabled"].GetBool()
+                             : defaults.subscriptions;
+
+  config.subscription_refresh_ms =
+      json.HasMember("subscriptionsRefreshMillis")
+          ? json["subscriptionsRefreshMillis"].GetInt64()
+          : defaults.subscription_refresh_ms;
+
+  const char* maybe_file = std::getenv("ATLAS_DISABLED_FILE");
+  config.disabled_file =
+      maybe_file != nullptr ? maybe_file : defaults.disabled_file;
+
+  return config;
 }
 
 }  // namespace util

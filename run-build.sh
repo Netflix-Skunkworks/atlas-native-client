@@ -39,7 +39,7 @@ if [ $CC = gcc ]; then
   make -j8 libatlasclient_coverage
 fi
 
-ctest
+./runtests
 if [ $? -ne 0 ]; then
     error "Error: there are failed tests!"
     exit 4

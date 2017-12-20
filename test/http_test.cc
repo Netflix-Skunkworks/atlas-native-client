@@ -14,6 +14,7 @@
 #include "../interpreter/tags_value.h"
 #include <thread>
 
+using atlas::util::HttpConfig;
 using atlas::util::Logger;
 using atlas::util::ToLowerCopy;
 
@@ -236,8 +237,8 @@ TEST(HttpTest, Post) {
   auto logger = Logger();
   logger->info("Server started on port {}", port);
 
-  auto cfg = atlas::util::DefaultConfig();
-  http client{*cfg};
+  auto cfg = HttpConfig();
+  http client{cfg};
   std::ostringstream os;
   os << "http://localhost:" << port << "/foo";
   auto url = os.str();
@@ -308,8 +309,8 @@ TEST(HttpTest, PostBatches) {
   auto logger = Logger();
   logger->info("Server started on port {}", port);
 
-  auto cfg = atlas::util::DefaultConfig();
-  http client{*cfg};
+  auto cfg = HttpConfig();
+  http client{cfg};
   std::ostringstream os;
   os << "http://localhost:" << port << "/foo";
   auto url = os.str();
@@ -352,8 +353,8 @@ TEST(HttpTest, Timeout) {
   auto logger = Logger();
   logger->info("Server started on port {}", port);
 
-  auto cfg = atlas::util::DefaultConfig();
-  http client{*cfg};
+  auto cfg = HttpConfig();
+  http client{cfg};
   std::ostringstream os;
   os << "http://localhost:" << port << "/foo";
   auto url = os.str();

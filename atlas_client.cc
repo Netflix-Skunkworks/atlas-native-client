@@ -109,7 +109,7 @@ util::Config GetConfig() {
   if (atlas_client) {
     return *atlas_client->GetConfig();
   }
-  return *atlas::util::DefaultConfig();
+  return util::Config();
 }
 
 void PushMeasurements(const atlas::meter::Measurements& measurements) {
@@ -120,10 +120,6 @@ void PushMeasurements(const atlas::meter::Measurements& measurements) {
 
 void SetLoggingDirs(const std::vector<std::string>& dirs) {
   atlas::util::SetLoggingDirs(dirs);
-}
-
-void SetLogSizes(size_t max_size, size_t max_files) {
-  atlas::util::SetLogSizes({max_size, max_files});
 }
 
 void UseConsoleLogger(int level) { atlas::util::UseConsoleLogger(level); }

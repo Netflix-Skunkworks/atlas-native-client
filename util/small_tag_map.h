@@ -51,10 +51,7 @@ static constexpr size_t kMaxTags = 32u;
 class SmallTagMap : private detail::prime_number_hash_policy {
   using value_type = std::pair<util::StrRef, util::StrRef>;
 
- public:
-  SmallTagMap() noexcept { init(); }
-
-  SmallTagMap(const SmallTagMap& other) noexcept {
+  void init_from(const SmallTagMap& other) {
     prime_index = other.prime_index;
     actual_size_ = other.actual_size_;
     auto N = num_buckets();
@@ -64,10 +61,27 @@ class SmallTagMap : private detail::prime_number_hash_policy {
     }
   }
 
-  SmallTagMap(SmallTagMap&& other) noexcept {
+  void move_from(SmallTagMap&& other) {
     prime_index = other.prime_index;
     entries_ = std::move(other.entries_);
     actual_size_ = other.actual_size_;
+  }
+
+ public:
+  SmallTagMap() noexcept { init(); }
+
+  SmallTagMap(const SmallTagMap& other) noexcept { init_from(other); }
+
+  SmallTagMap& operator=(const SmallTagMap& other) noexcept {
+    init_from(other);
+    return *this;
+  }
+
+  SmallTagMap(SmallTagMap&& other) noexcept { move_from(std::move(other)); }
+
+  SmallTagMap& operator=(SmallTagMap&& other) noexcept {
+    move_from(std::move(other));
+    return *this;
   }
 
   SmallTagMap(std::initializer_list<meter::Tag> vs) {

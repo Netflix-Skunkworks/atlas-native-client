@@ -12,7 +12,7 @@ static std::vector<std::string> logging_directories = {"/logs/atlasd",
                                                        "./logs"};
 
 static std::string current_logging_directory;
-static LogNumSize current_log_num_size{1024u * 1024u, 8};
+static LogConfig current_log_config;
 
 static bool is_writable_dir(const std::string& dir) {
   struct stat dir_stat;
@@ -68,8 +68,8 @@ static void initialize_logger(const std::string& log_dir) {
     });
     auto logger = spdlog::create<spdlog::sinks::rotating_file_sink_mt>(
         kMainLogger, join_path(log_dir, "atlasclient"),
-        SPDLOG_FILENAME_T("log"), current_log_num_size.max_size,
-        current_log_num_size.max_files);
+        SPDLOG_FILENAME_T("log"), current_log_config.max_size,
+        current_log_config.max_files);
     current_logging_directory = log_dir;
     logger->flush_on(spdlog::level::info);
   } else {
@@ -118,10 +118,6 @@ void SetLoggingDirs(const std::vector<std::string>& dirs) noexcept {
   initialize();
 }
 
-void SetLoggingLevel(int level) noexcept {
-  Logger()->set_level(level_from_int(level));
-}
-
 void UseConsoleLogger(int level) noexcept {
   std::lock_guard<std::mutex> lock(logger_mutex);
   auto logger = spdlog::get(kMainLogger);
@@ -134,16 +130,24 @@ void UseConsoleLogger(int level) noexcept {
   current_logging_directory = "";
 }
 
-LogNumSize GetLogSizes() noexcept { return current_log_num_size; }
-
-void SetLogSizes(const LogNumSize& log_num_size) noexcept {
+void InitializeLogging(const LogConfig& config) noexcept {
   std::lock_guard<std::mutex> lock(logger_mutex);
+
+  Logger()->set_level(level_from_int(config.verbosity));
+
+  auto new_size = config.max_size;
+  auto new_files = config.max_files;
+  if (current_log_config.max_files == new_files ||
+      current_log_config.max_size == new_size) {
+    return;
+  }
+
+  current_log_config = config;
   auto logger = spdlog::get(kMainLogger);
   if (logger) {
     spdlog::drop(kMainLogger);
   }
 
-  current_log_num_size = log_num_size;
   initialize();
 }
 

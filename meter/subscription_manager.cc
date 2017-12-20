@@ -63,7 +63,7 @@ void SubscriptionManager::MainSender(
 }
 
 static void updateAlertServer(const std::string& endpoint,
-                              const util::Config& config) {
+                              const util::HttpConfig& config) {
   util::http client(config);
   auto res =
       client.post(endpoint, "Content-type: application/octet-stream", "", 0);
@@ -77,7 +77,8 @@ void SubscriptionManager::SubRefresher() noexcept {
     try {
       auto start = system_clock::now();
       const auto& config = config_manager_.GetConfig();
-      auto subs_endpoint = config->SubsEndpoint();
+      const auto& endpoints = config->EndpointConfiguration();
+      auto subs_endpoint = endpoints.subscriptions;
       if (config->AreSubsEnabled()) {
         Logger()->info("Refreshing subscriptions from {}", subs_endpoint);
         RefreshSubscriptions(subs_endpoint);
@@ -85,12 +86,11 @@ void SubscriptionManager::SubRefresher() noexcept {
       // HACK (temporary until lwc does alerts)
       // notify alert server that we do not support on-instance alerts
       if (config->ShouldNotifyAlertServer() && refresher_runs % 30 == 0) {
-        auto check_cluster_endpoint = config->CheckClusterEndpoint();
         Logger()->debug(
             "Notifying alert server about our lack of on-instance alerts "
             "support {}",
-            check_cluster_endpoint);
-        updateAlertServer(check_cluster_endpoint, *config);
+            endpoints.check_cluster);
+        updateAlertServer(endpoints.check_cluster, config->HttpConfiguration());
       }
       ++refresher_runs;
       auto end = system_clock::now();
@@ -213,7 +213,7 @@ void SubscriptionManager::RefreshSubscriptions(
   auto logger = Logger();
 
   auto cfg = config_manager_.GetConfig();
-  util::http http_client(*cfg);
+  util::http http_client(cfg->HttpConfiguration());
   auto start = atlas_registry.clock().MonotonicTime();
   auto http_res =
       http_client.conditional_get(subs_endpoint, current_etag, &subs_str);
@@ -328,13 +328,14 @@ static void SendBatchToLwc(const util::http& client, const util::Config& config,
   auto timer = atlas_registry.timer(sendBatchLwcId->WithTag(freq_tag));
 
   auto metrics = SubResultsToJson(clock.WallTime(), first, last);
-  if (config.ShouldDumpSubs()) {
+  if (config.LogConfiguration().dump_subscriptions) {
     std::string file_name{"lwc_"};
     DumpJson("/tmp", file_name + msecs_str + "_", metrics);
   }
-  auto res = client.post(config.EvalEndpoint(), metrics);
+  const auto& endpoints = config.EndpointConfiguration();
+  auto res = client.post(endpoints.evaluate, metrics);
   if (res != 200) {
-    Logger()->error("Failed to POST: {}", res);
+    Logger()->error("Failed to POST to {}: {}", endpoints.evaluate, res);
     atlas_registry.counter(errorId->WithTag(freq_tag))->Increment();
   }
   timer->Record(clock.MonotonicTime() - start);
@@ -352,10 +353,11 @@ void SubscriptionManager::SendMetricsForInterval(int64_t millis) noexcept {
   auto timer = atlas_registry.timer(sendId->WithTag(freq_tag));
   auto cfg = config_manager_.GetConfig();
   const auto& sub_results = registry_.GetLwcMetricsForInterval(*cfg, millis);
-  util::http http_client(*cfg);
+  const auto& http_cfg = cfg->HttpConfiguration();
+  util::http http_client(http_cfg);
 
   auto batch_size =
-      static_cast<SubscriptionResults::difference_type>(cfg->BatchSize());
+      static_cast<SubscriptionResults::difference_type>(http_cfg.batch_size);
   auto from = sub_results.begin();
   auto end = sub_results.end();
   while (from != end) {
@@ -465,8 +467,10 @@ static void SendBatch(const util::http& client, const util::Config& config,
   auto logger = Logger();
 
   auto num_measurements = std::distance(first, last);
+  const auto& endpoints = config.EndpointConfiguration();
+  const auto& log_config = config.LogConfiguration();
   logger->info("Sending batch of {} metrics to {}", num_measurements,
-               config.PublishEndpoint());
+               endpoints.publish);
   int64_t added = 0;
   auto num_metrics = static_cast<int64_t>(num_measurements);
   auto payload = MeasurementsToJson(now_millis, first, last,
@@ -480,9 +484,9 @@ static void SendBatch(const util::http& client, const util::Config& config,
   }
 
   auto start = atlas_registry.clock().MonotonicTime();
-  auto http_res = client.post(config.PublishEndpoint(), payload);
+  auto http_res = client.post(endpoints.publish, payload);
   timer->Record(atlas_registry.clock().MonotonicTime() - start);
-  if (config.ShouldDumpMetrics()) {
+  if (log_config.dump_metrics) {
     DumpJson("/tmp", "main_batch_", payload);
   }
   if (http_res != 200) {
@@ -499,9 +503,11 @@ static void PushInParallel(const util::Config& config, int64_t now_millis,
                            const interpreter::TagsValuePairs& measurements) {
   static auto timer = atlas_registry.timer("atlas.client.parallelPost");
 
-  util::http client(config);
+  const auto& http_cfg = config.HttpConfiguration();
+  const auto& endpoints = config.EndpointConfiguration();
+  util::http client(http_cfg);
   auto batch_size =
-      static_cast<TagsValuePairs::difference_type>(config.BatchSize());
+      static_cast<TagsValuePairs::difference_type>(http_cfg.batch_size);
   std::vector<rapidjson::Document> batches;
   std::vector<int64_t> batch_sizes;
   auto from = measurements.begin();
@@ -517,7 +523,7 @@ static void PushInParallel(const util::Config& config, int64_t now_millis,
     int64_t added;
     batches.emplace_back(MeasurementsToJson(
         now_millis, from, to, config.ShouldValidateMetrics(), &added));
-    if (config.ShouldDumpMetrics()) {
+    if (config.LogConfiguration().dump_metrics) {
       DumpJson("/tmp", "main_batch_", batches.back());
     }
     total_valid_metrics += added;
@@ -527,7 +533,7 @@ static void PushInParallel(const util::Config& config, int64_t now_millis,
   }
 
   auto start = atlas_registry.clock().MonotonicTime();
-  auto http_codes = client.post_batches(config.PublishEndpoint(), batches);
+  auto http_codes = client.post_batches(endpoints.publish, batches);
   UpdateValidationErrorStats(validation_errors);
   UpdateTotalSentStat(static_cast<int64_t>(measurements.size()));
   for (auto i = 0u; i < http_codes.size(); ++i) {
@@ -548,9 +554,10 @@ static void PushInParallel(const util::Config& config, int64_t now_millis,
 
 static void PushSerially(const util::Config& config, int64_t now_millis,
                          const interpreter::TagsValuePairs& measurements) {
-  util::http client(config);
+  const auto& http_cfg = config.HttpConfiguration();
+  util::http client(http_cfg);
   auto batch_size =
-      static_cast<TagsValuePairs::difference_type>(config.BatchSize());
+      static_cast<TagsValuePairs::difference_type>(http_cfg.batch_size);
 
   auto from = measurements.begin();
   auto end = measurements.end();
@@ -567,7 +574,7 @@ static void PushSerially(const util::Config& config, int64_t now_millis,
 void SubscriptionManager::PushMeasurements(
     int64_t now_millis, const interpreter::TagsValuePairs& measurements) const {
   auto cfg = config_manager_.GetConfig();
-  if (cfg->SendInParallel()) {
+  if (cfg->HttpConfiguration().send_in_parallel) {
     PushInParallel(*cfg, now_millis, measurements);
   } else {
     PushSerially(*cfg, now_millis, measurements);
@@ -587,6 +594,7 @@ void SubscriptionManager::SendToMain() {
   const auto& clock = atlas_registry.clock();
   auto start = clock.MonotonicTime();
   auto cfg = config_manager_.GetConfig();
+  const auto& endpoints = cfg->EndpointConfiguration();
   const auto common_tags = cfg->CommonTags();
   auto metrics = registry_.GetMainMeasurements(*cfg, common_tags);
   // all our metrics are normalized, so send them with a timestamp at the start
@@ -597,7 +605,7 @@ void SubscriptionManager::SendToMain() {
   auto nanos = clock.MonotonicTime() - start;
   auto millis = nanos / 1e6;
   Logger()->info("Sent {} metrics to {} in {}ms", metrics->size(),
-                 cfg->PublishEndpoint(), millis);
+                 endpoints.publish, millis);
   send_timer->Record(nanos);
 }
 }  // namespace meter

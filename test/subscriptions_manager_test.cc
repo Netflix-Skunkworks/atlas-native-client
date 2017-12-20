@@ -20,7 +20,7 @@ rapidjson::Document SubResultsToJson(
 
 using namespace atlas::meter;
 TEST(SubscriptionsManager, ParseSubs) {
-  std::ifstream one_sub("subs1.json");
+  std::ifstream one_sub("./resources/subs1.json");
   std::stringstream buffer;
   buffer << one_sub.rdbuf();
 
@@ -35,7 +35,7 @@ TEST(SubscriptionsManager, ParseSubs) {
 }
 
 TEST(SubscriptionsManager, ParseLotsOfSubs) {
-  std::ifstream one_sub("many-subs.json");
+  std::ifstream one_sub("./resources/many-subs.json");
   std::stringstream buffer;
   buffer << one_sub.rdbuf();
 

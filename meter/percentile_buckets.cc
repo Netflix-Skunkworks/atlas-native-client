@@ -16,13 +16,7 @@ size_t IndexOf(int64_t v) {
   if (v <= 4) {
     return static_cast<size_t>(v);
   }
-  size_t lz;
-
-#ifdef __LZCNT__
-  lz = __lzcnt64(v);
-#else
-  lz = __builtin_clzll(v);
-#endif
+  size_t lz = __builtin_clzll(v);
   size_t shift = 64 - lz - 1;
   int64_t prevPowerOf2 = (v >> shift) << shift;
   int64_t prevPowerOf4 = prevPowerOf2;

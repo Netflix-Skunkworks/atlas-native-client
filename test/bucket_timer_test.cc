@@ -7,9 +7,11 @@ using atlas::meter::BucketTimer;
 using atlas::meter::Measurement;
 using atlas::meter::Tag;
 using atlas::meter::bucket_functions::Age;
+using atlas::meter::bucket_functions::Latency;
 using atlas::meter::kEmptyTags;
 using atlas::util::Logger;
 using std::chrono::milliseconds;
+using std::chrono::seconds;
 
 TEST(BucketTimer, Init) {
   TestRegistry r;
@@ -57,4 +59,25 @@ TEST(BucketTimer, Record) {
       FAIL() << "Unknown id: " << *m.id;
     }
   }
+}
+
+TEST(BucketTimer, Latency) {
+  TestRegistry r;
+  r.SetWall(1000);
+
+  auto id = r.CreateId("bucket.t", kEmptyTags);
+  BucketTimer bt(&r, id, Latency(seconds(3)));
+  bt.Record(seconds(1));
+
+  auto b1500 = id->WithTag(Tag::of("bucket", "1500ms"));
+  auto t = r.timer(std::move(b1500));
+  EXPECT_EQ(t->Count(), 1);
+
+  bt.Record(milliseconds(1200));
+  EXPECT_EQ(t->Count(), 2);
+
+  bt.Record(milliseconds(212));
+  auto b375 = id->WithTag(Tag::of("bucket", "0375ms"));
+  auto t2 = r.timer(std::move(b375));
+  EXPECT_EQ(t2->Count(), 1);
 }

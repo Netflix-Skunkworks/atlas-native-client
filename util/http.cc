@@ -149,7 +149,7 @@ size_t header_callback(char* buffer, size_t size, size_t n_items,
 
 int http::conditional_get(const std::string& url, std::string& etag,
                           std::string* res) const {
-  auto logger = Logger();
+  const auto& logger = Logger();
   logger->debug("Conditionally getting url: {} etag: {}", url, etag);
   CurlHandle curl;
   // url to get
@@ -195,7 +195,7 @@ int http::conditional_get(const std::string& url, std::string& etag,
 }
 
 int http::get(const std::string& url, std::string* res) const {
-  auto logger = Logger();
+  const auto& logger = Logger();
   logger->debug("Getting url: {}", url);
   CurlHandle curl;
   // url to get
@@ -237,7 +237,7 @@ static int do_post(const std::string& url, int connect_timeout,
   curl.set_connect_timeout(connect_timeout);
   curl.set_read_timeout(read_timeout);
 
-  auto logger = Logger();
+  const auto& logger = Logger();
   logger->info("POSTing to url: {}", url);
   curl.set_url(url);
   curl.set_headers(std::move(headers));
@@ -391,7 +391,6 @@ static bool setup_handle_for_post(CurlHandle* handle, const std::string& url,
     return false;
   }
 
-  auto logger = Logger();
   handle->set_url(url);
   handle->set_headers(std::move(headers));
   handle->post_payload(std::move(compressed_payload), size);

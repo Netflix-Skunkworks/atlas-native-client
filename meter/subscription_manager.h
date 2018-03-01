@@ -2,6 +2,8 @@
 
 #include "../util/config_manager.h"
 #include "subscription_registry.h"
+#include <condition_variable>
+#include <mutex>
 #include <set>
 
 namespace atlas {
@@ -35,6 +37,11 @@ class SubscriptionManager {
   std::atomic<Subscriptions*> subscriptions_{nullptr};
   SubscriptionRegistry& registry_;
   std::atomic<bool> should_run_{false};
+  std::thread main_sender_thread;
+  std::thread sub_refresher_thread;
+  std::vector<std::thread> sub_senders;
+  std::mutex mutex;
+  std::condition_variable cv;
 
   void SubRefresher() noexcept;
   void MainSender(std::chrono::seconds initial_delay) noexcept;

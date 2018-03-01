@@ -9,8 +9,8 @@ Subscriptions* ParseSubscriptions(const std::string& subs_str);
 rapidjson::Document MeasurementsToJson(
     int64_t now_millis,
     const interpreter::TagsValuePairs::const_iterator& first,
-    const interpreter::TagsValuePairs::const_iterator& last,
-    bool validate, int64_t* added);
+    const interpreter::TagsValuePairs::const_iterator& last, bool validate,
+    int64_t* added);
 
 rapidjson::Document SubResultsToJson(
     int64_t now_millis, const SubscriptionResults::const_iterator& first,
@@ -51,10 +51,8 @@ static std::string json_to_str(const rapidjson::Document& json) {
 
 static void expect_eq_json(rapidjson::Document& expected,
                            rapidjson::Document& actual) {
-
-  EXPECT_EQ(expected, actual)
-            << "expected: " << json_to_str(expected)
-            << ", actual: " << json_to_str(actual);
+  EXPECT_EQ(expected, actual) << "expected: " << json_to_str(expected)
+                              << ", actual: " << json_to_str(actual);
 }
 
 TEST(SubscriptionManager, MeasurementsToJsonInvalid) {
@@ -71,7 +69,8 @@ TEST(SubscriptionManager, MeasurementsToJsonInvalid) {
   TagsValuePairs ms{std::move(m1), std::move(m2), std::move(m3)};
 
   int64_t added;
-  auto json = atlas::meter::MeasurementsToJson(1, ms.begin(), ms.end(), true, &added);
+  auto json =
+      atlas::meter::MeasurementsToJson(1, ms.begin(), ms.end(), true, &added);
   EXPECT_EQ(added, 0);
 }
 
@@ -89,7 +88,8 @@ TEST(SubscriptionManager, MeasurementsToJson) {
   TagsValuePairs ms{std::move(m1), std::move(m2), std::move(m3)};
 
   int64_t added;
-  auto json = atlas::meter::MeasurementsToJson(1, ms.begin(), ms.end(), true, &added);
+  auto json =
+      atlas::meter::MeasurementsToJson(1, ms.begin(), ms.end(), true, &added);
   EXPECT_EQ(added, 3);
 
   const char* expected =
@@ -124,4 +124,3 @@ TEST(SubscriptionManager, SubResToJson) {
   expected_json.Parse<kParseCommentsFlag | kParseNanAndInfFlag>(expected);
   expect_eq_json(expected_json, json);
 }
-

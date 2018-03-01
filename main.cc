@@ -21,8 +21,8 @@ void init_tags(Tags* tags) {
 
 int main(int argc, char* argv[]) {
   atlas::util::UseConsoleLogger(1);
-  auto logger = atlas::util::Logger();
-  InitAtlas();
+  const auto& logger = atlas::util::Logger();
+  atlas::Init();
 
   Tags test_tags;
   init_tags(&test_tags);
@@ -35,7 +35,8 @@ int main(int argc, char* argv[]) {
     logger->info("Sleeping for 40s");
     std::this_thread::sleep_for(std::chrono::seconds(40));
   }
+  logger->info("Shutting down");
 
-  ShutdownAtlas();
+  atlas::Shutdown();
   return 0;
 }

@@ -16,4 +16,3 @@ TEST(ConfigManager, Init) {
   EXPECT_EQ(endpoints.subscriptions, "http://atlas.example.com/subs");
   EXPECT_EQ(endpoints.check_cluster, "http://atlas.example.com/check");
 }
-

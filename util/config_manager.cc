@@ -23,12 +23,13 @@ static std::unique_ptr<Config> DocToConfig(
 static std::unique_ptr<Config> ParseConfigFile(
     const std::string& file_name, std::unique_ptr<Config> defaults) noexcept {
   if (access(file_name.c_str(), R_OK) == 0) {
+    const auto& logger = Logger();
     std::ifstream cfg_file(file_name);
     std::ostringstream buffer;
     buffer << cfg_file.rdbuf();
     const auto& s = buffer.str();
     if (s.empty()) {
-      Logger()->info("Parsing {} - Found an empty config", file_name);
+      logger->info("Parsing {} - Found an empty config", file_name);
       return defaults;
     }
     rapidjson::Document document;
@@ -36,7 +37,7 @@ static std::unique_ptr<Config> ParseConfigFile(
         .Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseNanAndInfFlag>(
             buffer.str().c_str());
     auto cfg = DocToConfig(document, std::move(defaults));
-    Logger()->debug("Config after parsing {}: {}", file_name, cfg->ToString());
+    logger->debug("Config after parsing {}: {}", file_name, cfg->ToString());
     return cfg;
   }
   return defaults;
@@ -65,25 +66,30 @@ void ConfigManager::refresher() noexcept {
       Logger()->info("Ignoring exception while refreshing configuration: {}",
                      e.what());
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(refresh_ms_));
+    std::unique_lock<std::mutex> lock{cv_mutex};
+    cv.wait_for(lock, std::chrono::milliseconds(refresh_ms_));
   }
   Logger()->info("Stopping ConfigManager");
 }
 
 void ConfigManager::Start() noexcept {
   should_run_ = true;
-  std::thread refresher_thread(&ConfigManager::refresher, this);
-  refresher_thread.detach();
+  refresher_thread = std::thread(&ConfigManager::refresher, this);
 }
 
-void ConfigManager::Stop() noexcept { should_run_ = false; }
+void ConfigManager::Stop() noexcept {
+  if (should_run_) {
+    should_run_ = false;
+    cv.notify_all();
+    refresher_thread.join();
+  }
+}
 
 static void do_logging_config(const LogConfig& config) noexcept {
   InitializeLogging(config);
 }
 
 void ConfigManager::refresh_configs() noexcept {
-  auto logger = Logger();
   auto new_config = get_current_config();
   do_logging_config(new_config->LogConfiguration());
   std::lock_guard<std::mutex> lock{config_mutex};

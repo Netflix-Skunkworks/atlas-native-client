@@ -58,7 +58,8 @@ void SubscriptionManager::MainSender(
         std::max(kMinWaitMillis, kMainFrequencyMillis - elapsed_millis);
     Logger()->debug("Waiting {} millis until next main publish sender run",
                     wait_millis);
-    std::this_thread::sleep_for(milliseconds(wait_millis));
+    std::unique_lock<std::mutex> lock{mutex};
+    cv.wait_for(lock, milliseconds(wait_millis));
   }
 }
 
@@ -100,7 +101,8 @@ void SubscriptionManager::SubRefresher() noexcept {
           std::max(kMinWaitMillis, refresh_millis - elapsed_millis);
       Logger()->debug("Waiting {}ms for next refresh subscription cycle",
                       wait_millis);
-      std::this_thread::sleep_for(std::chrono::milliseconds(wait_millis));
+      std::unique_lock<std::mutex> lock{mutex};
+      cv.wait_for(lock, milliseconds(wait_millis));
     } catch (std::exception& e) {
       Logger()->info("Ignoring exception while refreshing configs: {}",
                      e.what());
@@ -123,7 +125,8 @@ void SubscriptionManager::SubSender(int64_t millis) noexcept {
     auto wait_millis = delta > 0 ? delta : 0;
     Logger()->info("Waiting {}ms for next send cycle for {}ms interval",
                    wait_millis, millis);
-    std::this_thread::sleep_for(milliseconds(wait_millis));
+    std::unique_lock<std::mutex> lock{mutex};
+    cv.wait_for(lock, milliseconds(wait_millis));
   }
 }
 
@@ -210,7 +213,7 @@ void SubscriptionManager::RefreshSubscriptions(
       atlas_registry.counter(atlas_registry.CreateId(
           "atlas.client.refreshSubsErrors", Tags{{"error", "http"}}));
   std::string subs_str;
-  auto logger = Logger();
+  const auto& logger = Logger();
 
   auto cfg = config_manager_.GetConfig();
   util::http http_client(cfg->HttpConfiguration());
@@ -229,9 +232,7 @@ void SubscriptionManager::RefreshSubscriptions(
         if (sender_intervals_.find(i) == sender_intervals_.end()) {
           logger->info("New sender for {} milliseconds detected. Scheduling",
                        i);
-          std::thread sub_sender_thread{&SubscriptionManager::SubSender, this,
-                                        i};
-          sub_sender_thread.detach();
+          sub_senders.emplace_back(&SubscriptionManager::SubSender, this, i);
         }
       }
     } catch (...) {
@@ -249,11 +250,17 @@ void SubscriptionManager::RefreshSubscriptions(
 void SubscriptionManager::Stop(SystemClockWithOffset* clock) noexcept {
   if (should_run_) {
     should_run_ = false;
+    cv.notify_all();
     if (clock != nullptr) {
       Logger()->info("Advancing clock and flushing metrics");
       clock->SetOffset(59900);
       SendToMain();
     }
+    for (auto& t : sub_senders) {
+      t.join();
+    }
+    main_sender_thread.join();
+    sub_refresher_thread.join();
   }
 }
 
@@ -279,13 +286,10 @@ static std::chrono::seconds GetInitialDelay() {
 
 void SubscriptionManager::Start() noexcept {
   should_run_ = true;
-  std::thread sub_refresher_thread(&SubscriptionManager::SubRefresher, this);
-  sub_refresher_thread.detach();
-
+  sub_refresher_thread = std::thread(&SubscriptionManager::SubRefresher, this);
   auto initialDelay = GetInitialDelay();
-  std::thread main_sender_thread(&SubscriptionManager::MainSender, this,
-                                 initialDelay);
-  main_sender_thread.detach();
+  main_sender_thread =
+      std::thread(&SubscriptionManager::MainSender, this, initialDelay);
 }
 
 static void DumpJson(const std::string& dir, const std::string& base_file_name,

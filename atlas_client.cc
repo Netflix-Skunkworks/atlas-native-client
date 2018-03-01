@@ -32,24 +32,23 @@ inline bool is_sane_environment() {
 class AtlasClient {
  public:
   AtlasClient() noexcept
-      : started{false},
-        subscription_manager{
-            new SubscriptionManager(config_manager, atlas_registry)} {}
+      : started{false}, subscription_manager{config_manager, atlas_registry} {}
 
   void Start() {
     if (started) {
       return;
     }
     http::global_init();
-    auto logger = Logger();
-    auto cfg = GetConfig();
+    const auto& logger = Logger();
+    const auto& cfg = GetConfig();
     if (cfg->ShouldForceStart() || is_sane_environment()) {
       logger->info("Initializing atlas-client");
       started = true;
       config_manager.Start();
-      subscription_manager->Start();
+      subscription_manager.Start();
+      logger->info("atlas-client initialized");
     } else {
-      logger->error("Not sending metrics from a development environment.");
+      logger->error("Not sending metrics from a development environment");
       for (const char* v : env_vars) {
         const auto env_value = std::getenv(v);
         const auto value = env_value == nullptr ? "(null)" : env_value;
@@ -59,12 +58,15 @@ class AtlasClient {
   }
 
   void Stop() {
+    const auto& logger = Logger();
     if (started) {
-      Logger()->info("Stopping atlas-client");
-      subscription_manager->Stop(&clockWithOffset);
+      logger->info("Stopping atlas-client");
+      subscription_manager.Stop(&clockWithOffset);
       config_manager.Stop();
       started = false;
       http::global_shutdown();
+    } else {
+      logger->debug("Ignoring stop request since we were never started");
     }
   }
 
@@ -84,8 +86,8 @@ class AtlasClient {
           return TagsValuePair::from(measurement, &atlas::meter::kEmptyTags);
         });
 
-    subscription_manager->PushMeasurements(atlas_registry.clock().WallTime(),
-                                           tagsValuePairs);
+    subscription_manager.PushMeasurements(atlas_registry.clock().WallTime(),
+                                          tagsValuePairs);
   }
 
   void AddCommonTag(const char* key, const char* value) {
@@ -99,7 +101,7 @@ class AtlasClient {
  private:
   bool started;
   ConfigManager config_manager;
-  std::unique_ptr<SubscriptionManager> subscription_manager;
+  SubscriptionManager subscription_manager;
 };
 
 static auto atlas_client = std::unique_ptr<AtlasClient>(nullptr);

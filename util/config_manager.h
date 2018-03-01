@@ -1,9 +1,11 @@
 #pragma once
 
 #include <atomic>
+#include <condition_variable>
 #include <memory>
 #include <mutex>
 #include <string>
+#include <thread>
 #include "config.h"
 
 namespace atlas {
@@ -32,6 +34,8 @@ class ConfigManager {
 
  private:
   mutable std::mutex config_mutex;
+  std::mutex cv_mutex;
+  std::condition_variable cv;
   std::string local_file_name_;
   int refresh_ms_;
   std::shared_ptr<Config> current_config_;
@@ -42,6 +46,7 @@ class ConfigManager {
   void refresher() noexcept;
   void refresh_configs() noexcept;
   std::unique_ptr<Config> get_current_config() noexcept;
+  std::thread refresher_thread;
 };
 }  // namespace util
 }  // namespace atlas

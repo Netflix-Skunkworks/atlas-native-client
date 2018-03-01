@@ -31,6 +31,7 @@ class http_server {
   ~http_server() {
     if (sockfd_ >= 0) {
       close(sockfd_);
+      acceptor.join();
     }
   }
 
@@ -55,8 +56,7 @@ class http_server {
     ASSERT_TRUE(getsockname(sockfd_, (sockaddr*)&serv_addr, &serv_len) >= 0);
     port_ = ntohs(serv_addr.sin_port);
 
-    std::thread acceptor([this] { accept_loop(); });
-    acceptor.detach();
+    acceptor = std::thread([this] { accept_loop(); });
   }
 
   int get_port() const { return port_; };
@@ -98,6 +98,7 @@ class http_server {
   const std::vector<Request>& get_requests() const { return requests_; };
 
  private:
+  std::thread acceptor;
   int sockfd_ = -1;
   int port_ = 0;
   std::atomic<bool> is_done{false};

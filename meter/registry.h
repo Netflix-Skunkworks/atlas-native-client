@@ -24,6 +24,8 @@ class Registry {
 
   virtual std::shared_ptr<Counter> counter(IdPtr id) noexcept = 0;
 
+  virtual std::shared_ptr<DCounter> dcounter(IdPtr id) noexcept = 0;
+
   virtual std::shared_ptr<Gauge<double>> gauge(IdPtr id) noexcept = 0;
 
   virtual std::shared_ptr<Gauge<double>> max_gauge(IdPtr id) noexcept = 0;

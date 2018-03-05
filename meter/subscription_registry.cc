@@ -96,6 +96,10 @@ std::shared_ptr<Counter> SubscriptionRegistry::counter(IdPtr id) noexcept {
   return CreateAndRegisterAsNeeded<SubscriptionCounter>(id);
 }
 
+std::shared_ptr<DCounter> SubscriptionRegistry::dcounter(IdPtr id) noexcept {
+  return CreateAndRegisterAsNeeded<SubscriptionDoubleCounter>(id);
+}
+
 std::shared_ptr<Timer> SubscriptionRegistry::timer(IdPtr id) noexcept {
   return CreateAndRegisterAsNeeded<SubscriptionTimer>(id);
 }
@@ -380,7 +384,6 @@ std::shared_ptr<interpreter::TagsValuePairs> SubscriptionRegistry::evaluate(
 
   return results;
 }
-
 SubscriptionRegistry::~SubscriptionRegistry() = default;
 
 }  // namespace meter

@@ -37,6 +37,8 @@ class SubscriptionRegistry : public Registry {
 
   std::shared_ptr<Counter> counter(IdPtr id) noexcept override;
 
+  std::shared_ptr<DCounter> dcounter(IdPtr id) noexcept override;
+
   std::shared_ptr<Timer> timer(IdPtr id) noexcept override;
 
   std::shared_ptr<Gauge<double>> gauge(IdPtr id) noexcept override;

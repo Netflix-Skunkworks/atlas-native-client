@@ -20,5 +20,7 @@ class CounterNumber {
 };
 
 using Counter = CounterNumber<int64_t>;
+using DCounter = CounterNumber<double>;
+
 }  // namespace meter
 }  // namespace atlas

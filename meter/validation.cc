@@ -18,11 +18,11 @@ using util::intern_str;
 using util::StartsWith;
 using util::StrRef;
 
-static bool is_key_restricted(util::StrRef k) noexcept {
+static bool is_key_restricted(StrRef k) noexcept {
   return StartsWith(k, "nf.") || StartsWith(k, "atlas.");
 }
 
-static std::unordered_set<util::StrRef> kValidNfTags = {
+static std::unordered_set<StrRef> kValidNfTags = {
     intern_str("nf.node"),          intern_str("nf.cluster"),
     intern_str("nf.app"),           intern_str("nf.asg"),
     intern_str("nf.stack"),         intern_str("nf.ami"),
@@ -35,7 +35,7 @@ static auto kDsType = intern_str("atlas.dstype");
 static auto kLegacy = intern_str("atlas.legacy");
 static auto kNameRef = intern_str("name");
 
-static bool is_user_key_invalid(util::StrRef k) noexcept {
+static bool is_user_key_invalid(StrRef k) noexcept {
   if (StartsWith(k, "atlas.")) {
     return k != kDsType && k != kLegacy;
   }
@@ -47,7 +47,7 @@ static bool is_user_key_invalid(util::StrRef k) noexcept {
   return false;
 }
 
-bool empty_or_null(util::StrRef r) { return r.is_null() || r.length() == 0; }
+bool empty_or_null(StrRef r) { return r.is_null() || r.length() == 0; }
 
 bool IsValid(const Tags& tags) noexcept {
   std::string err_msg;

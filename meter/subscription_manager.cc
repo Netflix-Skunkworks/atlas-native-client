@@ -36,7 +36,11 @@ void SubscriptionManager::MainSender(
     std::chrono::seconds initial_delay) noexcept {
   Logger()->info("Waiting for {} seconds to send the first batch to main.",
                  initial_delay.count());
-  std::this_thread::sleep_for(initial_delay);
+
+  {
+    std::unique_lock<std::mutex> lock{mutex};
+    cv.wait_for(lock, initial_delay);
+  }
   while (should_run_) {
     auto start = system_clock::now();
     const auto& config = config_manager_.GetConfig();
@@ -256,10 +260,13 @@ void SubscriptionManager::Stop(SystemClockWithOffset* clock) noexcept {
       clock->SetOffset(59900);
       SendToMain();
     }
+    Logger()->debug("Stopping subscription senders");
     for (auto& t : sub_senders) {
       t.join();
     }
+    Logger()->debug("Stopping main sender");
     main_sender_thread.join();
+    Logger()->debug("Stopping sub_refresher");
     sub_refresher_thread.join();
   }
 }

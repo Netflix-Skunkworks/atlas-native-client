@@ -11,30 +11,30 @@ namespace interpreter {
 inline void add_nonempty(const std::string::size_type i,
                          const std::string::size_type j, const std::string& s,
                          Expressions* result) {
-  // j starts pointing at the comma
-  std::string::size_type k = j - 1;
+  // j starts pointing at the comma or end of string
+  auto k = static_cast<int>(j) - 1;
   // trim right
-  while (static_cast<bool>(std::isspace(s[k]))) {
+  while (k >= 0 && static_cast<bool>(std::isspace(s[k]))) {
     --k;
   }
   // point to the last char that's not a space
   ++k;
 
   // only non-empty tokens
-  if (k > i) {
+  if (k > static_cast<int>(i)) {
     result->push_back(std::make_unique<Literal>(s.substr(i, k - i)));
   }
 }
 
-// split on ; and trim the elements. Does not add empty elements to the result
+// split on , and trim the elements. Does not add empty elements to the result
 void split(const std::string& s, Expressions* result) {
-  std::string::size_type i = 0;
+  auto i = std::string::size_type(0);
 
   // trim left
   while (static_cast<bool>(isspace(s[i]))) {
     ++i;
   }
-  std::string::size_type j = s.find(',', i);
+  auto j = s.find(',', i);
 
   while (j != std::string::npos) {
     add_nonempty(i, j, s, result);

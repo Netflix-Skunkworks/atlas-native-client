@@ -22,7 +22,16 @@ const static std::string EMPTY_STRING = "";
 
 class http_server {
  public:
-  http_server() = default;
+  http_server() {
+    path_response_["/foo"] =
+        "HTTP/1.1 200 OK\nContent-Length: 0\nServer: atlas-tests\n";
+    path_response_["/get"] =
+        "HTTP/1.0 200 OK\nContent-Length: 10\nServer: atlas-tests\nEtag: "
+        "1234\n\n123456790";
+    path_response_["/get304"] =
+        "HTTP/1.0 304 OK\nContent-Length: 0\nServer: atlas-tests\nEtag: "
+        "1234\n\n";
+  }
   http_server(const http_server&) = delete;
   http_server(http_server&&) = delete;
   http_server& operator=(const http_server&) = delete;
@@ -90,9 +99,9 @@ class http_server {
    private:
     std::string method_;
     std::string path_;
-    std::map<std::string, std::string> headers_;
+    std::map<std::string, std::string> headers_{};
     size_t size_;
-    std::unique_ptr<char[]> body_;
+    std::unique_ptr<char[]> body_{};
   };
 
   const std::vector<Request>& get_requests() const { return requests_; };
@@ -104,6 +113,7 @@ class http_server {
   std::vector<Request> requests_;
   int accept_sleep_ = 0;
   int read_sleep_ = 0;
+  std::map<std::string, std::string> path_response_;
 
   void get_line(int client, char* buf, size_t size) {
     assert(size > 0);
@@ -129,8 +139,6 @@ class http_server {
     buf[i] = '\0';
   }
 
-  static constexpr const char* const response =
-      "HTTP/1.1 200 OK\nContent-Length: 0\nServer: atlas-tests\n";
   void accept_request(int client) {
     using namespace std;
 
@@ -184,7 +192,9 @@ class http_server {
     }
 
     // do the body
-    int content_len = stoi(headers["content-length"]);
+    auto len = headers["content-length"];
+    int content_len = len.empty() ? 0 : stoi(len);
+
     auto body = std::unique_ptr<char[]>(new char[content_len + 1]);
 
     char* p = body.get();
@@ -199,10 +209,11 @@ class http_server {
     if (read_sleep_ > 0) {
       std::this_thread::sleep_for(std::chrono::milliseconds(read_sleep_));
     }
-    auto left_to_write = strlen(response);
-    auto resp_ptr = response;
+    auto response = path_response_[path];
+    auto left_to_write = response.length() + 1;
+    auto resp_ptr = response.c_str();
     while (left_to_write > 0) {
-      auto written = write(client, resp_ptr, strlen(response));
+      auto written = write(client, resp_ptr, left_to_write);
       resp_ptr += written;
       left_to_write -= written;
     }
@@ -361,6 +372,51 @@ TEST(HttpTest, Timeout) {
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   client.post(url, "Content-type: application/json", post_data.c_str(),
               post_data.length());
+
+  server.stop();
+}
+
+TEST(HttpTest, ConditionalGet) {
+  using atlas::util::http;
+  http_server server;
+  server.start();
+  auto port = server.get_port();
+  ASSERT_TRUE(port > 0) << "Port = " << port;
+  auto logger = Logger();
+  logger->info("Server started on port {}", port);
+
+  auto cfg = HttpConfig();
+  http client{cfg};
+  std::ostringstream os;
+  os << "http://localhost:" << port << "/get";
+  auto url = os.str();
+
+  std::string etag;
+  std::string content;
+  ASSERT_EQ(client.conditional_get(url, &etag, &content), 200);
+  ASSERT_EQ(content.length(), 10);
+  const auto& requests = server.get_requests();
+  EXPECT_EQ(requests.size(), 1);
+  const auto& req = requests.at(0);
+  EXPECT_EQ(req.method(), "GET");
+  EXPECT_EQ(req.path(), "/get");
+  EXPECT_EQ(req.get_header("Accept-Encoding"), "gzip");
+  EXPECT_EQ(req.get_header("Accept"), "*/*");
+  EXPECT_EQ(etag, "1234");
+
+  os << "304";
+  url = os.str();
+
+  ASSERT_EQ(client.conditional_get(url, &etag, &content), 304);
+  ASSERT_TRUE(content.length() > 0);
+  const auto& cond_req = server.get_requests().at(1);
+
+  EXPECT_EQ(cond_req.method(), "GET");
+  EXPECT_EQ(cond_req.path(), "/get304");
+  EXPECT_EQ(cond_req.get_header("Accept-Encoding"), "gzip");
+  EXPECT_EQ(cond_req.get_header("Accept"), "*/*");
+  EXPECT_EQ(cond_req.get_header("If-None-Match"), "1234");
+  EXPECT_EQ(etag, "1234");
 
   server.stop();
 }

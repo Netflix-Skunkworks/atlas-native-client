@@ -147,18 +147,18 @@ size_t header_callback(char* buffer, size_t size, size_t n_items,
 
 }  // namespace
 
-int http::conditional_get(const std::string& url, std::string& etag,
+int http::conditional_get(const std::string& url, std::string* etag,
                           std::string* res) const {
   const auto& logger = Logger();
-  logger->debug("Conditionally getting url: {} etag: {}", url, etag);
+  logger->debug("Conditionally getting url: {} etag: {}", url, *etag);
   CurlHandle curl;
   // url to get
   curl.set_url(url);
   // send all data to this function
   curl.set_opt(CURLOPT_WRITEFUNCTION,
                reinterpret_cast<const void*>(write_memory_callback));
-  if (!etag.empty()) {
-    std::string ifNone = std::string("If-None-Match: ") + etag;
+  if (!etag->empty()) {
+    std::string ifNone = std::string("If-None-Match: ") + *etag;
     auto headers = std::make_unique<CurlHeaders>();
     headers->append(ifNone);
     curl.set_headers(std::move(headers));
@@ -169,7 +169,7 @@ int http::conditional_get(const std::string& url, std::string& etag,
   curl.set_read_timeout(read_timeout_);
   // pass chunk to the callback function
   curl.set_opt(CURLOPT_WRITEDATA, &buffer);
-  curl.set_opt(CURLOPT_HEADERDATA, &etag);
+  curl.set_opt(CURLOPT_HEADERDATA, etag);
   curl.set_opt(CURLOPT_HEADERFUNCTION,
                reinterpret_cast<void*>(header_callback));
   auto curl_res = curl.perform();
@@ -186,7 +186,7 @@ int http::conditional_get(const std::string& url, std::string& etag,
     }
   }
   if (!error) {
-    logger->debug("Was able to fetch {} - status code: ", url, http_code);
+    logger->debug("Was able to fetch {} - status code: {}", url, http_code);
     if (http_code == 0) {
       http_code = 200;
     }  // for file:///

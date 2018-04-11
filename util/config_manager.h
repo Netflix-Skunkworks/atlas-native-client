@@ -16,8 +16,8 @@ static constexpr int kConfigRefreshMillis = 10000;
 
 class ConfigManager {
  public:
-  ConfigManager(std::string local_file_name = kLocalFileName,
-                int refresh_ms = kConfigRefreshMillis) noexcept
+  explicit ConfigManager(std::string local_file_name = kLocalFileName,
+                         int refresh_ms = kConfigRefreshMillis) noexcept
       : local_file_name_{std::move(local_file_name)},
         refresh_ms_{refresh_ms},
         current_config_{std::shared_ptr<Config>(get_current_config())} {}

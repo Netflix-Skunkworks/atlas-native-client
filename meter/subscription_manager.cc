@@ -5,6 +5,7 @@
 #include "../util/logger.h"
 #include "../util/string_pool.h"
 #include "../util/strings.h"
+#include "subscription_display.h"
 #include "validation.h"
 #include <chrono>
 #include <cstdlib>
@@ -203,6 +204,7 @@ Subscriptions* ParseSubscriptions(const std::string& subs_str) {
       }
     }
   }
+  Logger()->debug("Got subscriptions: {}", *subs);
 
   return subs;
 }

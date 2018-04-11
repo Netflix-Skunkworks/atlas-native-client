@@ -64,10 +64,10 @@ void LogManager::initialize_logger(const std::string& log_dir) noexcept {
     spdlog::set_error_handler([](const std::string& msg) {
       std::cerr << "Log error: " << msg << "\n";
     });
-    current_logger_ = spdlog::create<spdlog::sinks::rotating_file_sink_mt>(
-        kMainLogger, join_path(log_dir, "atlasclient"),
-        SPDLOG_FILENAME_T("log"), current_log_config.max_size,
-        current_log_config.max_files);
+    std::cerr << "Log DIR: " << log_dir << "\n";
+    current_logger_ = spdlog::rotating_logger_mt(
+        kMainLogger, join_path(log_dir, "atlasclient.log"),
+        current_log_config.max_size, current_log_config.max_files);
     current_logging_directory = log_dir;
     current_logger_->flush_on(spdlog::level::info);
   } else {

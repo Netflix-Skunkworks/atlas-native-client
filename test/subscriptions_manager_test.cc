@@ -3,6 +3,10 @@
 
 #include "../meter/subscription_manager.h"
 #include "../util/json.h"
+#include "../util/logger.h"
+
+using atlas::util::Logger;
+
 namespace atlas {
 namespace meter {
 Subscriptions* ParseSubscriptions(const std::string& subs_str);
@@ -39,7 +43,10 @@ TEST(SubscriptionsManager, ParseLotsOfSubs) {
   std::stringstream buffer;
   buffer << one_sub.rdbuf();
 
+  Logger()->set_level(spdlog::level::info);
+  // this is very spammy since it'll output all the subscriptions
   auto subs = std::unique_ptr<Subscriptions>(ParseSubscriptions(buffer.str()));
+  Logger()->set_level(spdlog::level::debug);
   EXPECT_EQ(subs->size(), 3665);
 }
 

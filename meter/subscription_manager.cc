@@ -223,7 +223,7 @@ void SubscriptionManager::RefreshSubscriptions(
   util::http http_client(cfg->HttpConfiguration());
   auto start = atlas_registry.clock().MonotonicTime();
   auto http_res =
-      http_client.conditional_get(subs_endpoint, current_etag, &subs_str);
+      http_client.conditional_get(subs_endpoint, &current_etag, &subs_str);
   timer_refresh_subs->Record(atlas_registry.clock().MonotonicTime() - start);
   if (http_res == 200) {
     auto subscriptions = ParseSubscriptions(subs_str);

@@ -15,7 +15,7 @@ class http {
       : connect_timeout_(config.connect_timeout),
         read_timeout_(config.read_timeout) {}
 
-  int conditional_get(const std::string& url, std::string& etag,
+  int conditional_get(const std::string& url, std::string* etag,
                       std::string* res) const;
 
   int get(const std::string& url, std::string* res) const;

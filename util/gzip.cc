@@ -11,14 +11,14 @@ static constexpr int kWindowBits =
     15 + kGzipHeaderSize;            // 32k window (max size)
 static constexpr int kMemLevel = 9;  // max memory for optimal speed
 
-int gzip_compress(Bytef* dest, uLongf* destLen, const Bytef* source,
-                  uLong sourceLen) {
+int gzip_compress(char* dest, size_t* destLen, const char* source,
+                  size_t sourceLen) {
   // no initialization due to gcc 4.8 bug
   z_stream stream;
 
-  stream.next_in = const_cast<z_const Bytef*>(source);
+  stream.next_in = reinterpret_cast<z_const Bytef*>(const_cast<char*>(source));
   stream.avail_in = static_cast<uInt>(sourceLen);
-  stream.next_out = dest;
+  stream.next_out = reinterpret_cast<Bytef*>(dest);
   stream.avail_out = static_cast<uInt>(*destLen);
   stream.zalloc = static_cast<alloc_func>(nullptr);
   stream.zfree = static_cast<free_func>(nullptr);
@@ -40,13 +40,13 @@ int gzip_compress(Bytef* dest, uLongf* destLen, const Bytef* source,
   return deflateEnd(&stream);
 }
 
-int gzip_uncompress(Bytef* dest, uLongf* destLen, const Bytef* source,
-                    uLong sourceLen) {
+int gzip_uncompress(char* dest, size_t* destLen, const char* source,
+                    size_t sourceLen) {
   // no initialization due to gcc 4.8 bug
   z_stream stream;
-  stream.next_in = const_cast<z_const Bytef*>(source);
+  stream.next_in = reinterpret_cast<z_const Bytef*>(const_cast<char*>(source));
   stream.avail_in = static_cast<uInt>(sourceLen);
-  stream.next_out = dest;
+  stream.next_out = reinterpret_cast<Bytef*>(dest);
   stream.avail_out = static_cast<uInt>(*destLen);
   stream.zalloc = static_cast<alloc_func>(nullptr);
   stream.zfree = static_cast<free_func>(nullptr);

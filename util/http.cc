@@ -86,7 +86,7 @@ class CurlHandle {
     curl_easy_setopt(handle_, CURLOPT_TIMEOUT, (long)read_timeout_seconds);
   }
 
-  void post_payload(std::unique_ptr<Bytef[]> payload, size_t size) {
+  void post_payload(std::unique_ptr<char[]> payload, size_t size) {
     payload_ = std::move(payload);
     curl_easy_setopt(handle_, CURLOPT_POST, 1L);
     curl_easy_setopt(handle_, CURLOPT_POSTFIELDS, payload_.get());
@@ -96,7 +96,7 @@ class CurlHandle {
  private:
   CURL* handle_;
   std::unique_ptr<CurlHeaders> headers_;
-  std::unique_ptr<Bytef[]> payload_;
+  std::unique_ptr<char[]> payload_;
 };
 
 class Buffer {
@@ -117,7 +117,40 @@ class Buffer {
     size += data_size;
     memory[size] = 0;
   }
-  void assign(std::string* s) { s->assign(memory, size); }
+
+  void assign(std::string* s, bool compressed) {
+    if (!compressed) {
+      s->assign(memory, size);
+    } else {
+      // TODO: Dynamically allocate buffer using inflate directly
+      constexpr size_t MAX_BUF = 10 * 1024 * 1024;
+      auto dest = std::unique_ptr<char[]>(new char[MAX_BUF]);
+      size_t dest_len = MAX_BUF;
+      auto res =
+          atlas::util::gzip_uncompress(dest.get(), &dest_len, memory, size);
+      if (res == Z_OK) {
+        s->assign(dest.get(), dest_len);
+      } else {
+        std::string err_msg;
+        switch (res) {
+          case Z_MEM_ERROR:
+            err_msg = "Out of memory";
+            break;
+          case Z_DATA_ERROR:
+            err_msg = "Invalid or incomplete compressed data";
+            break;
+          case Z_STREAM_ERROR:
+            err_msg = "Invalid compression level";
+            break;
+          default:
+            err_msg = std::to_string(res);
+        }
+        Logger()->error(
+            "Unable to decompress payload (compressed size={}) err={}", size,
+            err_msg);
+      }
+    }
+  }
 
  private:
   char* memory;
@@ -132,15 +165,21 @@ size_t write_memory_callback(void* contents, size_t size, size_t nmemb,
   return real_size;
 }
 
+struct header_info {
+  std::string etag;
+  bool compressed = false;
+};
 size_t header_callback(char* buffer, size_t size, size_t n_items,
                        void* userdata) {
   std::string header{buffer, size * n_items};
+  auto hi = static_cast<header_info*>(userdata);
   if (util::IStartsWith(header, "Etag: ")) {
     header.erase(0, 6);  // remove Etag:
     util::TrimRight(&header);
     Logger()->debug("Setting Etag to {}", header);
-    auto etag = static_cast<std::string*>(userdata);
-    etag->assign(header);
+    hi->etag = header;
+  } else if (util::IStartsWith(header, "Content-Encoding: gzip")) {
+    hi->compressed = true;
   }
   return size * n_items;
 }
@@ -169,7 +208,8 @@ int http::conditional_get(const std::string& url, std::string* etag,
   curl.set_read_timeout(read_timeout_);
   // pass chunk to the callback function
   curl.set_opt(CURLOPT_WRITEDATA, &buffer);
-  curl.set_opt(CURLOPT_HEADERDATA, etag);
+  header_info hi;
+  curl.set_opt(CURLOPT_HEADERDATA, &hi);
   curl.set_opt(CURLOPT_HEADERFUNCTION,
                reinterpret_cast<void*>(header_callback));
   auto curl_res = curl.perform();
@@ -180,9 +220,10 @@ int http::conditional_get(const std::string& url, std::string* etag,
     logger->error("Failed to get {} {}", url, curl_easy_strerror(curl_res));
     error = true;
   } else {
+    etag->assign(hi.etag);
     http_code = curl.status_code();
     if (http_code != 304) {  // if we got something back
-      buffer.assign(res);
+      buffer.assign(res, hi.compressed);
     }
   }
   if (!error) {
@@ -195,44 +236,13 @@ int http::conditional_get(const std::string& url, std::string* etag,
 }
 
 int http::get(const std::string& url, std::string* res) const {
-  const auto& logger = Logger();
-  logger->debug("Getting url: {}", url);
-  CurlHandle curl;
-  // url to get
-  curl.set_url(url);
-  // send all data to this function
-  curl.set_opt(CURLOPT_WRITEFUNCTION,
-               reinterpret_cast<const void*>(write_memory_callback));
-
-  Buffer buffer;
-  // pass chunk to the callback function
-  curl.set_opt(CURLOPT_WRITEDATA, &buffer);
-  curl.set_connect_timeout(connect_timeout_);
-  curl.set_read_timeout(read_timeout_);
-  auto curl_res = curl.perform();
-  auto http_code = 400;
-  auto error = false;
-
-  if (curl_res != CURLE_OK) {
-    logger->error("Failed to get {} {}", url, curl_easy_strerror(curl_res));
-    error = true;
-  } else {
-    http_code = curl.status_code();
-    buffer.assign(res);
-  }
-  if (!error) {
-    logger->debug("Was able to fetch {} - status code: {}", url, http_code);
-    // for file:///
-    if (http_code == 0) {
-      http_code = 200;
-    }
-  }
-  return http_code;
+  std::string etag;
+  return conditional_get(url, &etag, res);
 }
 
 static int do_post(const std::string& url, int connect_timeout,
                    int read_timeout, std::unique_ptr<CurlHeaders> headers,
-                   std::unique_ptr<Bytef[]> payload, size_t size) {
+                   std::unique_ptr<char[]> payload, size_t size) {
   CurlHandle curl;
   curl.set_connect_timeout(connect_timeout);
   curl.set_read_timeout(read_timeout);
@@ -270,11 +280,9 @@ int http::post(const std::string& url, const char* content_type,
 
   headers->append(kGzipEncoding);
   auto compressed_size = compressBound(size) + kGzipHeaderSize;
-  auto compressed_payload =
-      std::unique_ptr<Bytef[]>(new Bytef[compressed_size]);
+  auto compressed_payload = std::unique_ptr<char[]>(new char[compressed_size]);
   auto compress_res =
-      gzip_compress(compressed_payload.get(), &compressed_size,
-                    reinterpret_cast<const Bytef*>(payload), size);
+      gzip_compress(compressed_payload.get(), &compressed_size, payload, size);
   if (compress_res != Z_OK) {
     Logger()->error(
         "Failed to compress payload: {}, while posting to {} - uncompressed "
@@ -378,11 +386,9 @@ static bool setup_handle_for_post(CurlHandle* handle, const std::string& url,
   headers->append(kGzipEncoding);
 
   auto compressed_size = compressBound(size) + kGzipHeaderSize;
-  auto compressed_payload =
-      std::unique_ptr<Bytef[]>(new Bytef[compressed_size]);
+  auto compressed_payload = std::unique_ptr<char[]>(new char[compressed_size]);
   auto compress_res =
-      gzip_compress(compressed_payload.get(), &compressed_size,
-                    reinterpret_cast<const Bytef*>(payload), size);
+      gzip_compress(compressed_payload.get(), &compressed_size, payload, size);
   if (compress_res != Z_OK) {
     Logger()->error(
         "Failed to compress payload: {}, while posting to {} - uncompressed "

@@ -13,10 +13,13 @@
 #include "../util/strings.h"
 #include "../interpreter/tags_value.h"
 #include <thread>
+#include <fstream>
 
 using atlas::util::HttpConfig;
 using atlas::util::Logger;
 using atlas::util::ToLowerCopy;
+using atlas::util::gzip_compress;
+using atlas::util::gzip_uncompress;
 
 const static std::string EMPTY_STRING = "";
 
@@ -31,6 +34,19 @@ class http_server {
     path_response_["/get304"] =
         "HTTP/1.0 304 OK\nContent-Length: 0\nServer: atlas-tests\nEtag: "
         "1234\n\n";
+
+    std::string small = compress_file("./resources/subs1.json");
+    path_response_["/compressed"] =
+        fmt::format(
+            "HTTP/1.0 200 OK\nContent-Encoding: gzip\nContent-Length: {}\n\n",
+            small.length()) +
+        small;
+    std::string big = compress_file("./resources/many-subs.json");
+    path_response_["/compressedBig"] =
+        fmt::format(
+            "HTTP/1.0 200 OK\nContent-Encoding: gzip\nContent-Length: {}\n\n",
+            big.length()) +
+        big;
   }
   http_server(const http_server&) = delete;
   http_server(http_server&&) = delete;
@@ -41,6 +57,22 @@ class http_server {
     if (sockfd_ >= 0) {
       close(sockfd_);
     }
+  }
+
+  std::string compress_file(const char* file_name) {
+    std::ifstream to_compress(file_name);
+    std::stringstream buffer;
+    buffer << to_compress.rdbuf();
+    auto raw = buffer.str();
+    size_t buf_len = 1024 * 1024;
+    auto buf = std::unique_ptr<char[]>(new char[buf_len]);
+    auto gzip_res =
+        gzip_compress(buf.get(), &buf_len, raw.c_str(), raw.length());
+    if (gzip_res != Z_OK) {
+      Logger()->error("Unable to compress {}: gzip err {}", file_name, gzip_res);
+      return "";
+    }
+    return std::string{buf.get(), buf_len};
   }
 
   void set_read_sleep(int millis) { read_sleep_ = millis; }
@@ -270,8 +302,7 @@ TEST(HttpTest, Post) {
   const auto src_len = r.size();
   char dest[8192];
   size_t dest_len = sizeof dest;
-  auto res = atlas::util::gzip_uncompress((Bytef*)dest, &dest_len,
-                                          (const Bytef*)src, src_len);
+  auto res = gzip_uncompress(dest, &dest_len, src, src_len);
   ASSERT_EQ(res, Z_OK);
 
   std::string body_str{dest, dest_len};
@@ -380,6 +411,7 @@ TEST(HttpTest, ConditionalGet) {
   logger->info("Server started on port {}", port);
 
   auto cfg = HttpConfig();
+  cfg.read_timeout = 60;
   http client{cfg};
   auto url = fmt::format("http://localhost:{}/get", port);
 
@@ -388,8 +420,8 @@ TEST(HttpTest, ConditionalGet) {
   ASSERT_EQ(client.conditional_get(url, &etag, &content), 200);
   ASSERT_EQ(content.length(), 10);
   const auto& requests = server.get_requests();
-  EXPECT_EQ(requests.size(), 1);
-  const auto& req = requests.at(0);
+  ASSERT_EQ(requests.size(), 1);
+  const auto& req = requests.front();
   EXPECT_EQ(req.method(), "GET");
   EXPECT_EQ(req.path(), "/get");
   EXPECT_EQ(req.get_header("Accept-Encoding"), "gzip");
@@ -399,7 +431,8 @@ TEST(HttpTest, ConditionalGet) {
   auto cond_url = fmt::format("http://localhost:{}/get304", port);
   ASSERT_EQ(client.conditional_get(cond_url, &etag, &content), 304);
   ASSERT_TRUE(content.length() > 0);
-  const auto& cond_req = server.get_requests().at(1);
+  ASSERT_EQ(server.get_requests().size(), 2);
+  const auto& cond_req = server.get_requests().back();
 
   EXPECT_EQ(cond_req.method(), "GET");
   EXPECT_EQ(cond_req.path(), "/get304");
@@ -409,4 +442,37 @@ TEST(HttpTest, ConditionalGet) {
   EXPECT_EQ(etag, "1234");
 
   server.stop();
+}
+
+off_t get_file_size(const char* file) {
+  struct stat st;
+  auto err = stat(file, &st);
+  if (err != 0) {
+    Logger()->error("Can't stat {}: {}", file, strerror(err));
+    return 0;
+  }
+  return st.st_size;
+}
+
+TEST(HttpTest, CompressedGet) {
+  using atlas::util::http;
+  http_server server;
+  server.start();
+  auto port = server.get_port();
+  ASSERT_TRUE(port > 0) << "Port = " << port;
+  auto logger = Logger();
+  logger->info("Server started on port {}", port);
+
+  auto cfg = HttpConfig();
+  http client{cfg};
+  cfg.read_timeout = 60;
+  auto url = fmt::format("http://localhost:{}/compressed", port);
+  std::string content;
+  ASSERT_EQ(client.get(url, &content), 200);
+  ASSERT_EQ(content.length(), get_file_size("./resources/subs1.json"));
+
+  auto bigUrl = fmt::format("http://localhost:{}/compressedBig", port);
+  std::string big;
+  ASSERT_EQ(client.get(bigUrl, &big), 200);
+  ASSERT_EQ(big.length(), get_file_size("./resources/many-subs.json"));
 }

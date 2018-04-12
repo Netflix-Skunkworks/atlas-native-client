@@ -1,8 +1,8 @@
 #include "validation.h"
-#include "../util/dump.h"
+#include "id_format.h"
+
 #include "../util/logger.h"
 #include "../util/strings.h"
-#include <sstream>
 #include <unordered_set>
 
 namespace atlas {
@@ -69,10 +69,8 @@ bool IsValid(const Tags& tags) noexcept {
       ++user_tags;
       auto v_length = v_ref.length();
       if (v_length > MAX_NAME_LENGTH) {
-        std::ostringstream os;
-        os << "value for name exceeds length limit (" << v_length << ">"
-           << MAX_NAME_LENGTH << ")";
-        err_msg = os.str();
+        err_msg = fmt::format("value for name exceeds length limit ({} > {})",
+                              v_length, MAX_NAME_LENGTH);
         goto invalid;
       }
       continue;
@@ -81,11 +79,9 @@ bool IsValid(const Tags& tags) noexcept {
     auto k_length = k_ref.length();
     auto v_length = v_ref.length();
     if (k_length > MAX_KEY_LENGTH || v_length > MAX_VAL_LENGTH) {
-      std::ostringstream os;
-      os << "Tag " << k_ref.get() << "=" << v_ref.get()
-         << " exceeds length limits (" << k_length << "-" << MAX_KEY_LENGTH
-         << ", " << v_length << "-" << MAX_VAL_LENGTH << ")";
-      err_msg = os.str();
+      err_msg = fmt::format("Tag {}={} exceeds length limits ({}-{}, {}-{})",
+                            k_ref.get(), v_ref.get(), k_length, MAX_KEY_LENGTH,
+                            v_length, MAX_VAL_LENGTH);
       goto invalid;
     }
 
@@ -94,17 +90,16 @@ bool IsValid(const Tags& tags) noexcept {
     }
 
     if (is_user_key_invalid(k_ref)) {
-      err_msg = k_ref.get();
-      err_msg += " is using a reserved namespace";
+      err_msg = fmt::format("{} is using a reserved namespace", k_ref.get());
       goto invalid;
     }
   }
 
   if (user_tags > MAX_USER_TAGS) {
-    std::ostringstream os;
-    os << "Too many user tags. There is a " << MAX_USER_TAGS
-       << " user tags limit. Detected user tags = " << user_tags;
-    err_msg = os.str();
+    err_msg = fmt::format(
+        "Too many user tags. There is a {} user tags limit. Detected user tags "
+        "= {})",
+        MAX_USER_TAGS, user_tags);
     goto invalid;
   }
 
@@ -117,9 +112,7 @@ bool IsValid(const Tags& tags) noexcept {
   return true;
 
 invalid:
-  std::ostringstream os;
-  dump_tags(os, tags);
-  logger->warn("Invalid metric {} - {}", os.str(), err_msg);
+  logger->warn("Invalid metric {} - {}", tags, err_msg);
   return false;
 }
 

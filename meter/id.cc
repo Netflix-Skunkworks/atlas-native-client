@@ -1,5 +1,5 @@
 #include "id.h"
-#include "../util/dump.h"
+#include "id_format.h"
 #include "statistic.h"
 
 namespace atlas {
@@ -19,13 +19,6 @@ std::unique_ptr<Id> Id::WithTag(const Tag& tag) const {
 
 bool Id::operator==(const Id& rhs) const noexcept {
   return std::tie(name_, tags_) == std::tie(rhs.name_, rhs.tags_);
-}
-
-std::ostream& operator<<(std::ostream& os, const Id& id) {
-  os << "Id(" << id.Name() << ", ";
-  dump_tags(os, id.GetTags());
-  os << ")";
-  return os;
 }
 
 IdPtr WithDefaultTagForId(IdPtr id, const Tag& default_tag) {

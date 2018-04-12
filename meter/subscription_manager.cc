@@ -5,14 +5,13 @@
 #include "../util/logger.h"
 #include "../util/string_pool.h"
 #include "../util/strings.h"
-#include "subscription_display.h"
+#include "subscription_format.h"
 #include "validation.h"
 #include <chrono>
 #include <cstdlib>
 #include <curl/curl.h>
 #include <fstream>
 #include <random>
-#include <sstream>
 #include <zlib.h>
 
 namespace atlas {
@@ -305,9 +304,7 @@ static void DumpJson(const std::string& dir, const std::string& base_file_name,
                      const rapidjson::Document& payload) {
   auto millis = system_clock::now().time_since_epoch().count();
   auto logger = Logger();
-  std::ostringstream os;
-  os << dir << "/" << base_file_name << millis << ".json.gz";
-  auto file_name = os.str();
+  auto file_name = fmt::format("{}/{}{}.json.gz", dir, base_file_name, millis);
 
   // get a c string
   rapidjson::StringBuffer buffer;

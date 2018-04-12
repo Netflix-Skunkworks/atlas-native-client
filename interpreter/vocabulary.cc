@@ -291,11 +291,11 @@ class DropKeepTagsWord : public Word {
       return kNone;
     }
 
-    std::ostringstream os;
-    auto dropKey = keep_ ? ":keep" : ":drop";
-    os << dropKey << "-tags was expecting a list and a data expression or "
-                     "query on the stack";
-    return OptionalString{os.str()};
+    auto msg = fmt::format(
+        "{}-tags was expecting a list and a data expression or "
+        "query on the stack",
+        keep_ ? ":keep" : ":drop");
+    return OptionalString{msg};
   }
 
  private:

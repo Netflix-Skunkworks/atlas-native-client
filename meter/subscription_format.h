@@ -1,7 +1,7 @@
 #pragma once
 
 #include "subscription.h"
-#include <spdlog/fmt/ostr.h>
+#include <fmt/ostream.h>
 
 namespace atlas {
 namespace meter {

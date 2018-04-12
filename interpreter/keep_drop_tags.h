@@ -17,7 +17,8 @@ class KeepOrDropTags : public MultipleResults {
     return expr_->GetQuery();
   }
 
-  std::shared_ptr<TagsValuePairs> Apply(std::shared_ptr<TagsValuePairs> valuePairs) override;
+  std::shared_ptr<TagsValuePairs> Apply(
+      std::shared_ptr<TagsValuePairs> valuePairs) override;
 
   virtual std::ostream& Dump(std::ostream& os) const override;
 

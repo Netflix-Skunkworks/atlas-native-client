@@ -1,10 +1,8 @@
 #include "config.h"
-#include "dump.h"
 #include "logger.h"
 #include "environment.h"
+#include "../meter/id_format.h"
 #include <rapidjson/document.h>
-#include <iomanip>
-#include <sstream>
 
 namespace atlas {
 namespace util {
@@ -65,24 +63,14 @@ std::unique_ptr<Config> Config::FromJson(const rapidjson::Document& json,
 }
 
 std::string Config::ToString() const noexcept {
-  std::ostringstream os;
-  os << std::boolalpha;
-  os << "Config{endpoints=" << EndpointConfiguration() << '\n'
-     << ", subsRefresh=" << SubRefreshMillis() << "ms"
-     << ", notifyAlertServer=" << ShouldNotifyAlertServer() << '\n'
-     << ", validateMetrics=" << ShouldValidateMetrics() << '\n'
-     << ", forceStart=" << ShouldForceStart()
-     << ", mainEnabled=" << IsMainEnabled() << '\n'
-     << ", subsEnabled=" << AreSubsEnabled() << '\n'
-     << ", publishCfg=";
-  const auto& pub_cfg = PublishConfig();
-  dump_vector(os, pub_cfg);
-  os << "\n, log=" << LogConfiguration() << "\n, http=" << HttpConfiguration()
-     << "\n, commonTags=";
-  dump_tags(os, CommonTags());
-  os << "}";
-  os << std::noboolalpha;
-  return os.str();
+  return fmt::format(
+      "Config(endpoints={}\n, subsRefresh={}ms, notifyAlertServer={}\n"
+      ", validateMetrics={}, forceStart={}, mainEnabled={}, subsEnabled={}\n"
+      ", publishCfg={}\n, log={}\n, http={}\n, commonTags={})",
+      EndpointConfiguration(), SubRefreshMillis(), ShouldNotifyAlertServer(),
+      ShouldValidateMetrics(), ShouldForceStart(), IsMainEnabled(),
+      AreSubsEnabled(), PublishConfig(), LogConfiguration(),
+      HttpConfiguration(), CommonTags());
 }
 
 std::ostream& operator<<(std::ostream& os, const HttpConfig& http_config) {

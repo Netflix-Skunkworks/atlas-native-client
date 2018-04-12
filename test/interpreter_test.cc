@@ -235,3 +235,22 @@ TEST(Interpreter, GetQuery) {
   auto q = interpreter.GetQuery(":true,:all");
   EXPECT_TRUE(q->IsTrue());
 }
+
+TEST(Interpreter, InQuery) {
+  auto context = exec("name,(,sps,sps2,),:in");
+  ASSERT_EQ(1, context->StackSize());
+
+  auto expr = context->PopExpression();
+  ASSERT_TRUE(expression::IsQuery(*expr));
+
+  auto query = std::static_pointer_cast<Query>(expr);
+
+  Tags sps{{"name", "sps"}};
+  ASSERT_TRUE(query->Matches(sps));
+
+  Tags sps2{{"name", "sps2"}};
+  ASSERT_TRUE(query->Matches(sps2));
+
+  Tags sps3{{"name", "sps3"}};
+  ASSERT_FALSE(query->Matches(sps3));
+}

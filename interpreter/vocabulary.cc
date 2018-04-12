@@ -70,12 +70,13 @@ class LeWord : public Word {
 class InWord : public Word {
  public:
   OptionalString Execute(Context* context) override {
-    auto expr = context->PopExpression().get();
-    if (expr->GetType() != ExpressionType::List) {
+    auto list_expr = context->PopExpression();
+
+    if (list_expr->GetType() != ExpressionType::List) {
       return OptionalString(":in expects a list on the stack");
     }
 
-    auto list = static_cast<List*>(expr);
+    auto list = std::static_pointer_cast<List>(list_expr);
     auto key = context->PopString();
     auto in_expr = std::make_unique<InQuery>(key, list->ToStrings());
     context->Push(std::move(in_expr));

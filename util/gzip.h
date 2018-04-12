@@ -7,9 +7,9 @@ namespace util {
 
 static constexpr int kGzipHeaderSize = 16;  // size of the gzip header
 
-int gzip_compress(Bytef* dest, uLongf* destLen, const Bytef* source,
-                  uLong sourceLen);
-int gzip_uncompress(Bytef* dest, uLongf* destLen, const Bytef* source,
-                    uLong sourceLen);
+int gzip_compress(char* dest, size_t* destLen, const char* source,
+                  size_t sourceLen);
+int gzip_uncompress(char* dest, size_t* destLen, const char* source,
+                    size_t sourceLen);
 }  // namespace util
 }  // namespace atlas

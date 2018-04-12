@@ -2,9 +2,9 @@
 
 #include <array>
 #include <iomanip>
-#include <sstream>
 #include <string>
 #include <vector>
+#include <fmt/format.h>
 
 namespace atlas {
 namespace meter {
@@ -66,10 +66,8 @@ class ValueFormatter {
 
   /// Get the bucket label for the value v
   std::string GetLabel(int64_t v) const noexcept {
-    std::stringstream ss;
     auto unit = v / factor_;
-    ss << std::setw(width_) << std::setfill('0') << unit << suffix_;
-    return ss.str();
+    return fmt::format("{:<0{}}{}", unit, width_, suffix_);
   }
 
   /// Return a new bucket for the specified value

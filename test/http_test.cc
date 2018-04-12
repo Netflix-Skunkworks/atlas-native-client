@@ -250,9 +250,7 @@ TEST(HttpTest, Post) {
 
   auto cfg = HttpConfig();
   http client{cfg};
-  std::ostringstream os;
-  os << "http://localhost:" << port << "/foo";
-  auto url = os.str();
+  auto url = fmt::format("http://localhost:{}/foo", port);
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   client.post(url, "Content-type: application/json", post_data.c_str(),
               post_data.length());
@@ -322,9 +320,7 @@ TEST(HttpTest, PostBatches) {
 
   auto cfg = HttpConfig();
   http client{cfg};
-  std::ostringstream os;
-  os << "http://localhost:" << port << "/foo";
-  auto url = os.str();
+  auto url = fmt::format("http://localhost:{}/foo", port);
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
   constexpr size_t kBatches = 16;
@@ -366,9 +362,7 @@ TEST(HttpTest, Timeout) {
 
   auto cfg = HttpConfig();
   http client{cfg};
-  std::ostringstream os;
-  os << "http://localhost:" << port << "/foo";
-  auto url = os.str();
+  auto url = fmt::format("http://localhost:{}/foo", port);
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   client.post(url, "Content-type: application/json", post_data.c_str(),
               post_data.length());
@@ -387,9 +381,7 @@ TEST(HttpTest, ConditionalGet) {
 
   auto cfg = HttpConfig();
   http client{cfg};
-  std::ostringstream os;
-  os << "http://localhost:" << port << "/get";
-  auto url = os.str();
+  auto url = fmt::format("http://localhost:{}/get", port);
 
   std::string etag;
   std::string content;
@@ -404,10 +396,8 @@ TEST(HttpTest, ConditionalGet) {
   EXPECT_EQ(req.get_header("Accept"), "*/*");
   EXPECT_EQ(etag, "1234");
 
-  os << "304";
-  url = os.str();
-
-  ASSERT_EQ(client.conditional_get(url, &etag, &content), 304);
+  auto cond_url = fmt::format("http://localhost:{}/get304", port);
+  ASSERT_EQ(client.conditional_get(cond_url, &etag, &content), 304);
   ASSERT_TRUE(content.length() > 0);
   const auto& cond_req = server.get_requests().at(1);
 

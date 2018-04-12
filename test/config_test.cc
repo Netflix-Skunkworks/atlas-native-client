@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include <rapidjson/document.h>
 #include <cstdlib>
+#include <fmt/format.h>
 
 using atlas::util::Config;
 using atlas::util::EndpointConfig;

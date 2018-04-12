@@ -1,7 +1,7 @@
 #include "environment.h"
 #include "strings.h"
-#include <sstream>
 #include <unistd.h>
+#include <fmt/format.h>
 
 namespace atlas {
 namespace util {
@@ -41,9 +41,7 @@ std::string instance_id() noexcept {
     hostname[1023] = '\0';
     auto h = &hostname[0];
     if (gethostname(h, 1023) != 0) {
-      std::stringstream os;
-      os << "error-" << errno;
-      return os.str();
+      return fmt::format("error-{}", errno);
     }
     return std::string{h};
   }

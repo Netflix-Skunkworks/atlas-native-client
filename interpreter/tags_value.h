@@ -1,8 +1,8 @@
 #pragma once
 
+#include "../meter/id_format.h"
 #include "../meter/measurement.h"
 #include "../util/optional.h"
-#include "../util/dump.h"
 #include <cstdlib>
 #include <cmath>
 
@@ -17,8 +17,11 @@ class TagsValuePair {
   virtual ~TagsValuePair() = default;
   virtual void dump(std::ostream& os) const noexcept = 0;
 
-  static std::unique_ptr<TagsValuePair> from(const meter::Measurement& measurement, const meter::Tags* common_tags) noexcept;
-  static std::unique_ptr<TagsValuePair> of(meter::Tags&& tags, double value) noexcept;
+  static std::unique_ptr<TagsValuePair> from(
+      const meter::Measurement& measurement,
+      const meter::Tags* common_tags) noexcept;
+  static std::unique_ptr<TagsValuePair> of(meter::Tags&& tags,
+                                           double value) noexcept;
 };
 
 extern const OptionalString kNone;
@@ -26,31 +29,26 @@ extern const util::StrRef kNameRef;
 
 class SimpleTagsValuePair : public TagsValuePair {
  public:
-  SimpleTagsValuePair(meter::Tags&& tags, double value) : tags_(tags), value_(value) {
-  }
+  SimpleTagsValuePair(meter::Tags&& tags, double value)
+      : tags_(tags), value_(value) {}
 
   OptionalString get_value(util::StrRef key) const noexcept override {
-      auto v = tags_.at(key);
-      if (*v.get() != '\0') {
-        return OptionalString{v.get()};
-      }
-
-      return kNone;
+    auto v = tags_.at(key);
+    if (*v.get() != '\0') {
+      return OptionalString{v.get()};
     }
 
-  meter::Tags all_tags() const noexcept override {
-    return tags_;
+    return kNone;
   }
+
+  meter::Tags all_tags() const noexcept override { return tags_; }
 
   void dump(std::ostream& os) const noexcept override {
-    os << "SimpleTagsValuePair(tags=";
-    dump_tags(os, tags_);
-    os << ",value=" << value_ << ")";
+    os << "SimpleTagsValuePair(tags=" << tags_ << ",value=" << value_ << ")";
   }
 
-  double value() const noexcept override {
-    return value_;
-  }
+  double value() const noexcept override { return value_; }
+
  private:
   meter::Tags tags_;
   double value_;
@@ -58,10 +56,8 @@ class SimpleTagsValuePair : public TagsValuePair {
 
 class IdTagsValuePair : public TagsValuePair {
  public:
-  IdTagsValuePair(meter::IdPtr id, const meter::Tags* common_tags, double value) :
-      id_(std::move(id)),
-      common_tags_(common_tags),
-      value_(value) {}
+  IdTagsValuePair(meter::IdPtr id, const meter::Tags* common_tags, double value)
+      : id_(std::move(id)), common_tags_(common_tags), value_(value) {}
 
   OptionalString get_value(util::StrRef key) const noexcept override {
     if (key.get() == kNameRef.get()) {
@@ -81,9 +77,7 @@ class IdTagsValuePair : public TagsValuePair {
     return kNone;
   }
 
-  double value() const noexcept override {
-    return value_;
-  }
+  double value() const noexcept override { return value_; }
 
   meter::Tags all_tags() const noexcept override {
     meter::Tags tags{*common_tags_};
@@ -93,10 +87,10 @@ class IdTagsValuePair : public TagsValuePair {
   }
 
   void dump(std::ostream& os) const noexcept override {
-    os << "IdTagsValuePair(id=" <<  *id_ << ",common_tags=";
-    dump_tags(os, *common_tags_);
-    os << ",value=" << value_ << ")";
+    os << "IdTagsValuePair(id=" << *id_ << ",common_tags=" << *common_tags_
+       << ",value=" << value_ << ")";
   }
+
  private:
   meter::IdPtr id_;
   const meter::Tags* common_tags_;
@@ -105,13 +99,16 @@ class IdTagsValuePair : public TagsValuePair {
 
 std::ostream& operator<<(std::ostream& os, const TagsValuePair& tagsValuePair);
 
-std::ostream& operator<<(std::ostream& os, const std::shared_ptr<TagsValuePair>& tagsValuePair);
+std::ostream& operator<<(std::ostream& os,
+                         const std::shared_ptr<TagsValuePair>& tagsValuePair);
 
 inline bool operator==(const TagsValuePair& lhs, const TagsValuePair& rhs) {
-  return lhs.all_tags() == rhs.all_tags() && std::abs(lhs.value() - rhs.value()) < 1e-6;
+  return lhs.all_tags() == rhs.all_tags() &&
+         std::abs(lhs.value() - rhs.value()) < 1e-6;
 }
 
-inline bool operator==(const std::shared_ptr<TagsValuePair>& lhs, const std::shared_ptr<TagsValuePair>& rhs) {
+inline bool operator==(const std::shared_ptr<TagsValuePair>& lhs,
+                       const std::shared_ptr<TagsValuePair>& rhs) {
   return *lhs == *rhs;
 }
 

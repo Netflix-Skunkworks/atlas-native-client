@@ -1,7 +1,6 @@
 #include "keep_drop_tags.h"
 #include "../meter/id.h"
 #include "../meter/measurement.h"
-#include "../util/dump.h"
 #include <algorithm>
 
 namespace atlas {
@@ -28,21 +27,24 @@ static StringRefs drop_keys(const meter::Tags& tags, const StringRefs& keys) {
 
   // add all tag keys that are not in the set of keys to be dropped
   for (const auto& tag : tags) {
-    if (tag.first != kNameRef && std::find(keys.begin(), keys.end(), tag.first) == keys.end()) {
+    if (tag.first != kNameRef &&
+        std::find(keys.begin(), keys.end(), tag.first) == keys.end()) {
       res.push_back(tag.first);
     }
   }
   return res;
 }
 
-std::shared_ptr<TagsValuePairs> KeepOrDropTags::Apply(std::shared_ptr<TagsValuePairs> valuePairs) {
+std::shared_ptr<TagsValuePairs> KeepOrDropTags::Apply(
+    std::shared_ptr<TagsValuePairs> valuePairs) {
   // group metrics by keys
   std::unordered_map<meter::Tags, TagsValuePairs> grouped;
   for (auto& valuePair : *valuePairs) {
     auto should_keep = true;
     meter::Tags group_by_vals;
 
-    const auto& keys = keep_ ? *keys_ : drop_keys(valuePair->all_tags(), *keys_);
+    const auto& keys =
+        keep_ ? *keys_ : drop_keys(valuePair->all_tags(), *keys_);
 
     for (auto& key : keys) {
       auto value = get_value(*valuePair, key);
@@ -63,7 +65,8 @@ std::shared_ptr<TagsValuePairs> KeepOrDropTags::Apply(std::shared_ptr<TagsValueP
     auto tags = entry.first;
     const auto& measurements_for_tags = entry.second;
     const auto& expr_results = expr_->Apply(measurements_for_tags);
-    results->push_back(TagsValuePair::of(std::move(tags), expr_results->value()));
+    results->push_back(
+        TagsValuePair::of(std::move(tags), expr_results->value()));
   }
 
   return results;

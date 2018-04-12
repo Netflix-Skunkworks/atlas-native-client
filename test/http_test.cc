@@ -68,7 +68,10 @@ class http_server {
     auto buf = std::unique_ptr<char[]>(new char[buf_len]);
     auto gzip_res =
         gzip_compress(buf.get(), &buf_len, raw.c_str(), raw.length());
-    assert(gzip_res == Z_OK);
+    if (gzip_res != Z_OK) {
+      Logger()->error("Unable to compress {}: gzip err {}", file_name, gzip_res);
+      return "";
+    }
     return std::string{buf.get(), buf_len};
   }
 

@@ -86,8 +86,8 @@ std::ostream& operator<<(std::ostream& os, const HttpConfig& http_config) {
 std::ostream& operator<<(std::ostream& os, const LogConfig& log_config) {
   os << std::boolalpha;
   os << "L(V=" << log_config.verbosity << ",S=" << log_config.max_size
-     << ",N=" << log_config.max_files << ",DM=" << log_config.dump_metrics
-     << ",DS=" << log_config.dump_subscriptions << ")";
+     << ",N=" << log_config.max_files << ",DumpM=" << log_config.dump_metrics
+     << ",DumpS=" << log_config.dump_subscriptions << ")";
   os << std::noboolalpha;
 
   return os;

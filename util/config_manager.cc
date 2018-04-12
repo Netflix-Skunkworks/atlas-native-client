@@ -74,6 +74,7 @@ void ConfigManager::refresher() noexcept {
 
 void ConfigManager::Start() noexcept {
   should_run_ = true;
+  refresh_configs();
   refresher_thread = std::thread(&ConfigManager::refresher, this);
 }
 

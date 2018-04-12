@@ -69,7 +69,8 @@ class http_server {
     auto gzip_res =
         gzip_compress(buf.get(), &buf_len, raw.c_str(), raw.length());
     if (gzip_res != Z_OK) {
-      Logger()->error("Unable to compress {}: gzip err {}", file_name, gzip_res);
+      Logger()->error("Unable to compress {}: gzip err {}", file_name,
+                      gzip_res);
       return "";
     }
     return std::string{buf.get(), buf_len};
@@ -136,12 +137,16 @@ class http_server {
     std::unique_ptr<char[]> body_{};
   };
 
-  const std::vector<Request>& get_requests() const { return requests_; };
+  const std::vector<Request>& get_requests() const {
+    std::lock_guard<std::mutex> guard(requests_mutex_);
+    return requests_;
+  };
 
  private:
   int sockfd_ = -1;
   int port_ = 0;
   std::atomic<bool> is_done{false};
+  mutable std::mutex requests_mutex_{};
   std::vector<Request> requests_;
   int accept_sleep_ = 0;
   int read_sleep_ = 0;
@@ -250,6 +255,7 @@ class http_server {
       left_to_write -= written;
     }
 
+    std::lock_guard<std::mutex> guard(requests_mutex_);
     requests_.emplace_back(method, path, headers, content_len, std::move(body));
   }
 

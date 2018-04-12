@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
   init_tags(&test_tags);
   std::string prefix{"atlas.client.test."};
   for (int minute = 0; minute < 5; ++minute) {
-    logger->info("Starting to generate 50k metrics");
+    logger->info("Starting to generate metrics");
     for (int i = 0; i < 5; ++i) {
       counter(prefix + std::to_string(i), test_tags)->Increment();
     }

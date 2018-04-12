@@ -69,7 +69,6 @@ class SubscriptionRegistry::impl {
 
  private:
   std::unique_ptr<interpreter::Interpreter> interpreter_;
-  // TODO(dmuino) use a concurrent map
   mutable std::mutex meters_mutex;
   std::unordered_map<IdPtr, std::shared_ptr<Meter>> meters_;
 };

@@ -242,6 +242,12 @@ class http_server {
       p += bytes_read;
     }
     *p = '\0';
+    Logger()->debug("Adding request {} {}", method, path);
+    {
+      std::lock_guard<std::mutex> guard(requests_mutex_);
+      requests_.emplace_back(method, path, headers, content_len,
+                             std::move(body));
+    }
 
     if (read_sleep_ > 0) {
       std::this_thread::sleep_for(std::chrono::milliseconds(read_sleep_));
@@ -254,9 +260,6 @@ class http_server {
       resp_ptr += written;
       left_to_write -= written;
     }
-
-    std::lock_guard<std::mutex> guard(requests_mutex_);
-    requests_.emplace_back(method, path, headers, content_len, std::move(body));
   }
 
   void accept_loop() {
@@ -388,8 +391,7 @@ TEST(HttpTest, PostBatches) {
 TEST(HttpTest, Timeout) {
   using atlas::util::http;
   http_server server;
-  server.set_accept_sleep(1500);
-  //  server.set_read_sleep(0);
+  server.set_read_sleep(1500);
   server.start();
 
   auto port = server.get_port();
@@ -398,13 +400,16 @@ TEST(HttpTest, Timeout) {
   logger->info("Server started on port {}", port);
 
   auto cfg = HttpConfig();
+  cfg.connect_timeout = 1;
+  cfg.read_timeout = 1;
   http client{cfg};
   auto url = fmt::format("http://localhost:{}/foo", port);
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-  client.post(url, "Content-type: application/json", post_data.c_str(),
-              post_data.length());
+  auto status = client.post(url, "Content-type: application/json",
+                            post_data.c_str(), post_data.length());
 
   server.stop();
+  EXPECT_EQ(status, 400);
 }
 
 TEST(HttpTest, ConditionalGet) {

@@ -1,13 +1,13 @@
 #pragma once
 
 #include <string>
+#include <vector>
 namespace atlas {
 namespace util {
 
 class Buffer {
  public:
-  Buffer() : memory(static_cast<char*>(malloc(1))) {}
-  ~Buffer() { free(memory); }
+  Buffer() = default;
   Buffer(const Buffer&) = delete;
   Buffer& operator=(const Buffer&) = delete;
   Buffer& operator=(Buffer&&) = delete;
@@ -17,8 +17,7 @@ class Buffer {
   void uncompress_to(std::string* s);
 
  private:
-  char* memory;
-  size_t size = 0;
+  std::vector<char> buf;
 };
 
 }  // namespace util

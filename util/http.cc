@@ -4,6 +4,7 @@
 #include "logger.h"
 #include "memory.h"
 #include "strings.h"
+#include "buffer.h"
 
 #include <algorithm>
 #include <curl/curl.h>
@@ -99,64 +100,6 @@ class CurlHandle {
   std::unique_ptr<char[]> payload_;
 };
 
-class Buffer {
- public:
-  Buffer() : memory(static_cast<char*>(malloc(1))) {}
-  ~Buffer() { free(memory); }
-  Buffer(const Buffer&) = delete;
-  Buffer& operator=(const Buffer&) = delete;
-  Buffer& operator=(Buffer&&) = delete;
-  Buffer(Buffer&&) = delete;
-  void append(void* data, size_t data_size) {
-    memory = static_cast<char*>(realloc(memory, size + data_size + 1));
-    if (memory == nullptr) {
-      throw std::bad_alloc();
-    }
-
-    memcpy(memory + size, data, data_size);
-    size += data_size;
-    memory[size] = 0;
-  }
-
-  void assign(std::string* s, bool compressed) {
-    if (!compressed) {
-      s->assign(memory, size);
-    } else {
-      // TODO: Dynamically allocate buffer using inflate directly
-      constexpr size_t MAX_BUF = 10 * 1024 * 1024;
-      auto dest = std::unique_ptr<char[]>(new char[MAX_BUF]);
-      size_t dest_len = MAX_BUF;
-      auto res =
-          atlas::util::gzip_uncompress(dest.get(), &dest_len, memory, size);
-      if (res == Z_OK) {
-        s->assign(dest.get(), dest_len);
-      } else {
-        std::string err_msg;
-        switch (res) {
-          case Z_MEM_ERROR:
-            err_msg = "Out of memory";
-            break;
-          case Z_DATA_ERROR:
-            err_msg = "Invalid or incomplete compressed data";
-            break;
-          case Z_STREAM_ERROR:
-            err_msg = "Invalid compression level";
-            break;
-          default:
-            err_msg = std::to_string(res);
-        }
-        Logger()->error(
-            "Unable to decompress payload (compressed size={}) err={}", size,
-            err_msg);
-      }
-    }
-  }
-
- private:
-  char* memory;
-  size_t size = 0;
-};
-
 size_t write_memory_callback(void* contents, size_t size, size_t nmemb,
                              void* userp) {
   auto real_size = size * nmemb;
@@ -223,7 +166,11 @@ int http::conditional_get(const std::string& url, std::string* etag,
     etag->assign(hi.etag);
     http_code = curl.status_code();
     if (http_code != 304) {  // if we got something back
-      buffer.assign(res, hi.compressed);
+      if (hi.compressed) {
+        buffer.uncompress_to(res);
+      } else {
+        buffer.assign(res);
+      }
     }
   }
   if (!error) {

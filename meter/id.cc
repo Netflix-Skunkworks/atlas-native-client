@@ -36,5 +36,10 @@ IdPtr WithDefaultGaugeTags(IdPtr id, const Tag& stat) {
   return WithDefaultTagForId(WithDefaultTagForId(id, stat), kGaugeDsType);
 }
 
+std::ostream& operator<<(std::ostream& os, const Id& id) {
+  os << "Id(" << id.Name() << ", " << id.GetTags() << ")";
+  return os;
+}
+
 }  // namespace meter
 }  // namespace atlas

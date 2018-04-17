@@ -21,11 +21,6 @@ inline std::ostream& operator<<(std::ostream& os, const Tags& tags) {
   return os;
 }
 
-inline std::ostream& operator<<(std::ostream& os, const Id& id) {
-  os << "Id(" << id.Name() << ", " << id.GetTags() << ")";
-  return os;
-}
-
 }  // namespace meter
 }  // namespace atlas
 

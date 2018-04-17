@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../meter/id_format.h"
 #include "../meter/measurement.h"
 #include "../util/optional.h"
 #include <cstdlib>
@@ -43,9 +42,7 @@ class SimpleTagsValuePair : public TagsValuePair {
 
   meter::Tags all_tags() const noexcept override { return tags_; }
 
-  void dump(std::ostream& os) const noexcept override {
-    os << "SimpleTagsValuePair(tags=" << tags_ << ",value=" << value_ << ")";
-  }
+  void dump(std::ostream& os) const noexcept override;
 
   double value() const noexcept override { return value_; }
 
@@ -86,10 +83,7 @@ class IdTagsValuePair : public TagsValuePair {
     return tags;
   }
 
-  void dump(std::ostream& os) const noexcept override {
-    os << "IdTagsValuePair(id=" << *id_ << ",common_tags=" << *common_tags_
-       << ",value=" << value_ << ")";
-  }
+  void dump(std::ostream& os) const noexcept override;
 
  private:
   meter::IdPtr id_;

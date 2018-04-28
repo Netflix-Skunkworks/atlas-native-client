@@ -53,6 +53,8 @@ class StepNumber {
     }
   }
 
+  int64_t StepMillis() const noexcept { return step_millis_; }
+
  private:
   T init_;
   int64_t step_millis_;

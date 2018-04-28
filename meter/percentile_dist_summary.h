@@ -15,9 +15,7 @@ class PercentileDistributionSummary : public Meter, public DistributionSummary {
   PercentileDistributionSummary(Registry* registry, IdPtr id);
   void Record(int64_t amount) noexcept override;
   std::ostream& Dump(std::ostream& os) const override;
-  Measurements MeasuresForPoller(size_t) const override {
-    return Measurements();
-  };
+  Measurements Measure() const override { return Measurements(); };
   int64_t Count() const noexcept override { return dist_->Count(); }
   int64_t TotalAmount() const noexcept override { return dist_->TotalAmount(); }
   double Percentile(double p) const noexcept;

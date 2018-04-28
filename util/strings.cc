@@ -1,4 +1,5 @@
 #include "strings.h"
+
 #include "environment.h"
 #include "logger.h"
 #include <sstream>
@@ -16,6 +17,10 @@ static pcre* get_var_pattern() {
 
   return pcre_compile(
       R"(\$(\w+)|\$\{([^\}]+)\})", 0, &error, &error_offset, nullptr);
+}
+
+std::string secs_for_millis(int64_t millis) {
+  return fmt::format("{:02d}s", millis / 1000);
 }
 
 static constexpr size_t kOffsetsMax = 30;

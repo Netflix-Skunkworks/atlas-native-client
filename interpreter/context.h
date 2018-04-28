@@ -11,7 +11,7 @@ class Context {
  public:
   using Stack = std::vector<std::shared_ptr<Expression>>;
 
-  explicit Context(std::unique_ptr<Stack> stack);
+  Context();
 
   std::string PopString();
 
@@ -26,7 +26,7 @@ class Context {
   std::ostream& Dump(std::ostream& os) const;
 
  private:
-  std::unique_ptr<Stack> stack_;
+  Stack stack_;
   const std::shared_ptr<Expression>& TopOfStack();
 };
 

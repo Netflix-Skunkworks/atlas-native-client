@@ -5,11 +5,11 @@
 namespace atlas {
 namespace meter {
 
-class SubscriptionLongTaskTimer : public Meter, public LongTaskTimer {
+class DefaultLongTaskTimer : public Meter, public LongTaskTimer {
  public:
-  SubscriptionLongTaskTimer(IdPtr id, const Clock& clock);
+  DefaultLongTaskTimer(IdPtr id, const Clock& clock);
 
-  Measurements MeasuresForPoller(size_t) const override;
+  Measurements Measure() const override;
 
   std::ostream& Dump(std::ostream& os) const override;
 
@@ -22,8 +22,6 @@ class SubscriptionLongTaskTimer : public Meter, public LongTaskTimer {
   int64_t Duration() const noexcept override;
 
   int ActiveTasks() const noexcept override;
-
-  virtual void UpdatePollers() override;
 
   // Long task timers don't expire
   bool HasExpired() const noexcept override { return false; }

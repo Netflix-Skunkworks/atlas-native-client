@@ -27,8 +27,8 @@ class StrRef {
 
 const StrRef& intern_str(const char* string);
 const StrRef& intern_str(const std::string& string);
-}
-}
+}  // namespace util
+}  // namespace atlas
 
 namespace std {
 template <>
@@ -39,4 +39,4 @@ struct hash<atlas::util::StrRef> {
     return pointer_value >> 4;
   }
 };
-}
+}  // namespace std

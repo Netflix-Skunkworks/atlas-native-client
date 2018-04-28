@@ -15,6 +15,7 @@ class DistributionSummaryNumber {
 };
 
 using DistributionSummary = DistributionSummaryNumber<int64_t>;
+using DDistributionSummary = DistributionSummaryNumber<double>;
 
 }  // namespace meter
 }  // namespace atlas

@@ -1,4 +1,3 @@
-// This is just an example of something using the meter api
 
 #include "atlas_client.h"
 #include "util/logger.h"
@@ -6,10 +5,6 @@
 #include <thread>
 
 using namespace atlas::meter;
-
-std::shared_ptr<Counter> counter(std::string&& name, const Tags& tags) {
-  return atlas_registry.counter(atlas_registry.CreateId(name, tags));
-}
 
 void init_tags(Tags* tags) {
   std::string prefix{"some.random.string.for.testing."};
@@ -22,7 +17,9 @@ void init_tags(Tags* tags) {
 int main(int argc, char* argv[]) {
   atlas::util::UseConsoleLogger(1);
   const auto& logger = atlas::util::Logger();
-  atlas::Init();
+  atlas::Client atlas_client;
+  atlas_client.Start();
+  auto registry = atlas_client.GetRegistry();
 
   Tags test_tags;
   init_tags(&test_tags);
@@ -30,13 +27,13 @@ int main(int argc, char* argv[]) {
   for (int minute = 0; minute < 5; ++minute) {
     logger->info("Starting to generate metrics");
     for (int i = 0; i < 5; ++i) {
-      counter(prefix + std::to_string(i), test_tags)->Increment();
+      registry->counter(prefix + std::to_string(i), test_tags)->Increment();
     }
     logger->info("Sleeping for 1s");
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
   logger->info("Shutting down");
 
-  atlas::Shutdown();
+  atlas_client.Stop();
   return 0;
 }

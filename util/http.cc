@@ -15,8 +15,6 @@
 namespace atlas {
 namespace util {
 
-namespace {
-
 class CurlHeaders {
  public:
   CurlHeaders() = default;
@@ -33,6 +31,8 @@ class CurlHeaders {
  private:
   curl_slist* list_{nullptr};
 };
+
+namespace {
 
 constexpr const char* const kUserAgent = "atlas-native/1.0";
 
@@ -127,12 +127,33 @@ size_t header_callback(char* buffer, size_t size, size_t n_items,
   return size * n_items;
 }
 
+void add_status_tags(meter::Tags* tags, CURLcode curl_res, int status_code) {
+  if (curl_res == CURLE_OK) {
+    auto code = fmt::format("{}", status_code);
+    auto status = fmt::format("{}xx", status_code / 100);
+
+    tags->add("status", status.c_str());
+    tags->add("statusCode", code.c_str());
+  } else if (curl_res == CURLE_OPERATION_TIMEDOUT) {
+    tags->add("status", "timeout");
+    tags->add("statusCode", "timeout");
+  } else {
+    tags->add("status", "error");
+    tags->add("statusCode", "error");
+  }
+}
+
 }  // namespace
 
 int http::conditional_get(const std::string& url, std::string* etag,
                           std::string* res) const {
   const auto& logger = Logger();
   logger->debug("Conditionally getting url: {} etag: {}", url, *etag);
+  const auto start = registry_->clock().MonotonicTime();
+  meter::Tags tags{{"method", "GET"},
+                   {"mode", "http-client"},
+                   {"client", "atlas-native-client"}};
+
   CurlHandle curl;
   // url to get
   curl.set_url(url);
@@ -178,7 +199,10 @@ int http::conditional_get(const std::string& url, std::string* etag,
     if (http_code == 0) {
       http_code = 200;
     }  // for file:///
+    add_status_tags(&tags, curl_res, http_code);
   }
+  auto duration = registry_->clock().MonotonicTime() - start;
+  registry_->timer("http.req.complete", tags)->Record(duration);
   return http_code;
 }
 
@@ -187,12 +211,15 @@ int http::get(const std::string& url, std::string* res) const {
   return conditional_get(url, &etag, res);
 }
 
-static int do_post(const std::string& url, int connect_timeout,
-                   int read_timeout, std::unique_ptr<CurlHeaders> headers,
-                   std::unique_ptr<char[]> payload, size_t size) {
+int http::do_post(const std::string& url, std::unique_ptr<CurlHeaders> headers,
+                  std::unique_ptr<char[]> payload, size_t size) const {
+  const auto start = registry_->clock().MonotonicTime();
+  meter::Tags tags{{"method", "POST"},
+                   {"mode", "http-client"},
+                   {"client", "atlas-native-client"}};
   CurlHandle curl;
-  curl.set_connect_timeout(connect_timeout);
-  curl.set_read_timeout(read_timeout);
+  curl.set_connect_timeout(connect_timeout_);
+  curl.set_read_timeout(read_timeout_);
 
   const auto& logger = Logger();
   logger->info("POSTing to url: {}", url);
@@ -207,13 +234,24 @@ static int do_post(const std::string& url, int connect_timeout,
   if (curl_res != CURLE_OK) {
     logger->error("Failed to POST {}: {}", url, curl_easy_strerror(curl_res));
     error = true;
+    if (curl_res == CURLE_OPERATION_TIMEDOUT) {
+      tags.add("status", "timeout");
+      tags.add("statusCode", "timeout");
+    } else {
+      tags.add("status", "error");
+      tags.add("statusCode", "error");
+    }
   } else {
     http_code = curl.status_code();
+    add_status_tags(&tags, curl_res, http_code);
   }
 
   if (!error) {
     logger->info("Was able to POST to {} - status code: {}", url, http_code);
   }
+
+  auto duration = registry_->clock().MonotonicTime() - start;
+  registry_->timer("http.req.complete", tags)->Record(duration);
   return http_code;
 }
 
@@ -238,8 +276,8 @@ int http::post(const std::string& url, const char* content_type,
     return 400;
   }
 
-  return do_post(url, connect_timeout_, read_timeout_, std::move(headers),
-                 std::move(compressed_payload), compressed_size);
+  return do_post(url, std::move(headers), std::move(compressed_payload),
+                 compressed_size);
 }
 
 int http::post(const std::string& url,
@@ -351,10 +389,12 @@ static bool setup_handle_for_post(CurlHandle* handle, const std::string& url,
 }
 
 std::vector<int> http::post_batches(
-    const std::string& url, const std::vector<rapidjson::Document>& batches) {
+    const std::string& url,
+    const std::vector<rapidjson::Document>& batches) const {
   CurlMultiHandle multi_handle;
 
   std::vector<std::unique_ptr<CurlHandle>> easy_handles;
+  auto start = registry_->clock().MonotonicTime();
   for (const auto& doc : batches) {
     auto handle = std::make_unique<CurlHandle>();
     handle->set_read_timeout(read_timeout_);
@@ -363,7 +403,17 @@ std::vector<int> http::post_batches(
     easy_handles.push_back(std::move(handle));
   }
 
-  return multi_handle.perform_all(easy_handles);
+  // TODO(dmuino) find a way to return errors and timings
+  auto results = multi_handle.perform_all(easy_handles);
+  auto duration = registry_->clock().MonotonicTime() - start;
+  meter::Tags tags{{"method", "POST"},
+                   {"mode", "http-client"},
+                   {"client", "atlas-native-client"}};
+  for (const auto& result : results) {
+    add_status_tags(&tags, CURLE_OK, result);
+    registry_->timer("http.req.complete", tags)->Record(duration);
+  }
+  return results;
 }
 
 void http::global_init() noexcept { curl_global_init(CURL_GLOBAL_ALL); }

@@ -1,14 +1,15 @@
 #include "../meter/bucket_timer.h"
+#include "../meter/statistic.h"
 #include "../util/logger.h"
 #include "test_registry.h"
 #include <gtest/gtest.h>
 
 using atlas::meter::BucketTimer;
+using atlas::meter::kEmptyTags;
 using atlas::meter::Measurement;
 using atlas::meter::Tag;
 using atlas::meter::bucket_functions::Age;
 using atlas::meter::bucket_functions::Latency;
-using atlas::meter::kEmptyTags;
 using atlas::util::Logger;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
@@ -18,7 +19,7 @@ TEST(BucketTimer, Init) {
 
   auto id = r.CreateId("test", kEmptyTags);
   BucketTimer t(&r, id, Age(milliseconds{100}));
-  auto ms = r.AllMeasurements();
+  auto ms = r.measurements_for_name("test");
   EXPECT_EQ(ms.size(), 0);
 }
 
@@ -34,7 +35,7 @@ TEST(BucketTimer, Record) {
   ds.Record(milliseconds(28));
 
   r.SetWall(61000);
-  auto ms = r.AllMeasurements();
+  auto ms = r.measurements_for_name("test");
   EXPECT_EQ(ms.size(), 4);
 
   auto base_id = id->WithTag(Tag::of("bucket", "050ms"));
@@ -51,9 +52,8 @@ TEST(BucketTimer, Record) {
       auto totalSq = 30.0 * kMillisToSecs * 30.0 * kMillisToSecs +
                      28.0 * kMillisToSecs * 28.0 * kMillisToSecs;
       EXPECT_DOUBLE_EQ(totalSq / 60.0, m.value);
-    } else if (*m.id ==
-               *base_id->WithTag(atlas::meter::statistic::max)
-                    ->WithTag(Tag::of("atlas.dstype", "gauge"))) {
+    } else if (*m.id == *base_id->WithTag(atlas::meter::statistic::max)
+                             ->WithTag(Tag::of("atlas.dstype", "gauge"))) {
       EXPECT_DOUBLE_EQ(30 * kMillisToSecs, m.value);
     } else {
       FAIL() << "Unknown id: " << *m.id;

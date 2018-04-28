@@ -19,9 +19,7 @@ std::ostream& MonotonicCounter::Dump(std::ostream& os) const {
   return os;
 }
 
-Measurements MonotonicCounter::MeasuresForPoller(size_t /*poller_idx*/) const {
-  return Measurements();
-}
+Measurements MonotonicCounter::Measure() const { return Measurements(); }
 
 void MonotonicCounter::Set(int64_t amount) noexcept {
   auto prev_updated = last_updated_.load(std::memory_order_relaxed);

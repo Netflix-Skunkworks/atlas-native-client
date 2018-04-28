@@ -78,7 +78,8 @@ static double count_af(const Query& filter,
 static const double MAX_VALUE = std::numeric_limits<double>::max();
 static const double LOWEST_VALUE = std::numeric_limits<double>::lowest();
 
-static double min_af(const Query& filter, const TagsValuePairs& tagsValuePairs) {
+static double min_af(const Query& filter,
+                     const TagsValuePairs& tagsValuePairs) {
   auto mn = MAX_VALUE;
   for (const auto& m : tagsValuePairs) {
     if (!std::isnan(m->value()) && filter.Matches(*m)) {
@@ -88,7 +89,8 @@ static double min_af(const Query& filter, const TagsValuePairs& tagsValuePairs) 
   return mn == MAX_VALUE ? kNAN : mn;
 }
 
-static double max_af(const Query& filter, const TagsValuePairs& tagsValuePairs) {
+static double max_af(const Query& filter,
+                     const TagsValuePairs& tagsValuePairs) {
   auto mx = LOWEST_VALUE;
   for (const auto& m : tagsValuePairs) {
     if (!std::isnan(m->value()) && filter.Matches(*m)) {

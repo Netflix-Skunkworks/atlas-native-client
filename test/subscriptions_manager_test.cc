@@ -1,6 +1,7 @@
 #include <fstream>
 #include <gtest/gtest.h>
 
+#include "../meter/subscription_format.h"
 #include "../meter/subscription_manager.h"
 #include "../util/json.h"
 #include "../util/logger.h"
@@ -9,6 +10,10 @@ using atlas::util::Logger;
 
 namespace atlas {
 namespace meter {
+SubscriptionResults generate_sub_results(
+    const interpreter::Evaluator& evaluator, const Subscriptions& subs,
+    const interpreter::TagsValuePairs& pairs);
+
 Subscriptions* ParseSubscriptions(const std::string& subs_str);
 rapidjson::Document MeasurementsToJson(
     int64_t now_millis,
@@ -130,4 +135,30 @@ TEST(SubscriptionManager, SubResToJson) {
   Document expected_json;
   expected_json.Parse<kParseCommentsFlag | kParseNanAndInfFlag>(expected);
   expect_eq_json(expected_json, json);
+}
+
+TEST(SubscriptionManager, generate_subs_results) {
+  using namespace atlas::interpreter;
+
+  Evaluator evaluator;
+  Subscriptions subs;
+  subs.emplace_back(Subscription{"id", 60000, ":true,:all"});
+  subs.emplace_back(
+      Subscription{"id2", 60000, "name,name1,:eq,:sum,(,k2,),:by"});
+  subs.emplace_back(Subscription{"id3", 60000, "name,name3,:eq,:sum"});
+  subs.emplace_back(Subscription{"id3", 60000, "name,name4,:eq,:sum"});
+  Tags t1{{"name", "name1"}, {"k1", "v1"}, {"k2", "v2"}};
+  Tags t2{{"name", "name2"}, {"k1", "v1"}, {"k2", "v2.0"}};
+  Tags t3{{"name", "name3"}, {"k1", "v1"}, {"k2", "v2.1"}};
+
+  auto m1 = TagsValuePair::of(std::move(t1), 1.1);
+  auto m2 = TagsValuePair::of(std::move(t2), 2.2);
+  auto m3 = TagsValuePair::of(std::move(t3), 3.3);
+  TagsValuePairs ms{std::move(m1), std::move(m2), std::move(m3)};
+
+  auto g = generate_sub_results(evaluator, subs, ms);
+  for (const auto& sr : g) {
+    Logger()->info("Got {}", sr);
+  }
+  EXPECT_EQ(g.size(), 5);
 }

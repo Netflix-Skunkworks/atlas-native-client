@@ -3,8 +3,8 @@
 
 namespace atlas {
 namespace interpreter {
-Context::Context(std::unique_ptr<Context::Stack> stack)
-    : stack_(std::move(stack)) {}
+
+Context::Context() : stack_() {}
 
 static void ensure_stack_notempty(const Context::Stack& stack) {
   if (stack.empty()) {
@@ -14,15 +14,15 @@ static void ensure_stack_notempty(const Context::Stack& stack) {
 }
 
 std::shared_ptr<Expression> Context::PopExpression() {
-  ensure_stack_notempty(*stack_);
-  auto top = stack_->at(stack_->size() - 1);
-  stack_->pop_back();
+  ensure_stack_notempty(stack_);
+  auto top = stack_.at(stack_.size() - 1);
+  stack_.pop_back();
   return top;
 }
 
 const std::shared_ptr<Expression>& Context::TopOfStack() {
-  ensure_stack_notempty(*stack_);
-  return stack_->at(stack_->size() - 1);
+  ensure_stack_notempty(stack_);
+  return stack_.at(stack_.size() - 1);
 }
 
 static void ensure(bool b, const std::string& msg) {
@@ -32,7 +32,7 @@ static void ensure(bool b, const std::string& msg) {
 }
 
 std::string Context::PopString() {
-  ensure_stack_notempty(*stack_);
+  ensure_stack_notempty(stack_);
   auto maybe_str = PopExpression();
   ensure(expression::IsLiteral(*maybe_str),
          "Wrong type. Expecting a literal string.");
@@ -40,20 +40,20 @@ std::string Context::PopString() {
 }
 
 void Context::PushToList(std::shared_ptr<Expression> expression) {
-  ensure_stack_notempty(*stack_);
+  ensure_stack_notempty(stack_);
   auto top = TopOfStack().get();
   ensure(expression::IsList(*top), "Wrong type. Expecting a list.");
   auto list = static_cast<List*>(top);
   list->Add(std::move(expression));
 }
 
-size_t Context::StackSize() const noexcept { return stack_->size(); }
+size_t Context::StackSize() const noexcept { return stack_.size(); }
 
 std::ostream& Context::Dump(std::ostream& os) const {
   os << "Context: {"
      << "\n";
   bool first = true;
-  for (auto& elt : *stack_) {
+  for (auto& elt : stack_) {
     if (!first) {
       os << ",\n";
     } else {
@@ -66,7 +66,7 @@ std::ostream& Context::Dump(std::ostream& os) const {
 }
 
 void Context::Push(std::shared_ptr<Expression> expression) {
-  stack_->push_back(expression);
+  stack_.push_back(expression);
 }
 
 std::ostream& operator<<(std::ostream& os, const Context& context) {

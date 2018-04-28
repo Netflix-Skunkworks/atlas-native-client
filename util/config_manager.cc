@@ -48,7 +48,6 @@ static constexpr const char* const kGlobalFile =
 
 std::unique_ptr<Config> ConfigManager::get_current_config() noexcept {
   auto defaults = std::make_unique<Config>();
-  defaults->SetNotify(default_notify_);
   auto my_global = ParseConfigFile(kGlobalFile, std::move(defaults));
   return ParseConfigFile(local_file_name_, std::move(my_global));
 }

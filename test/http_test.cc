@@ -6,281 +6,43 @@
 #include <sys/types.h>
 #include <zlib.h>
 
+#include "../meter/id_format.h"
 #include "../util/config_manager.h"
 #include "../util/gzip.h"
 #include "../util/http.h"
 #include "../util/logger.h"
 #include "../util/strings.h"
 #include "../interpreter/tags_value.h"
+#include "http_server.h"
+#include "test_registry.h"
 #include <thread>
 #include <fstream>
 
+using atlas::meter::Tags;
+using atlas::util::gzip_uncompress;
+using atlas::util::http;
 using atlas::util::HttpConfig;
 using atlas::util::Logger;
-using atlas::util::ToLowerCopy;
-using atlas::util::gzip_compress;
-using atlas::util::gzip_uncompress;
 
-const static std::string EMPTY_STRING = "";
-
-class http_server {
- public:
-  http_server() {
-    path_response_["/foo"] =
-        "HTTP/1.1 200 OK\nContent-Length: 0\nServer: atlas-tests\n";
-    path_response_["/get"] =
-        "HTTP/1.0 200 OK\nContent-Length: 10\nServer: atlas-tests\nEtag: "
-        "1234\n\n123456790";
-    path_response_["/get304"] =
-        "HTTP/1.0 304 OK\nContent-Length: 0\nServer: atlas-tests\nEtag: "
-        "1234\n\n";
-
-    std::string small = compress_file("./resources/subs1.json");
-    path_response_["/compressed"] =
-        fmt::format(
-            "HTTP/1.0 200 OK\nContent-Encoding: gzip\nContent-Length: {}\n\n",
-            small.length()) +
-        small;
-    std::string big = compress_file("./resources/many-subs.json");
-    path_response_["/compressedBig"] =
-        fmt::format(
-            "HTTP/1.0 200 OK\nContent-Encoding: gzip\nContent-Length: {}\n\n",
-            big.length()) +
-        big;
-  }
-  http_server(const http_server&) = delete;
-  http_server(http_server&&) = delete;
-  http_server& operator=(const http_server&) = delete;
-  http_server& operator=(http_server&&) = delete;
-
-  ~http_server() {
-    if (sockfd_ >= 0) {
-      close(sockfd_);
-    }
-  }
-
-  std::string compress_file(const char* file_name) {
-    std::ifstream to_compress(file_name);
-    std::stringstream buffer;
-    buffer << to_compress.rdbuf();
-    auto raw = buffer.str();
-    size_t buf_len = 1024 * 1024;
-    auto buf = std::unique_ptr<char[]>(new char[buf_len]);
-    auto gzip_res =
-        gzip_compress(buf.get(), &buf_len, raw.c_str(), raw.length());
-    if (gzip_res != Z_OK) {
-      Logger()->error("Unable to compress {}: gzip err {}", file_name,
-                      gzip_res);
-      return "";
-    }
-    return std::string{buf.get(), buf_len};
-  }
-
-  void set_read_sleep(int millis) { read_sleep_ = millis; }
-
-  void set_accept_sleep(int millis) { accept_sleep_ = millis; }
-
-  void start() {
-    struct sockaddr_in serv_addr;
-    sockfd_ = socket(AF_INET, SOCK_STREAM, 0);
-    ASSERT_TRUE(sockfd_ >= 0);
-
-    bzero(&serv_addr, sizeof serv_addr);
-    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = 0;
-
-    ASSERT_TRUE(bind(sockfd_, (sockaddr*)&serv_addr, sizeof serv_addr) >= 0);
-    ASSERT_TRUE(listen(sockfd_, 32) == 0);
-
-    socklen_t serv_len = sizeof serv_addr;
-    ASSERT_TRUE(getsockname(sockfd_, (sockaddr*)&serv_addr, &serv_len) >= 0);
-    port_ = ntohs(serv_addr.sin_port);
-
-    std::thread acceptor([this] { accept_loop(); });
-    acceptor.detach();
-  }
-
-  int get_port() const { return port_; };
-  void stop() { is_done = true; }
-
-  class Request {
-   public:
-    Request() : size_(0), body_(nullptr) {}
-    Request(std::string method, std::string path,
-            std::map<std::string, std::string> headers, size_t size,
-            std::unique_ptr<char[]>&& body)
-        : method_(std::move(method)),
-          path_(std::move(path)),
-          headers_(std::move(headers)),
-          size_(size),
-          body_(std::move(body)) {}
-
-    size_t size() const { return size_; }
-    const char* body() const { return body_.get(); }
-    const std::string& get_header(const std::string& name) const {
-      auto lower = ToLowerCopy(name);
-      auto it = headers_.find(lower);
-      if (it == headers_.end()) {
-        return EMPTY_STRING;
-      }
-      return it->second;
-    }
-    const std::string& method() const { return method_; }
-    const std::string& path() const { return path_; }
-
-   private:
-    std::string method_;
-    std::string path_;
-    std::map<std::string, std::string> headers_{};
-    size_t size_;
-    std::unique_ptr<char[]> body_{};
-  };
-
-  const std::vector<Request>& get_requests() const {
-    std::lock_guard<std::mutex> guard(requests_mutex_);
-    return requests_;
-  };
-
- private:
-  int sockfd_ = -1;
-  int port_ = 0;
-  std::atomic<bool> is_done{false};
-  mutable std::mutex requests_mutex_{};
-  std::vector<Request> requests_;
-  int accept_sleep_ = 0;
-  int read_sleep_ = 0;
-  std::map<std::string, std::string> path_response_;
-
-  void get_line(int client, char* buf, size_t size) {
-    assert(size > 0);
-    size_t i = 0;
-    char c = '\0';
-
-    while ((i < size - 1) && (c != '\n')) {
-      auto n = recv(client, &c, 1, 0);
-      if (n > 0) {
-        if (c == '\r') {
-          n = recv(client, &c, 1, MSG_PEEK);
-          if (n > 0 && c == '\n') {
-            recv(client, &c, 1, 0);
-          } else {
-            c = '\n';
-          }
-        }
-        buf[i++] = c;
-      } else {
-        c = '\n';
-      }
-    }
-    buf[i] = '\0';
-  }
-
-  void accept_request(int client) {
-    using namespace std;
-
-    char buf[4096];
-    get_line(client, buf, sizeof buf);
-
-    char method[256];
-    char path[1024];
-    size_t i = 0, j = 0;
-    while (!isspace(buf[i]) && i < (sizeof method - 1)) {
-      method[i++] = buf[j++];
-    }
-    method[i] = '\0';
-    while (isspace(buf[j]) && j < sizeof buf) {
-      ++j;
-    }
-
-    i = 0;
-    while (!isspace(buf[j]) && i < (sizeof path - 1) && j < sizeof buf) {
-      path[i++] = buf[j++];
-    }
-    path[i] = '\0';
-
-    // do headers
-    map<string, string> headers;
-    for (;;) {
-      get_line(client, buf, sizeof buf);
-      if (strlen(buf) <= 1) {
-        break;
-      }
-
-      i = 0;
-      while (buf[i] != ':' && i < (sizeof buf - 1)) {
-        buf[i] = (char)tolower(buf[i]);
-        ++i;
-      }
-      buf[i++] = '\0';
-
-      while (isspace(buf[i]) && i < sizeof buf) {
-        ++i;
-      }
-
-      std::string header_name = buf;
-      j = i;
-      while (buf[i] != '\n' && i < (sizeof buf - 1)) {
-        ++i;
-      }
-      buf[i] = '\0';
-      std::string header_value = &buf[j];
-      headers[header_name] = header_value;
-    }
-
-    // do the body
-    auto len = headers["content-length"];
-    int content_len = len.empty() ? 0 : stoi(len);
-
-    auto body = std::unique_ptr<char[]>(new char[content_len + 1]);
-
-    char* p = body.get();
-    auto n = content_len;
-    while (n > 0) {
-      auto bytes_read = read(client, p, (size_t)n);
-      n -= bytes_read;
-      p += bytes_read;
-    }
-    *p = '\0';
-    Logger()->debug("Adding request {} {}", method, path);
-    {
-      std::lock_guard<std::mutex> guard(requests_mutex_);
-      requests_.emplace_back(method, path, headers, content_len,
-                             std::move(body));
-    }
-
-    if (read_sleep_ > 0) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(read_sleep_));
-    }
-    auto response = path_response_[path];
-    auto left_to_write = response.length() + 1;
-    auto resp_ptr = response.c_str();
-    while (left_to_write > 0) {
-      auto written = write(client, resp_ptr, left_to_write);
-      resp_ptr += written;
-      left_to_write -= written;
-    }
-  }
-
-  void accept_loop() {
-    while (!is_done) {
-      struct sockaddr_in cli_addr;
-      socklen_t cli_len = sizeof(cli_addr);
-      if (accept_sleep_ > 0) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(accept_sleep_));
-      }
-      int client_socket = accept(sockfd_, (sockaddr*)&cli_addr, &cli_len);
-      if (client_socket >= 0) {
-        accept_request(client_socket);
-        close(client_socket);
+static std::shared_ptr<atlas::meter::Meter> find_meter(
+    atlas::meter::Registry* registry, const char* name,
+    const char* status_code) {
+  auto meters = registry->meters();
+  auto status_ref = atlas::util::intern_str(status_code);
+  for (const auto& m : meters) {
+    auto meter_name = m->GetId()->Name();
+    if (strcmp(meter_name, name) == 0) {
+      auto status = atlas::util::intern_str("statusCode");
+      auto t = m->GetId()->GetTags().at(status);
+      if (t == status_ref) {
+        return m;
       }
     }
   }
-};
+  return nullptr;
+}
 
 TEST(HttpTest, Post) {
-  using atlas::util::http;
-
   http_server server;
   server.start();
 
@@ -290,13 +52,21 @@ TEST(HttpTest, Post) {
   logger->info("Server started on port {}", port);
 
   auto cfg = HttpConfig();
-  http client{cfg};
+  auto registry = std::make_shared<TestRegistry>();
+  http client{registry, cfg};
   auto url = fmt::format("http://localhost:{}/foo", port);
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   client.post(url, "Content-type: application/json", post_data.c_str(),
               post_data.length());
 
   server.stop();
+  auto timer_for_req = find_meter(registry.get(), "http.req.complete", "200");
+  auto expected_tags = Tags{{"client", "atlas-native-client"},
+                            {"statusCode", "200"},
+                            {"status", "2xx"},
+                            {"mode", "http-client"},
+                            {"method", "POST"}};
+  EXPECT_EQ(expected_tags, timer_for_req->GetId()->GetTags());
 
   const auto& requests = server.get_requests();
   EXPECT_EQ(requests.size(), 1);
@@ -331,7 +101,6 @@ rapidjson::Document MeasurementsToJson(
 static rapidjson::Document get_json_doc() {
   using atlas::interpreter::TagsValuePair;
   using atlas::interpreter::TagsValuePairs;
-  using atlas::meter::Tags;
 
   Tags t1{{"name", "name1"}, {"k1", "v1"}};
   Tags t2{{"name", "name1"}, {"k1", "v2"}};
@@ -359,7 +128,9 @@ TEST(HttpTest, PostBatches) {
   logger->info("Server started on port {}", port);
 
   auto cfg = HttpConfig();
-  http client{cfg};
+  auto registry = std::make_shared<TestRegistry>();
+  http client{registry, cfg};
+
   auto url = fmt::format("http://localhost:{}/foo", port);
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
@@ -370,8 +141,16 @@ TEST(HttpTest, PostBatches) {
   }
 
   auto res = client.post_batches(url, batches);
-
   server.stop();
+  auto timer_for_req = find_meter(registry.get(), "http.req.complete", "200");
+  ASSERT_TRUE(timer_for_req);
+
+  auto expected_tags = Tags{{"client", "atlas-native-client"},
+                            {"statusCode", "200"},
+                            {"status", "2xx"},
+                            {"mode", "http-client"},
+                            {"method", "POST"}};
+  EXPECT_EQ(expected_tags, timer_for_req->GetId()->GetTags());
 
   const auto& requests = server.get_requests();
   EXPECT_EQ(requests.size(), kBatches);
@@ -402,7 +181,8 @@ TEST(HttpTest, Timeout) {
   auto cfg = HttpConfig();
   cfg.connect_timeout = 1;
   cfg.read_timeout = 1;
-  http client{cfg};
+  auto registry = std::make_shared<TestRegistry>();
+  http client{registry, cfg};
   auto url = fmt::format("http://localhost:{}/foo", port);
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   auto status = client.post(url, "Content-type: application/json",
@@ -410,6 +190,15 @@ TEST(HttpTest, Timeout) {
 
   server.stop();
   EXPECT_EQ(status, 400);
+
+  auto timer_for_req =
+      find_meter(registry.get(), "http.req.complete", "timeout");
+  auto expected_tags = Tags{{"client", "atlas-native-client"},
+                            {"statusCode", "timeout"},
+                            {"status", "timeout"},
+                            {"mode", "http-client"},
+                            {"method", "POST"}};
+  EXPECT_EQ(expected_tags, timer_for_req->GetId()->GetTags());
 }
 
 TEST(HttpTest, ConditionalGet) {
@@ -423,7 +212,8 @@ TEST(HttpTest, ConditionalGet) {
 
   auto cfg = HttpConfig();
   cfg.read_timeout = 60;
-  http client{cfg};
+  auto registry = std::make_shared<TestRegistry>();
+  http client{registry, cfg};
   auto url = fmt::format("http://localhost:{}/get", port);
 
   std::string etag;
@@ -439,6 +229,14 @@ TEST(HttpTest, ConditionalGet) {
   EXPECT_EQ(req.get_header("Accept"), "*/*");
   EXPECT_EQ(etag, "1234");
 
+  auto timer_for_req = find_meter(registry.get(), "http.req.complete", "200");
+  auto expected_tags = Tags{{"client", "atlas-native-client"},
+                            {"statusCode", "200"},
+                            {"status", "2xx"},
+                            {"mode", "http-client"},
+                            {"method", "GET"}};
+  EXPECT_EQ(expected_tags, timer_for_req->GetId()->GetTags());
+
   auto cond_url = fmt::format("http://localhost:{}/get304", port);
   ASSERT_EQ(client.conditional_get(cond_url, &etag, &content), 304);
   ASSERT_TRUE(content.length() > 0);
@@ -452,6 +250,13 @@ TEST(HttpTest, ConditionalGet) {
   EXPECT_EQ(cond_req.get_header("If-None-Match"), "1234");
   EXPECT_EQ(etag, "1234");
 
+  auto timer304 = find_meter(registry.get(), "http.req.complete", "304");
+  auto not_modified_tags = Tags{{"client", "atlas-native-client"},
+                                {"statusCode", "304"},
+                                {"status", "3xx"},
+                                {"mode", "http-client"},
+                                {"method", "GET"}};
+  EXPECT_EQ(not_modified_tags, timer304->GetId()->GetTags());
   server.stop();
 }
 
@@ -475,8 +280,10 @@ TEST(HttpTest, CompressedGet) {
   logger->info("Server started on port {}", port);
 
   auto cfg = HttpConfig();
-  http client{cfg};
   cfg.read_timeout = 60;
+  auto registry = std::make_shared<TestRegistry>();
+  http client{registry, cfg};
+
   auto url = fmt::format("http://localhost:{}/compressed", port);
   std::string content;
   ASSERT_EQ(client.get(url, &content), 200);

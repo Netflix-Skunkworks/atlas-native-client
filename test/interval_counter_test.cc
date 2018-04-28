@@ -6,8 +6,8 @@
 
 using atlas::meter::Id;
 using atlas::meter::IntervalCounter;
-using atlas::meter::Measurements;
 using atlas::meter::kEmptyTags;
+using atlas::meter::Measurements;
 using atlas::util::intern_str;
 
 TEST(IntervalCounter, Init) {
@@ -71,14 +71,17 @@ TEST(IntervalCounter, Measure) {
 
   c.Increment();
   r.SetWall(60000);
-  assert_interval_counter(r.AllMeasurements(), 60000, 1 / 60.0, 60.0);
+  assert_interval_counter(r.measurements_for_name("test"), 60000, 1 / 60.0,
+                          60.0);
 
   r.SetWall(120000);
-  assert_interval_counter(r.AllMeasurements(), 120000, 0 / 60.0, 120.0);
+  assert_interval_counter(r.measurements_for_name("test"), 120000, 0 / 60.0,
+                          120.0);
 
   c.Increment();
   r.SetWall(180000);
-  assert_interval_counter(r.AllMeasurements(), 180000, 1 / 60.0, 60.0);
+  assert_interval_counter(r.measurements_for_name("test"), 180000, 1 / 60.0,
+                          60.0);
 }
 
 TEST(IntervalCounter, ReusesInstance) {
@@ -93,7 +96,8 @@ TEST(IntervalCounter, ReusesInstance) {
   c2.Increment();
   r.SetWall(60000);
 
-  assert_interval_counter(r.AllMeasurements(), 60000, 2 / 60.0, 60.0);
+  assert_interval_counter(r.measurements_for_name("test"), 60000, 2 / 60.0,
+                          60.0);
 }
 
 TEST(IntervalCounter, Expiration) {
@@ -105,12 +109,12 @@ TEST(IntervalCounter, Expiration) {
   c.Increment();
 
   r.SetWall(60000);
-  EXPECT_EQ(r.AllMeasurements().size(), 2);
+  EXPECT_EQ(r.measurements_for_name("test").size(), 2);
 
   auto t = atlas::meter::MAX_IDLE_TIME + 60000;
   r.SetWall(t);
 
-  auto ms = r.AllMeasurements();
+  auto ms = r.measurements_for_name("test");
   EXPECT_EQ(ms.size(), 1);
   EXPECT_DOUBLE_EQ(ms.at(0).value, t / 1000.0);
 }

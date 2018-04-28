@@ -5,12 +5,9 @@
 namespace atlas {
 namespace interpreter {
 
-
-
 OptionalString MultipleResults::get_value(const TagsValuePair& tagsValuePair,
                                           const util::StrRef k) {
   return tagsValuePair.get_value(k);
-
 }
 
 std::string MultipleResults::keys_str(StringRefs strings) {

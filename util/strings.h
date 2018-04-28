@@ -11,6 +11,8 @@
 namespace atlas {
 namespace util {
 
+std::string secs_for_millis(int64_t millis);
+
 inline std::string first_nonempty(
     std::initializer_list<std::string> list) noexcept {
   using namespace std;

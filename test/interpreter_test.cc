@@ -3,8 +3,8 @@
 #include "../util/logger.h"
 #include <gtest/gtest.h>
 
-using atlas::util::Logger;
 using atlas::util::intern_str;
+using atlas::util::Logger;
 
 using namespace atlas::interpreter;
 using namespace atlas::meter;
@@ -67,19 +67,18 @@ static Tags common_tags{{"nf.node", "i-1234"},
                         {"nf.cluster", "foo-main"},
                         {"nf.asg", "foo-main-v001"}};
 
-static std::unique_ptr<Context> exec(const std::string& expr) {
+static Context exec(const std::string& expr) {
   Interpreter interpreter{std::make_unique<ClientVocabulary>()};
-  auto stack = std::make_unique<Context::Stack>();
-  auto context = std::make_unique<Context>(std::move(stack));
-  interpreter.Execute(context.get(), expr);
+  Context context;
+  interpreter.Execute(&context, expr);
   return context;
 }
 
 TEST(Interpreter, EqualQuery) {
   auto context = exec("name,sps,:eq");
-  ASSERT_EQ(1, context->StackSize());
+  ASSERT_EQ(1, context.StackSize());
 
-  auto expr = context->PopExpression();
+  auto expr = context.PopExpression();
   ASSERT_TRUE(expression::IsQuery(*expr));
 
   auto query = std::static_pointer_cast<Query>(expr);
@@ -93,9 +92,9 @@ TEST(Interpreter, EqualQuery) {
 
 TEST(Interpreter, RegexQuery) {
   auto context = exec("id,sps,:re");
-  ASSERT_EQ(1, context->StackSize());
+  ASSERT_EQ(1, context.StackSize());
 
-  auto expr = context->PopExpression();
+  auto expr = context.PopExpression();
   auto query = std::static_pointer_cast<Query>(expr);
 
   Tags sps{{"name", "foo"}, {"id", "sps_foobar"}};
@@ -105,30 +104,30 @@ TEST(Interpreter, RegexQuery) {
   ASSERT_FALSE(query->Matches(not_sps));
 }
 
-static std::shared_ptr<TagsValuePairs> get_measurements() {
+static TagsValuePairs get_measurements() {
   Tags id1{{"name", "name1"}, {"k1", "v1"}};
   Tags id2{{"name", "name1"}, {"k1", "v2"}};
   Tags id3{{"name", "name1"}, {"k1", "v1"}, {"k2", "w1"}};
 
-  auto res = std::make_shared<TagsValuePairs>();
-  res->push_back(TagsValuePair::of(std::move(id1), 1.0));
-  res->push_back(TagsValuePair::of(std::move(id2), 2.0));
-  res->push_back(TagsValuePair::of(std::move(id3), 3.0));
+  TagsValuePairs res;
+  res.emplace_back(TagsValuePair::of(std::move(id1), 1.0));
+  res.emplace_back(TagsValuePair::of(std::move(id2), 2.0));
+  res.emplace_back(TagsValuePair::of(std::move(id3), 3.0));
   return res;
 }
 
 TEST(Interpreter, All) {
   auto context = exec(":true,:all");
-  ASSERT_EQ(1, context->StackSize());
+  ASSERT_EQ(1, context.StackSize());
 
-  auto expr = context->PopExpression();
+  auto expr = context.PopExpression();
   ASSERT_EQ(expr->GetType(), ExpressionType::MultipleResults);
 
   auto all = std::static_pointer_cast<MultipleResults>(expr);
 
   auto measurements = get_measurements();
   auto res = all->Apply(measurements);
-  EXPECT_EQ(res->size(), 3);
+  EXPECT_EQ(res.size(), 3);
 
   Tags t1{{"name", "name1"}, {"k1", "v1"}};
   Tags t2{{"name", "name1"}, {"k1", "v2"}};
@@ -136,97 +135,97 @@ TEST(Interpreter, All) {
   TagsValuePairs expected{TagsValuePair::of(std::move(t1), 1.0),
                           TagsValuePair::of(std::move(t2), 2.0),
                           TagsValuePair::of(std::move(t3), 3.0)};
-  EXPECT_EQ(*res, expected);
+  EXPECT_EQ(res, expected);
 }
 
 TEST(Interpreter, GroupBy) {
   auto context = exec("name,name1,:eq,:sum,(,k1,),:by");
-  ASSERT_EQ(1, context->StackSize());
+  ASSERT_EQ(1, context.StackSize());
 
-  auto expr = context->PopExpression();
+  auto expr = context.PopExpression();
   ASSERT_EQ(expr->GetType(), ExpressionType::MultipleResults);
 
   auto all = std::static_pointer_cast<MultipleResults>(expr);
 
   auto measurements = get_measurements();
   auto res = all->Apply(measurements);
-  EXPECT_EQ(res->size(), 2);
+  EXPECT_EQ(res.size(), 2);
 
   Tags t1{{"name", "name1"}, {"k1", "v1"}};
   Tags t2{{"name", "name1"}, {"k1", "v2"}};
   auto exp1 = TagsValuePair::of(std::move(t1), 4.0);
   auto exp2 = TagsValuePair::of(std::move(t2), 2.0);
-  if (res->at(0)->all_tags().at(intern_str("k1")) == intern_str("v1")) {
+  if (res.front()->all_tags().at(intern_str("k1")) == intern_str("v1")) {
     TagsValuePairs expected{std::move(exp1), std::move(exp2)};
-    EXPECT_EQ(*res, expected);
+    EXPECT_EQ(res, expected);
   } else {
     TagsValuePairs expected{std::move(exp2), std::move(exp1)};
-    EXPECT_EQ(*res, expected);
+    EXPECT_EQ(res, expected);
   }
 }
 
 TEST(Interpreter, GroupByFiltering) {
   auto context = exec("name,name1,:eq,:count,(,k2,),:by");
-  ASSERT_EQ(1, context->StackSize());
+  ASSERT_EQ(1, context.StackSize());
 
-  auto expr = context->PopExpression();
+  auto expr = context.PopExpression();
   ASSERT_EQ(expr->GetType(), ExpressionType::MultipleResults);
 
   auto all = std::static_pointer_cast<MultipleResults>(expr);
 
   auto measurements = get_measurements();
   auto res = all->Apply(measurements);
-  EXPECT_EQ(res->size(), 1);
+  EXPECT_EQ(res.size(), 1);
 
   Tags t1{{"name", "name1"}, {"k2", "w1"}};
   TagsValuePairs expected{TagsValuePair::of(std::move(t1), 1.0)};
-  EXPECT_EQ(*res, expected);
+  EXPECT_EQ(res, expected);
 }
 
 TEST(Interpreter, KeepTags) {
   auto context = exec("name,name1,:eq,:count,(,k2,),:keep-tags");
-  ASSERT_EQ(1, context->StackSize());
+  ASSERT_EQ(1, context.StackSize());
 
-  auto expr = context->PopExpression();
+  auto expr = context.PopExpression();
   ASSERT_EQ(expr->GetType(), ExpressionType::MultipleResults);
 
   auto all = std::static_pointer_cast<MultipleResults>(expr);
 
   auto measurements = get_measurements();
   auto res = all->Apply(measurements);
-  EXPECT_EQ(res->size(), 1);
+  EXPECT_EQ(res.size(), 1);
 
   Tags t1{{"name", "name1"}, {"k2", "w1"}};
   TagsValuePairs expected{TagsValuePair::of(std::move(t1), 1.0)};
-  EXPECT_EQ(*res, expected);
+  EXPECT_EQ(res, expected);
 }
 
 TEST(Interpreter, DropTags) {
   auto context = exec(
       "name,name1,:eq,k2,w1,:eq,:and,:count,(,k2,does.not.exist.tag,),:drop-"
       "tags");
-  ASSERT_EQ(1, context->StackSize());
+  ASSERT_EQ(1, context.StackSize());
 
-  auto expr = context->PopExpression();
+  auto expr = context.PopExpression();
   ASSERT_EQ(expr->GetType(), ExpressionType::MultipleResults);
 
   auto all = std::static_pointer_cast<MultipleResults>(expr);
 
   auto measurements = get_measurements();
   auto res = all->Apply(measurements);
-  EXPECT_EQ(res->size(), 2);
+  EXPECT_EQ(res.size(), 2);
 
   Tags t1{{"name", "name1"}, {"k1", "v1"}};
   Tags t2{{"name", "name1"}, {"k1", "v2"}};
   auto exp1 = TagsValuePair::of(std::move(t1), 1.0);
   auto exp2 = TagsValuePair::of(std::move(t2), 0.0);
-  EXPECT_EQ(res->size(), 2);
-  if (res->at(0)->all_tags() == t1) {
+  EXPECT_EQ(res.size(), 2);
+  if (res.front()->all_tags() == t1) {
     TagsValuePairs expected{std::move(exp1), std::move(exp2)};
-    EXPECT_EQ(expected, *res);
+    EXPECT_EQ(expected, res);
   } else {
     TagsValuePairs expected{std::move(exp2), std::move(exp1)};
-    EXPECT_EQ(expected, *res);
+    EXPECT_EQ(expected, res);
   }
 }
 
@@ -238,9 +237,9 @@ TEST(Interpreter, GetQuery) {
 
 TEST(Interpreter, InQuery) {
   auto context = exec("name,(,sps,sps2,),:in");
-  ASSERT_EQ(1, context->StackSize());
+  ASSERT_EQ(1, context.StackSize());
 
-  auto expr = context->PopExpression();
+  auto expr = context.PopExpression();
   ASSERT_TRUE(expression::IsQuery(*expr));
 
   auto query = std::static_pointer_cast<Query>(expr);

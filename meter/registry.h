@@ -32,16 +32,49 @@ class Registry {
 
   virtual std::shared_ptr<LongTaskTimer> long_task_timer(IdPtr id) noexcept = 0;
 
+  virtual std::shared_ptr<DDistributionSummary> ddistribution_summary(
+      IdPtr id) noexcept = 0;
+
   virtual std::shared_ptr<DistributionSummary> distribution_summary(
       IdPtr id) noexcept = 0;
 
-  virtual IdPtr CreateId(std::string name, Tags tags) = 0;
+  virtual IdPtr CreateId(std::string name, Tags tags) const = 0;
 
   virtual void RegisterMonitor(std::shared_ptr<Meter> meter) noexcept = 0;
 
   virtual Meters meters() const noexcept = 0;
 
-  virtual Pollers& pollers() noexcept = 0;
+  virtual Measurements measurements() const noexcept = 0;
+
+  std::shared_ptr<Counter> counter(std::string name,
+                                   const Tags& tags = kEmptyTags) {
+    return counter(CreateId(std::move(name), tags));
+  }
+
+  std::shared_ptr<Timer> timer(std::string name,
+                               const Tags& tags = kEmptyTags) {
+    return timer(CreateId(std::move(name), tags));
+  }
+
+  std::shared_ptr<Gauge<double>> gauge(std::string name,
+                                       const Tags& tags = kEmptyTags) {
+    return gauge(CreateId(std::move(name), tags));
+  }
+
+  std::shared_ptr<LongTaskTimer> long_task_timer(
+      std::string name, const Tags& tags = kEmptyTags) {
+    return long_task_timer(CreateId(std::move(name), tags));
+  }
+
+  std::shared_ptr<DistributionSummary> distribution_summary(
+      std::string name, const Tags& tags = kEmptyTags) {
+    return distribution_summary(CreateId(std::move(name), tags));
+  }
+
+  std::shared_ptr<DDistributionSummary> ddistribution_summary(
+      std::string name, const Tags& tags = kEmptyTags) {
+    return ddistribution_summary(CreateId(std::move(name), tags));
+  }
 };
 
 }  // namespace meter

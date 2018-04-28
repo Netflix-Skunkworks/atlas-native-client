@@ -14,9 +14,7 @@ std::ostream& BucketCounter::Dump(std::ostream& os) const {
 }
 
 static const Measurements kEmptyMeasurements;
-Measurements BucketCounter::MeasuresForPoller(size_t /*poller_idx*/) const {
-  return kEmptyMeasurements;
-}
+Measurements BucketCounter::Measure() const { return kEmptyMeasurements; }
 
 static const std::string kBucket{"bucket"};
 

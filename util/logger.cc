@@ -64,7 +64,6 @@ void LogManager::initialize_logger(const std::string& log_dir) noexcept {
     spdlog::set_error_handler([](const std::string& msg) {
       std::cerr << "Log error: " << msg << "\n";
     });
-    std::cerr << "Log DIR: " << log_dir << "\n";
     current_logger_ = spdlog::rotating_logger_mt(
         kMainLogger, join_path(log_dir, "atlasclient.log"),
         current_log_config.max_size, current_log_config.max_files);

@@ -15,8 +15,7 @@ std::ostream& BucketDistributionSummary::Dump(std::ostream& os) const {
 }
 
 static const Measurements kEmptyMeasurements;
-Measurements BucketDistributionSummary::MeasuresForPoller(
-    size_t /*poller_idx*/) const {
+Measurements BucketDistributionSummary::Measure() const {
   return kEmptyMeasurements;
 }
 

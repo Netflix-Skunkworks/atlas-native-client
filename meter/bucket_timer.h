@@ -11,7 +11,7 @@ class BucketTimer : public Meter, public Timer {
  public:
   BucketTimer(Registry* registry, IdPtr id, BucketFunction bucket_function);
   std::ostream& Dump(std::ostream& os) const override;
-  Measurements MeasuresForPoller(size_t poller_idx) const override;
+  Measurements Measure() const override;
   void Record(std::chrono::nanoseconds duration) override;
   int64_t Count() const noexcept override;
   int64_t TotalTime() const noexcept override;

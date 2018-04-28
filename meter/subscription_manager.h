@@ -1,7 +1,10 @@
 #pragma once
 
+#include "atlas_registry.h"
 #include "../util/config_manager.h"
-#include "subscription_registry.h"
+#include "../util/http.h"
+#include "../interpreter/evaluator.h"
+#include "publisher.h"
 #include <condition_variable>
 #include <mutex>
 #include <set>
@@ -11,9 +14,8 @@ namespace meter {
 
 class SubscriptionManager {
  public:
-  SubscriptionManager(const util::ConfigManager& config_manager,
-                      SubscriptionRegistry& registry);
-
+  explicit SubscriptionManager(
+      const util::ConfigManager& config_manager) noexcept;
   ~SubscriptionManager();
 
   SubscriptionManager(const SubscriptionManager&) = delete;
@@ -27,15 +29,18 @@ class SubscriptionManager {
   void PushMeasurements(int64_t now_millis,
                         const interpreter::TagsValuePairs& measurements) const;
 
+  std::shared_ptr<Registry> GetRegistry() { return registry_; }
+
  private:
+  interpreter::Evaluator evaluator_;
   const util::ConfigManager& config_manager_;
-  std::set<int> sender_intervals_;
+  std::shared_ptr<Registry> registry_;  // main registry
+  Publisher publisher_;
 
   std::string current_etag;
   // unfortunately no atomic unique ptrs available yet,
   // so we use a raw pointer to the current subscriptions
   std::atomic<Subscriptions*> subscriptions_{nullptr};
-  SubscriptionRegistry& registry_;
   std::atomic<bool> should_run_{false};
   std::thread main_sender_thread;
   std::thread sub_refresher_thread;
@@ -43,18 +48,18 @@ class SubscriptionManager {
   std::mutex mutex;
   std::condition_variable cv;
 
-  void SubRefresher() noexcept;
-  void MainSender(std::chrono::seconds initial_delay) noexcept;
-  void SubSender(int64_t millis) noexcept;
-  void SendMetricsForInterval(int64_t millis) noexcept;
+  Subscriptions subs_for_frequency(int64_t frequency) const noexcept;
+  SubscriptionResults get_lwc_metrics(const Tags* common_tags,
+                                      int64_t frequency) const noexcept;
+  void sub_refresher() noexcept;
+  void main_sender(std::chrono::seconds initial_delay) noexcept;
+  void send_subscriptions(int64_t millis) noexcept;
+  void update_metrics() noexcept;
 
  protected:
   // for testing
-  void RefreshSubscriptions(const std::string& subs_endpoint);
-
-  void SendToMain();
-
-  void UpdateMetrics() noexcept;
+  void refresh_subscriptions(const std::string& subs_endpoint);
+  void send_to_main();
 };
 }  // namespace meter
 }  // namespace atlas

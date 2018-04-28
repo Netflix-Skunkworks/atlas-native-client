@@ -1,11 +1,12 @@
 #include "group_by.h"
+#include "singleton_value_expr.h"
 #include "../util/logger.h"
 
 namespace atlas {
 namespace interpreter {
 
-using util::Logger;
 using util::intern_str;
+using util::Logger;
 
 namespace expression {
 
@@ -17,7 +18,7 @@ std::shared_ptr<MultipleResults> GetMultipleResults(
 
   if (e->GetType() == ExpressionType::ValueExpression) {
     auto ve = std::static_pointer_cast<ValueExpression>(e);
-    return std::make_shared<All>(ve);
+    return std::make_shared<SingletonValueExpr>(ve);
   }
 
   Logger()->error(
@@ -36,10 +37,10 @@ std::ostream& GroupBy::Dump(std::ostream& os) const {
   return os;
 }
 
-std::shared_ptr<TagsValuePairs> GroupBy::Apply(std::shared_ptr<TagsValuePairs> tagsValuePairs) {
+TagsValuePairs GroupBy::Apply(const TagsValuePairs& measurements) {
   // group metrics by keys
   std::unordered_map<meter::Tags, TagsValuePairs> grouped;
-  for (auto& tagsValuePair : *tagsValuePairs) {
+  for (auto& tagsValuePair : measurements) {
     auto should_keep = true;
     meter::Tags group_by_vals;
     for (auto& key : *keys_) {
@@ -56,13 +57,18 @@ std::shared_ptr<TagsValuePairs> GroupBy::Apply(std::shared_ptr<TagsValuePairs> t
     }
   }
 
-  auto results = std::make_shared<TagsValuePairs>();
+  auto results = TagsValuePairs();
   for (auto& entry : grouped) {
     auto tags = entry.first;
     const auto& pairs_for_key = entry.second;
     const auto& expr_results = expr_->Apply(pairs_for_key);
+    auto v = expr_results->value();
+    if (std::isnan(v)) {
+      continue;
+    }
     tags.add_all(expr_results->all_tags());
-    results->push_back(TagsValuePair::of(std::move(tags), expr_results->value()));
+    results.emplace_back(
+        TagsValuePair::of(std::move(tags), expr_results->value()));
   }
 
   return results;

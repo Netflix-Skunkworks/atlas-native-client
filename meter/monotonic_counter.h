@@ -9,7 +9,7 @@ namespace meter {
 class MonotonicCounter : public Meter {
  public:
   MonotonicCounter(Registry* registry, IdPtr id);
-  Measurements MeasuresForPoller(size_t poller_idx) const override;
+  Measurements Measure() const override;
   std::ostream& Dump(std::ostream& os) const override;
   void Set(int64_t amount) noexcept;
   int64_t Count() const noexcept;

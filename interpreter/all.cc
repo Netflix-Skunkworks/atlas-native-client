@@ -1,16 +1,30 @@
 #include "all.h"
+#include "../meter/id_format.h"
+#include "../util/logger.h"
 
 namespace atlas {
 namespace interpreter {
 
-All::All(std::shared_ptr<ValueExpression> expr) : expr_(std::move(expr)) {}
+All::All(std::shared_ptr<Query> query) : query_(std::move(query)) {}
 
-std::shared_ptr<TagsValuePairs> All::Apply(std::shared_ptr<TagsValuePairs> measurements) {
-  return measurements;
+TagsValuePairs All::Apply(const TagsValuePairs& measurements) {
+  if (query_->IsTrue()) {
+    // fast path
+    return measurements;
+  }
+
+  TagsValuePairs result;
+  auto q = query_.get();
+  std::copy_if(measurements.begin(), measurements.end(),
+               std::back_inserter(result),
+               [q](const std::shared_ptr<TagsValuePair>& m) {
+                 return !std::isnan(m->value()) && q->Matches(*m);
+               });
+  return result;
 }
 
 std::ostream& All::Dump(std::ostream& os) const {
-  os << "All(" << *expr_ << ")";
+  os << "All(" << *query_ << ")";
   return os;
 }
 }  // namespace interpreter

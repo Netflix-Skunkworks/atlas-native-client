@@ -6,8 +6,8 @@ namespace atlas {
 namespace interpreter {
 
 using meter::Measurements;
-using util::Logger;
 using util::intern_str;
+using util::Logger;
 
 Literal::Literal(std::string str) noexcept : str_(std::move(str)) {}
 

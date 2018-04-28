@@ -35,7 +35,7 @@ class FunctionGauge : public UpdateableMeter {
     return os;
   }
 
-  Measurements MeasuresForPoller(size_t /*poller_idx*/) const override {
+  Measurements Measure() const override {
     return Measurements{Measurement{id_, clock_.WallTime(), value_}};
   }
 

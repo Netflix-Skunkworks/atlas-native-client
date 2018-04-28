@@ -19,9 +19,9 @@ class GroupBy : public MultipleResults {
     return expr_->GetQuery();
   }
 
-  std::shared_ptr<TagsValuePairs> Apply(std::shared_ptr<TagsValuePairs> tagsValuePairs) override;
+  TagsValuePairs Apply(const TagsValuePairs& measurements) override;
 
-  virtual std::ostream& Dump(std::ostream& os) const override;
+  std::ostream& Dump(std::ostream& os) const override;
 
  private:
   std::unique_ptr<StringRefs> keys_;

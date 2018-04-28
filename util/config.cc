@@ -64,13 +64,12 @@ std::unique_ptr<Config> Config::FromJson(const rapidjson::Document& json,
 
 std::string Config::ToString() const noexcept {
   return fmt::format(
-      "Config(endpoints={}\n, subsRefresh={}ms, notifyAlertServer={}\n"
+      "Config(endpoints={}\n, subsRefresh={}ms\n"
       ", validateMetrics={}, forceStart={}, mainEnabled={}, subsEnabled={}\n"
       ", publishCfg={}\n, log={}\n, http={}\n, commonTags={})",
-      EndpointConfiguration(), SubRefreshMillis(), ShouldNotifyAlertServer(),
-      ShouldValidateMetrics(), ShouldForceStart(), IsMainEnabled(),
-      AreSubsEnabled(), PublishConfig(), LogConfiguration(),
-      HttpConfiguration(), CommonTags());
+      EndpointConfiguration(), SubRefreshMillis(), ShouldValidateMetrics(),
+      ShouldForceStart(), IsMainEnabled(), AreSubsEnabled(), PublishConfig(),
+      LogConfiguration(), HttpConfiguration(), CommonTags());
 }
 
 std::ostream& operator<<(std::ostream& os, const HttpConfig& http_config) {
@@ -95,7 +94,7 @@ std::ostream& operator<<(std::ostream& os, const LogConfig& log_config) {
 
 std::ostream& operator<<(std::ostream& os, const EndpointConfig& endpoints) {
   os << "E(P=" << endpoints.publish << ",S=" << endpoints.subscriptions
-     << ",E=" << endpoints.evaluate << ",C=" << endpoints.check_cluster << ")";
+     << ",E=" << endpoints.evaluate << ")";
   return os;
 }
 
@@ -138,10 +137,6 @@ EndpointConfig EndpointConfig::FromJson(
                        ? ExpandEnvVars(document["publishUrl"].GetString())
                        : defaults.publish;
 
-  config.check_cluster =
-      document.HasMember("checkClusterUrl")
-          ? ExpandEnvVars(document["checkClusterUrl"].GetString())
-          : defaults.check_cluster;
   return config;
 }
 
@@ -183,10 +178,6 @@ FeaturesConfig FeaturesConfig::FromJson(
   config.validate = json.HasMember("validateMetrics")
                         ? json["validateMetrics"].GetBool()
                         : defaults.validate;
-
-  config.notify_alert_server = json.HasMember("notifyAlertServer")
-                                   ? json["notifyAlertServer"].GetBool()
-                                   : defaults.notify_alert_server;
 
   config.publish_config = json.HasMember("publishConfig")
                               ? vector_from(json["publishConfig"])

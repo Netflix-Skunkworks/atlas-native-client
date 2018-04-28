@@ -6,9 +6,9 @@
 
 using atlas::meter::FunctionGauge;
 using atlas::meter::Id;
+using atlas::meter::kEmptyTags;
 using atlas::meter::ManualClock;
 using atlas::meter::Meter;
-using atlas::meter::kEmptyTags;
 
 static ManualClock manual_clock;
 static constexpr auto kNAN = std::numeric_limits<double>::quiet_NaN();

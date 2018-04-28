@@ -138,6 +138,6 @@ BucketFunction Bytes(int64_t max);
 ///     so they can be used with a simple group by.
 ///
 BucketFunction Decimal(int64_t max);
-}
+}  // namespace bucket_functions
 }  // namespace meter
 }  // namespace atlas

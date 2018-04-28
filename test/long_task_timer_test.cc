@@ -1,18 +1,16 @@
+#include "../meter/default_long_task_timer.h"
 #include "../meter/long_task_timer.h"
 #include "../meter/manual_clock.h"
 #include "../meter/statistic.h"
-#include "../meter/subscription_long_task_timer.h"
-#include "test_registry.h"
 #include <gtest/gtest.h>
 
 using namespace atlas::meter;
 
 static ManualClock manual_clock;
-static TestRegistry test_registry;
-static auto id = test_registry.CreateId("foo", kEmptyTags);
 
-static std::unique_ptr<SubscriptionLongTaskTimer> newTimer() {
-  return std::make_unique<SubscriptionLongTaskTimer>(id, manual_clock);
+static std::unique_ptr<DefaultLongTaskTimer> newTimer() {
+  auto id = std::make_shared<Id>("foo", kEmptyTags);
+  return std::make_unique<DefaultLongTaskTimer>(id, manual_clock);
 }
 
 TEST(LongTaskTimerTest, Init) {
@@ -55,7 +53,7 @@ TEST(LongTaskTimerTest, Stop) {
   EXPECT_EQ(1, t->ActiveTasks());
 }
 
-static void assertLongTaskTimer(const SubscriptionLongTaskTimer& t,
+static void assertLongTaskTimer(const DefaultLongTaskTimer& t,
                                 int64_t timestamp, int activeTasks,
                                 double duration) {
   bool tested_something = false;

@@ -43,5 +43,5 @@ class StringPool {
 };
 
 StringPool& the_str_pool() noexcept;
-}
-}
+}  // namespace util
+}  // namespace atlas

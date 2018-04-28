@@ -64,3 +64,21 @@ TEST(SmallTagMap, AddAllOverrides) {
   map1.add_all(map2);
   EXPECT_EQ(map1, expected);
 }
+
+TEST(SmallTagMap, CopyConstructor) {
+  SmallTagMap common_tags;
+  common_tags.add("nf.app", "foo");
+  common_tags.add("nf.cluster", "foo-main");
+  common_tags.add("nf.x", "foo");
+  common_tags.add("nf.y", "foo");
+  common_tags.add("nf.z", "foo");
+  common_tags.add("nf.a", "foo");
+  common_tags.add("nf.b", "foo");
+  common_tags.add("nf.c", "foo");
+  common_tags.add("nf.d", "foo");
+  common_tags.add("nf.e", "foo");
+  common_tags.add("nf.f", "foo");
+  common_tags.add("nf.g", "foo");
+  SmallTagMap copy{common_tags};
+  EXPECT_EQ(copy, common_tags);
+}

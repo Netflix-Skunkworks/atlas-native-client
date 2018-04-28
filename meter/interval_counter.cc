@@ -32,9 +32,7 @@ void IntervalCounter::Add(int64_t amount) noexcept {
 
 int64_t IntervalCounter::Count() const noexcept { return counter_->Count(); }
 
-Measurements IntervalCounter::MeasuresForPoller(size_t /*poller_idx*/) const {
-  return Measurements{};
-}
+Measurements IntervalCounter::Measure() const { return Measurements{}; }
 
 std::ostream& IntervalCounter::Dump(std::ostream& os) const {
   os << "IntervalCounter{" << id_ << ",count=" << counter_->Count()

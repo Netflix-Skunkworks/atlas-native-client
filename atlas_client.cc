@@ -8,17 +8,13 @@
 
 using atlas::interpreter::ClientVocabulary;
 using atlas::interpreter::Interpreter;
+using atlas::meter::AtlasRegistry;
+using atlas::meter::Registry;
 using atlas::meter::SubscriptionManager;
-using atlas::meter::SubscriptionRegistry;
 using atlas::meter::SystemClockWithOffset;
 using atlas::util::ConfigManager;
-using atlas::util::Logger;
 using atlas::util::http;
-
-static SystemClockWithOffset clockWithOffset;
-SubscriptionRegistry atlas_registry{
-    std::make_unique<Interpreter>(std::make_unique<ClientVocabulary>()),
-    &clockWithOffset};
+using atlas::util::Logger;
 
 const std::vector<const char*> env_vars{"NETFLIX_CLUSTER", "EC2_OWNER_ID",
                                         "EC2_REGION", "NETFLIX_ENVIRONMENT"};
@@ -29,12 +25,16 @@ inline bool is_sane_environment() {
   });
 }
 
-class AtlasClient {
- public:
-  AtlasClient() noexcept
-      : started{false}, subscription_manager{config_manager, atlas_registry} {}
+namespace atlas {
 
-  void Start() {
+class Client::impl {
+ public:
+  impl()
+      : started{false},
+        clock{},
+        config_manager{},
+        subscription_manager{config_manager} {}
+  void Start() noexcept {
     if (started) {
       return;
     }
@@ -57,11 +57,11 @@ class AtlasClient {
     }
   }
 
-  void Stop() {
+  void Stop() noexcept {
     const auto& logger = Logger();
     if (started) {
       logger->info("Stopping atlas-client");
-      subscription_manager.Stop(&clockWithOffset);
+      subscription_manager.Stop(&clock);
       config_manager.Stop();
       started = false;
       http::global_shutdown();
@@ -70,11 +70,7 @@ class AtlasClient {
     }
   }
 
-  std::shared_ptr<atlas::util::Config> GetConfig() {
-    return config_manager.GetConfig();
-  }
-
-  void Push(const atlas::meter::Measurements& measurements) {
+  void Push(const atlas::meter::Measurements& measurements) noexcept {
     using atlas::interpreter::TagsValuePair;
     using atlas::interpreter::TagsValuePairs;
     using atlas::meter::Measurement;
@@ -86,77 +82,58 @@ class AtlasClient {
           return TagsValuePair::from(measurement, &atlas::meter::kEmptyTags);
         });
 
-    subscription_manager.PushMeasurements(atlas_registry.clock().WallTime(),
-                                          tagsValuePairs);
+    subscription_manager.PushMeasurements(clock.WallTime(), tagsValuePairs);
   }
 
-  void AddCommonTag(const char* key, const char* value) {
+  std::shared_ptr<atlas::util::Config> GetConfig() noexcept {
+    return config_manager.GetConfig();
+  }
+
+  void AddCommonTag(const char* key, const char* value) noexcept {
     config_manager.AddCommonTag(key, value);
   }
 
-  void SetNotifyAlertServer(bool notify) {
-    config_manager.SetNotifyAlertServer(notify);
+  std::shared_ptr<meter::Registry> GetRegistry() {
+    return subscription_manager.GetRegistry();
   }
 
  private:
   bool started;
+  SystemClockWithOffset clock;
   ConfigManager config_manager;
   SubscriptionManager subscription_manager;
 };
 
-static auto atlas_client = std::unique_ptr<AtlasClient>(nullptr);
+Client::Client() noexcept : impl_{std::make_unique<impl>()} {}
 
-namespace atlas {
-util::Config GetConfig() {
-  if (atlas_client) {
-    return *atlas_client->GetConfig();
-  }
-  return util::Config();
-}
-
-void PushMeasurements(const atlas::meter::Measurements& measurements) {
-  if (atlas_client) {
-    atlas_client->Push(measurements);
-  }
-}
-
-void SetLoggingDirs(const std::vector<std::string>& dirs) {
+void Client::SetLoggingDirs(const std::vector<std::string>& dirs) noexcept {
   atlas::util::SetLoggingDirs(dirs);
 }
 
-void UseConsoleLogger(int level) { atlas::util::UseConsoleLogger(level); }
-
-void SetNotifyAlertServer(bool notify) {
-  if (atlas_client) {
-    atlas_client->SetNotifyAlertServer(notify);
-  }
+void Client::UseConsoleLogger(int level) noexcept {
+  atlas::util::UseConsoleLogger(level);
 }
 
-void Init() {
-  if (!atlas_client) {
-    atlas_client = std::make_unique<AtlasClient>();
-  }
-  atlas_client->Start();
+std::shared_ptr<Registry> Client::GetRegistry() const noexcept {
+  return impl_->GetRegistry();
 }
 
-void Shutdown() {
-  if (atlas_client) {
-    atlas_client->Stop();
-  }
+void Client::Start() noexcept { impl_->Start(); }
+
+void Client::Stop() noexcept { impl_->Stop(); }
+
+std::shared_ptr<util::Config> Client::GetConfig() noexcept {
+  return impl_->GetConfig();
 }
 
-void AddCommonTag(const char* key, const char* value) {
-  if (atlas_client) {
-    atlas_client->AddCommonTag(key, value);
-  }
+void Client::Push(const meter::Measurements& measurements) noexcept {
+  impl_->Push(measurements);
 }
+
+void Client::AddCommonTag(const char* key, const char* value) noexcept {
+  impl_->AddCommonTag(key, value);
+}
+
+Client::~Client() noexcept = default;
 
 }  // namespace atlas
-
-void InitAtlas() { atlas::Init(); }
-
-void ShutdownAtlas() { atlas::Shutdown(); }
-
-void AtlasAddCommonTag(const char* key, const char* value) {
-  atlas::AddCommonTag(key, value);
-}

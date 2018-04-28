@@ -83,12 +83,12 @@ class ValueFormatter {
 };
 
 using ValueFormatters = std::vector<ValueFormatter>;
-using std::chrono::nanoseconds;
+using std::chrono::hours;
 using std::chrono::microseconds;
 using std::chrono::milliseconds;
-using std::chrono::seconds;
 using std::chrono::minutes;
-using std::chrono::hours;
+using std::chrono::nanoseconds;
+using std::chrono::seconds;
 
 template <typename D>
 inline ValueFormatter fmt(D duration, int width, const std::string& suffix,

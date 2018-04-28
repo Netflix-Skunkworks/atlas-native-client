@@ -3,6 +3,7 @@
 #include <atomic>
 #include <limits>
 #include <ostream>
+#include <utility>
 #include "clock.h"
 #include "id.h"
 #include "measurement.h"
@@ -19,7 +20,8 @@ using Pollers = std::vector<int64_t>;  // { 60000, 10000 } millis
 
 class Meter {
  public:
-  Meter(IdPtr id, const Clock& clock) noexcept : id_(id), clock_(clock) {}
+  Meter(IdPtr id, const Clock& clock) noexcept
+      : id_(std::move(id)), clock_(clock) {}
 
   virtual IdPtr GetId() const noexcept { return id_; }
 
@@ -27,17 +29,13 @@ class Meter {
 
   virtual ~Meter() noexcept = default;
 
-  virtual Measurements MeasuresForPoller(size_t poller_idx) const = 0;
-
-  virtual Measurements Measure() const { return MeasuresForPoller(0); }
+  virtual Measurements Measure() const = 0;
 
   virtual bool HasExpired() const noexcept {
     auto last = last_updated_.load(std::memory_order::memory_order_relaxed);
     auto now = clock_.WallTime();
     return (now - last) > MAX_IDLE_TIME;
   }
-
-  virtual void UpdatePollers() {}
 
   virtual bool IsUpdateable() const noexcept { return false; }
 

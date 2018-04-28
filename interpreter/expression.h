@@ -78,7 +78,8 @@ class Query;
 class FalseQuery;
 class ValueExpression : public Expression {
  public:
-  virtual std::unique_ptr<TagsValuePair> Apply(const TagsValuePairs& measurements) const = 0;
+  virtual std::unique_ptr<TagsValuePair> Apply(
+      const TagsValuePairs& measurements) const = 0;
 
   virtual std::shared_ptr<Query> GetQuery() const noexcept = 0;
 

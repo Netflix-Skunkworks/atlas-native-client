@@ -10,5 +10,5 @@ class Word {
   virtual OptionalString Execute(Context* context) = 0;
   virtual ~Word() = default;
 };
-}
-}
+}  // namespace interpreter
+}  // namespace atlas

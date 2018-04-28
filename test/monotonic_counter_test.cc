@@ -25,18 +25,18 @@ TEST(MonotonicCounter, NotEnoughData) {
   TestRegistry registry;
   MonotonicCounter counter{&registry, registry.CreateId("ctr", kEmptyTags)};
 
-  EXPECT_EQ(0, registry.AllMeasurements().size())
+  EXPECT_EQ(0, registry.measurements_for_name("ctr").size())
       << "Not enough data for a rate";
 
   registry.SetWall(61000);
   counter.Set(100);
-  EXPECT_EQ(0, registry.AllMeasurements().size())
+  EXPECT_EQ(0, registry.measurements_for_name("ctr").size())
       << "Not enough data for a rate";
 
   registry.SetWall(121000);
   counter.Set(200);
   registry.SetWall(181000);
-  auto ms = registry.AllMeasurements();
+  auto ms = registry.measurements_for_name("ctr");
   EXPECT_EQ(1, ms.size()) << "Finally enough data";
 
   EXPECT_DOUBLE_EQ(100 / 60.0, ms.at(0).value) << "Computes the correct rate";
@@ -56,7 +56,7 @@ TEST(MonotonicCounter, Rate) {
   counter.Set(200);
 
   registry.SetWall(121000);
-  auto ms1 = registry.AllMeasurements();
+  auto ms1 = registry.measurements_for_name("ctr");
   EXPECT_DOUBLE_EQ(200 / 60.0, ms1.at(0).value) << "Computes the correct rate";
 }
 
@@ -75,7 +75,7 @@ TEST(MonotonicCounter, Expiration) {
   registry.SetWall(61000 + 16 * 60000);
   EXPECT_TRUE(counter.HasExpired()) << "No recent update";
 
-  EXPECT_EQ(0, registry.AllMeasurements().size())
+  EXPECT_EQ(0, registry.measurements_for_name("ctr").size())
       << "Expired metrics are not reported";
 }
 
@@ -89,18 +89,18 @@ TEST(MonotonicCounter, Overflow) {
   counter.Set(200);
 
   registry.SetWall(121000);
-  auto v = registry.AllMeasurements().at(0).value;
+  auto v = registry.measurements_for_name("ctr").front().value;
   EXPECT_DOUBLE_EQ(100 / 60.0, v);  // baseline
   counter.Set(100);
 
   registry.SetWall(181000);
-  auto ov = registry.AllMeasurements().at(0).value;
+  auto ov = registry.measurements_for_name("ctr").front().value;
   EXPECT_DOUBLE_EQ(0.0, ov) << "Detects overflow in values";
 
   registry.SetWall(241000);
   counter.Set(200);
 
   registry.SetWall(301000);
-  auto v2 = registry.AllMeasurements().at(0).value;
+  auto v2 = registry.measurements_for_name("ctr").front().value;
   EXPECT_DOUBLE_EQ(100 / 60.0, v2) << "Recovers from overflow";
 }

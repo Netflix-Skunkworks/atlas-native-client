@@ -35,6 +35,6 @@ std::unique_ptr<AggregateExpression> max(std::shared_ptr<Query> filter);
 std::unique_ptr<AggregateExpression> min(std::shared_ptr<Query> filter);
 
 std::unique_ptr<AggregateExpression> avg(std::shared_ptr<Query> filter);
-}
-}
-}
+}  // namespace aggregation
+}  // namespace interpreter
+}  // namespace atlas

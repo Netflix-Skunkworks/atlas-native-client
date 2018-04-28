@@ -15,5 +15,5 @@ inline const char* JsonGetString(rapidjson::StringBuffer& buffer,
   document.Accept(writer);
   return buffer.GetString();
 }
-}
-}
+}  // namespace util
+}  // namespace atlas

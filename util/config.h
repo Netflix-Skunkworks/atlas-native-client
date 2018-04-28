@@ -57,11 +57,6 @@ struct EndpointConfig {
       "http://atlas-lwcapi-iep.$EC2_REGION.iep$NETFLIX_ENVIRONMENT.netflix.net/"
       "lwc/api/"
       "v1/evaluate");
-  std::string check_cluster = ExpandEnvVars(
-      "http://"
-      "atlas-alert-api-$EC2_OWNER_ID.$EC2_REGION.$NETFLIX_ENVIRONMENT.netflix."
-      "net/"
-      "alertchecker/checkCluster/$NETFLIX_CLUSTER");
 
   static EndpointConfig FromJson(const rapidjson::Document& json,
                                  const EndpointConfig& defaults) noexcept;
@@ -84,9 +79,8 @@ std::ostream& operator<<(std::ostream& os, const LogConfig& log_config);
 struct FeaturesConfig {
   bool force_start = false;
   bool validate = true;
-  bool notify_alert_server = true;
   bool main = true;
-  bool subscriptions = false;
+  bool subscriptions = true;
   int64_t subscription_refresh_ms = 10000;
   std::vector<std::string> publish_config = {":true,:all"};
   std::string disabled_file = "/mnt/data/atlas.disabled";
@@ -108,10 +102,6 @@ class Config {
     return endpoints;
   }
 
-  void SetNotify(bool notify) noexcept {
-    features.notify_alert_server = notify;
-  }
-
   const std::vector<std::string>& PublishConfig() const noexcept {
     return features.publish_config;
   }
@@ -121,9 +111,6 @@ class Config {
   std::string LoggingDirectory() const noexcept;
   bool ShouldValidateMetrics() const noexcept { return features.validate; }
   bool ShouldForceStart() const noexcept { return features.force_start; }
-  bool ShouldNotifyAlertServer() const noexcept {
-    return features.notify_alert_server;
-  }
   bool IsMainEnabled() const noexcept;
   bool AreSubsEnabled() const noexcept;
   meter::Tags CommonTags() const noexcept { return common_tags_; }

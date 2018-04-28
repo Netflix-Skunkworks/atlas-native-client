@@ -5,9 +5,9 @@
 namespace atlas {
 namespace interpreter {
 
+using util::intern_str;
 using util::Logger;
 using util::StrRef;
-using util::intern_str;
 
 bool Query::IsTrue() const noexcept { return false; }
 
@@ -119,7 +119,8 @@ RegexQuery::RegexQuery(std::string k, const std::string& pattern,
 
 static constexpr size_t kOffsetsMax = 30;
 
-static bool MatchesRegex(pcre* pattern, const std::string& str_pattern, const OptionalString& value) {
+static bool MatchesRegex(pcre* pattern, const std::string& str_pattern,
+                         const OptionalString& value) {
   if (pattern == nullptr) {
     return false;
   }

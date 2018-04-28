@@ -8,20 +8,12 @@ using atlas::util::Config;
 using atlas::util::EndpointConfig;
 using atlas::util::FeaturesConfig;
 using atlas::util::HttpConfig;
-using atlas::util::LogConfig;
 using atlas::util::intern_str;
+using atlas::util::LogConfig;
 
 TEST(Config, Default) {
   auto cfg = Config();
   EXPECT_TRUE(cfg.IsMainEnabled());
-}
-
-TEST(Config, SetNotify) {
-  auto cfg = Config();
-  cfg.SetNotify(false);
-  EXPECT_FALSE(cfg.ShouldNotifyAlertServer());
-  cfg.SetNotify(true);
-  EXPECT_TRUE(cfg.ShouldNotifyAlertServer());
 }
 
 TEST(Config, ParseConfig) {
@@ -99,7 +91,6 @@ TEST(EndpointConfig, ParseAndCompose) {
     EXPECT_EQ(cfg.evaluate, "http://foo.abcdef.bar/eval");
     EXPECT_EQ(cfg.subscriptions, "http://foo.abcdef.bar/subs");
     EXPECT_EQ(cfg.publish, "http://foo.abcdef.bar/pub");
-    EXPECT_EQ(cfg.check_cluster, "http://foo.abcdef.bar/check");
   };
   check_cfg(cfg);
 
@@ -123,7 +114,6 @@ TEST(Features, Parse) {
   document.Parse(cfgStr);
   auto cfg = FeaturesConfig::FromJson(document, FeaturesConfig());
   EXPECT_FALSE(cfg.validate);
-  EXPECT_FALSE(cfg.notify_alert_server);
   EXPECT_TRUE(cfg.force_start);
   EXPECT_TRUE(cfg.main);
   EXPECT_TRUE(cfg.subscriptions);
@@ -134,7 +124,6 @@ TEST(Features, Parse) {
 
   auto cfg2 = Config::FromJson(document, Config());
   EXPECT_FALSE(cfg2->ShouldValidateMetrics());
-  EXPECT_FALSE(cfg2->ShouldNotifyAlertServer());
   EXPECT_EQ(cfg2->PublishConfig(), expected_pub_config);
   EXPECT_TRUE(cfg2->IsMainEnabled());
   EXPECT_TRUE(cfg2->AreSubsEnabled());

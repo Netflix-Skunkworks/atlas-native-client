@@ -1,6 +1,5 @@
 #include "../meter/manual_clock.h"
-#include "../meter/subscription_gauge.h"
-#include "test_registry.h"
+#include "../meter/default_gauge.h"
 #include <cmath>
 #include <gtest/gtest.h>
 
@@ -8,11 +7,9 @@ using namespace atlas::meter;
 
 static ManualClock manual_clock;
 
-static TestRegistry test_registry;
-static auto id = test_registry.CreateId("foo", kEmptyTags);
-
-static std::unique_ptr<SubscriptionGauge> newGauge() {
-  return std::make_unique<SubscriptionGauge>(id, manual_clock);
+static std::unique_ptr<DefaultGauge> newGauge() {
+  static auto id = std::make_shared<Id>("foo", kEmptyTags);
+  return std::make_unique<DefaultGauge>(id, manual_clock);
 }
 
 TEST(GaugeTest, Value) {

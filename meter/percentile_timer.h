@@ -14,9 +14,7 @@ class PercentileTimer : public Meter, public Timer {
   PercentileTimer(Registry* registry, IdPtr id);
   void Record(std::chrono::nanoseconds nanos) noexcept override;
   std::ostream& Dump(std::ostream& os) const override;
-  Measurements MeasuresForPoller(size_t) const override {
-    return Measurements();
-  };
+  Measurements Measure() const override { return Measurements(); };
   int64_t Count() const noexcept override { return timer_->Count(); }
   int64_t TotalTime() const noexcept override { return timer_->TotalTime(); }
   double Percentile(double p) const noexcept;

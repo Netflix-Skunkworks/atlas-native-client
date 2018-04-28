@@ -260,13 +260,12 @@ std::shared_ptr<ValueExpression> value_expr_from(
 class AllWord : public Word {
  public:
   OptionalString Execute(Context* context) override {
-    auto value_expr = value_expr_from(context->PopExpression());
-    if (!value_expr) {
-      return OptionalString(
-          ":all was expecting a data expression or query on the stack");
+    auto q = context->PopExpression();
+    if (!expression::IsQuery(*q)) {
+      return OptionalString(":all was expecting a query on the stack");
     }
 
-    context->Push(std::make_shared<All>(value_expr));
+    context->Push(std::make_shared<All>(std::static_pointer_cast<Query>(q)));
     return kNone;
   }
 };

@@ -1,13 +1,14 @@
 #include "../meter/bucket_distribution_summary.h"
+#include "../meter/statistic.h"
 #include "../util/logger.h"
 #include "test_registry.h"
 #include <gtest/gtest.h>
 
 using atlas::meter::BucketDistributionSummary;
+using atlas::meter::kEmptyTags;
 using atlas::meter::Measurement;
 using atlas::meter::Tag;
 using atlas::meter::bucket_functions::Age;
-using atlas::meter::kEmptyTags;
 using atlas::util::Logger;
 using std::chrono::seconds;
 
@@ -16,7 +17,7 @@ TEST(BucketDistributionSummary, Init) {
 
   auto id = r.CreateId("test", kEmptyTags);
   BucketDistributionSummary ds(&r, id, Age(seconds{60}));
-  auto ms = r.AllMeasurements();
+  auto ms = r.measurements_for_name("test");
   EXPECT_EQ(ms.size(), 0);
 }
 
@@ -33,7 +34,7 @@ TEST(BucketDistributionSummary, Record) {
   ds.Record(22 * kSecsToNanos);
 
   r.SetWall(61000);
-  auto ms = r.AllMeasurements();
+  auto ms = r.measurements_for_name("test");
   EXPECT_EQ(ms.size(), 4);
 
   auto base_id = id->WithTag(Tag::of("bucket", "30s"));
@@ -51,9 +52,8 @@ TEST(BucketDistributionSummary, Record) {
       auto totalSq = 30.0 * kSecsToNanos * 30.0 * kSecsToNanos +
                      22.0 * kSecsToNanos * 22.0 * kSecsToNanos;
       EXPECT_DOUBLE_EQ(totalSq / 60.0, m.value);
-    } else if (*m.id ==
-               *base_id->WithTag(atlas::meter::statistic::max)
-                    ->WithTag(Tag::of("atlas.dstype", "gauge"))) {
+    } else if (*m.id == *base_id->WithTag(atlas::meter::statistic::max)
+                             ->WithTag(Tag::of("atlas.dstype", "gauge"))) {
       EXPECT_DOUBLE_EQ(30 * kSecsToNanos, m.value);
     } else {
       FAIL() << "Unknown id: " << *m.id;

@@ -1,23 +1,24 @@
 #include "../meter/bucket_counter.h"
+#include "../meter/statistic.h"
 #include "../util/logger.h"
 #include "test_registry.h"
 #include <gtest/gtest.h>
 
 using atlas::meter::BucketCounter;
+using atlas::meter::kEmptyTags;
 using atlas::meter::Measurement;
+using atlas::meter::Measurements;
+using atlas::meter::Registry;
 using atlas::meter::Tag;
 using atlas::meter::bucket_functions::Age;
-using atlas::meter::kEmptyTags;
 using atlas::util::Logger;
 using std::chrono::microseconds;
 
 TEST(BucketCounter, Init) {
   TestRegistry r;
-
   auto id = r.CreateId("test", kEmptyTags);
   BucketCounter b(&r, id, Age(microseconds{100}));
-
-  auto ms = r.AllMeasurements();
+  auto ms = r.measurements_for_name("test");
   EXPECT_EQ(ms.size(), 0);
 }
 
@@ -32,7 +33,7 @@ TEST(BucketCounter, Record) {
   b.Record(30 * kMicrosToNanos);
 
   r.SetWall(61000);
-  auto ms = r.AllMeasurements();
+  auto ms = r.measurements_for_name("test");
   EXPECT_EQ(ms.size(), 1);
 
   auto m = ms.front();

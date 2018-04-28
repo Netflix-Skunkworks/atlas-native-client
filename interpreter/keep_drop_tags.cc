@@ -7,8 +7,8 @@ namespace atlas {
 namespace interpreter {
 
 using meter::Measurements;
-using util::StrRef;
 using util::intern_str;
+using util::StrRef;
 
 KeepOrDropTags::KeepOrDropTags(const List& keys,
                                std::shared_ptr<ValueExpression> expr, bool keep)
@@ -35,11 +35,10 @@ static StringRefs drop_keys(const meter::Tags& tags, const StringRefs& keys) {
   return res;
 }
 
-std::shared_ptr<TagsValuePairs> KeepOrDropTags::Apply(
-    std::shared_ptr<TagsValuePairs> valuePairs) {
+TagsValuePairs KeepOrDropTags::Apply(const TagsValuePairs& measurements) {
   // group metrics by keys
   std::unordered_map<meter::Tags, TagsValuePairs> grouped;
-  for (auto& valuePair : *valuePairs) {
+  for (auto& valuePair : measurements) {
     auto should_keep = true;
     meter::Tags group_by_vals;
 
@@ -60,13 +59,16 @@ std::shared_ptr<TagsValuePairs> KeepOrDropTags::Apply(
     }
   }
 
-  auto results = std::make_shared<TagsValuePairs>();
+  TagsValuePairs results{};
   for (auto& entry : grouped) {
     auto tags = entry.first;
     const auto& measurements_for_tags = entry.second;
     const auto& expr_results = expr_->Apply(measurements_for_tags);
-    results->push_back(
-        TagsValuePair::of(std::move(tags), expr_results->value()));
+    auto v = expr_results->value();
+    if (std::isnan(v)) {
+      continue;
+    }
+    results.emplace_back(TagsValuePair::of(std::move(tags), v));
   }
 
   return results;

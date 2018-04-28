@@ -18,7 +18,7 @@ class IntervalCounter : public Meter, public Counter {
   double SecondsSinceLastUpdate() const noexcept;
 
   std::ostream& Dump(std::ostream& os) const override;
-  Measurements MeasuresForPoller(size_t poller_idx) const override;
+  Measurements Measure() const override;
 
  private:
   std::shared_ptr<Counter> counter_;

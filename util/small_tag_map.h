@@ -70,7 +70,10 @@ class SmallTagMap : private detail::prime_number_hash_policy {
  public:
   SmallTagMap() noexcept { init(); }
 
-  SmallTagMap(const SmallTagMap& other) noexcept { init_from(other); }
+  SmallTagMap(const SmallTagMap& other) noexcept
+      : prime_number_hash_policy(other) {
+    init_from(other);
+  }
 
   SmallTagMap& operator=(const SmallTagMap& other) noexcept {
     init_from(other);
@@ -171,12 +174,12 @@ class SmallTagMap : private detail::prime_number_hash_policy {
       ++idx;
     }
 
-    return const_iterator(entries_.get(), idx, N);
+    return {entries_.get(), idx, N};
   }
 
   const_iterator end() const noexcept {
     size_t N = num_buckets();
-    return const_iterator(entries_.get(), N, N);
+    return {entries_.get(), N, N};
   }
 
  private:

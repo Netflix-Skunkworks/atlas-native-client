@@ -103,16 +103,15 @@ void Interpreter::Execute(Context* context, const std::string& program) const {
 }
 
 std::shared_ptr<Query> Interpreter::GetQuery(const std::string& program) const {
-  auto stack = std::make_unique<Context::Stack>();
-  auto context = std::make_unique<Context>(std::move(stack));
-  Execute(context.get(), program);
-  if (context->StackSize() != 1) {
+  Context context;
+  Execute(&context, program);
+  if (context.StackSize() != 1) {
     Logger()->error("Failed to get query from '{}': {} expressions", program,
-                    context->StackSize());
+                    context.StackSize());
     return query::false_q();
   }
 
-  auto top = context->PopExpression();
+  auto top = context.PopExpression();
   switch (top->GetType()) {
     case ExpressionType::Query:
       return std::static_pointer_cast<Query>(top);

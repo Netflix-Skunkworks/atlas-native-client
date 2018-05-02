@@ -22,7 +22,7 @@ else
   cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
 fi
 
-make -j8
+make -j4
 # Checks if last comand didn't output 0
 # $? checks what last command outputed
 # If output is 0 then command is succesfuly executed
@@ -36,7 +36,7 @@ fi
 showinfo "Running tests ..."
 
 if [ $CC = gcc ]; then
-  make -j8 libatlasclient_coverage
+  make -j4 libatlasclient_coverage
 fi
 
 ./runtests

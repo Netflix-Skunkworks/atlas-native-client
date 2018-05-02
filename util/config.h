@@ -80,7 +80,7 @@ struct FeaturesConfig {
   bool force_start = false;
   bool validate = true;
   bool main = true;
-  bool subscriptions = true;
+  bool subscriptions = false;
   int64_t subscription_refresh_ms = 10000;
   std::vector<std::string> publish_config = {":true,:all"};
   std::string disabled_file = "/mnt/data/atlas.disabled";

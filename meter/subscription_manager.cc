@@ -331,12 +331,16 @@ SubscriptionResults SubscriptionManager::get_lwc_metrics(
 // the whole send process (get measurements, get tagsvaluepairs, eval, send)
 TagsValuePairs get_main_measurements(const util::Config& cfg,
                                      const Tags* common_tags,
-                                     const Registry* registry,
+                                     Registry* registry,
                                      const Evaluator& evaluator) {
   using interpreter::Query;
   using interpreter::TagsValuePair;
 
   const auto all_measurements = registry->measurements();
+  const auto freq_value = util::secs_for_millis(kMainFrequencyMillis);
+  Tags freq_tags{{"id", freq_value.c_str()}};
+  registry->gauge("atlas.client.rawMeasurements", freq_tags)
+      ->Update(all_measurements.size());
   auto result = TagsValuePairs();
   auto logger = Logger();
 
@@ -388,6 +392,9 @@ TagsValuePairs get_main_measurements(const util::Config& cfg,
     std::move(rule_result.begin(), rule_result.end(),
               std::back_inserter(result));
   }
+
+  registry->gauge("atlas.client.mainMeasurements", freq_tags)
+      ->Update(result.size());
   return result;
 }
 

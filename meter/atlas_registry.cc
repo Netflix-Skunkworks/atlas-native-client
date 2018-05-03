@@ -119,21 +119,12 @@ void AtlasRegistry::RegisterMonitor(std::shared_ptr<Meter> meter) noexcept {
   InsertIfNeeded(meter);
 }
 
-/*
-  raw_measurements_size->Update(all.size());
-  main_measurements_size->Update(result->size());
- */
-
-/*
-
- */
-
 AtlasRegistry::AtlasRegistry(int64_t freq_millis, const Clock* clock) noexcept
     : impl_{std::make_unique<impl>()},
       clock_{clock},
       freq_millis_{freq_millis},
       freq_tags{} {
-  auto freq_value = fmt::format("{:02d}s", freq_millis / 1000);
+  auto freq_value = util::secs_for_millis(freq_millis);
   freq_tags.add("id", freq_value.c_str());
   meters_size = gauge(CreateId("atlas.numMeters", freq_tags));
 }

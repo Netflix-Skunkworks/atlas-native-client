@@ -146,29 +146,32 @@ AtlasRegistry::AtlasRegistry(int64_t freq_millis, const Clock* clock) noexcept
 Measurements AtlasRegistry::measurements() noexcept {
   Measurements res;
 
-  // quickly create a copy of the meters to avoid locking while we get the
-  // measurements
-  const auto all_meters = meters();
+  {
+    // quickly create a copy of the meters to avoid locking while we get the
+    // measurements
+    const auto all_meters = meters();
 
-  // attempt to guess how big the resulting measurements will be.
-  // timers / distribution summaries = 4x, counters = 1x
-  // so we pick 2x
-  res.reserve(all_meters.size() * 2);
+    // attempt to guess how big the resulting measurements will be.
+    // timers / distribution summaries = 4x, counters = 1x
+    // so we pick 2x
+    res.reserve(all_meters.size() * 2);
 
-  // now get a measurement from each meter that is involved in the given query
-  for (const auto& m : all_meters) {
-    if (!m->HasExpired()) {
-      if (m->IsUpdateable()) {
-        std::static_pointer_cast<UpdateableMeter>(m)->Update();
-      }
-      const auto measurements = m->Measure();
-      if (!measurements.empty()) {
-        std::move(measurements.begin(), measurements.end(),
-                  std::back_inserter(res));
+    // now get a measurement from each meter that is involved in the given query
+    for (const auto& m : all_meters) {
+      if (!m->HasExpired()) {
+        if (m->IsUpdateable()) {
+          std::static_pointer_cast<UpdateableMeter>(m)->Update();
+        }
+        const auto measurements = m->Measure();
+        if (!measurements.empty()) {
+          std::move(measurements.begin(), measurements.end(),
+                    std::back_inserter(res));
+        }
       }
     }
   }
-
+  // destruct our copy of the meters before calling expire_meters, this
+  // will reduce the refcount
   expire_meters();
 
   return res;

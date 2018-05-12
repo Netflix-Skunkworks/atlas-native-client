@@ -6,6 +6,7 @@
 
 using atlas::meter::BucketCounter;
 using atlas::meter::kEmptyTags;
+using atlas::meter::ManualClock;
 using atlas::meter::Measurement;
 using atlas::meter::Measurements;
 using atlas::meter::Registry;
@@ -15,7 +16,8 @@ using atlas::util::Logger;
 using std::chrono::microseconds;
 
 TEST(BucketCounter, Init) {
-  TestRegistry r;
+  ManualClock m;
+  TestRegistry r{&m};
   auto id = r.CreateId("test", kEmptyTags);
   BucketCounter b(&r, id, Age(microseconds{100}));
   auto ms = r.measurements_for_name("test");
@@ -25,7 +27,8 @@ TEST(BucketCounter, Init) {
 // micros to nanos
 static constexpr int64_t kMicrosToNanos = 1000l;
 TEST(BucketCounter, Record) {
-  TestRegistry r;
+  ManualClock manual_clock;
+  TestRegistry r{&manual_clock};
   r.SetWall(1000);
 
   auto id = r.CreateId("test", kEmptyTags);

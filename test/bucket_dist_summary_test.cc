@@ -6,6 +6,7 @@
 
 using atlas::meter::BucketDistributionSummary;
 using atlas::meter::kEmptyTags;
+using atlas::meter::ManualClock;
 using atlas::meter::Measurement;
 using atlas::meter::Tag;
 using atlas::meter::bucket_functions::Age;
@@ -13,7 +14,8 @@ using atlas::util::Logger;
 using std::chrono::seconds;
 
 TEST(BucketDistributionSummary, Init) {
-  TestRegistry r;
+  ManualClock m;
+  TestRegistry r{&m};
 
   auto id = r.CreateId("test", kEmptyTags);
   BucketDistributionSummary ds(&r, id, Age(seconds{60}));
@@ -25,7 +27,8 @@ TEST(BucketDistributionSummary, Init) {
 static constexpr int64_t kSecsToNanos = 1000l * 1000l * 1000l;
 
 TEST(BucketDistributionSummary, Record) {
-  TestRegistry r;
+  ManualClock manual_clock;
+  TestRegistry r{&manual_clock};
   r.SetWall(1000);
 
   auto id = r.CreateId("test", kEmptyTags);

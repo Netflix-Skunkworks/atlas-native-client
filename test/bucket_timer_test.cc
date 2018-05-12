@@ -6,6 +6,7 @@
 
 using atlas::meter::BucketTimer;
 using atlas::meter::kEmptyTags;
+using atlas::meter::ManualClock;
 using atlas::meter::Measurement;
 using atlas::meter::Tag;
 using atlas::meter::bucket_functions::Age;
@@ -15,7 +16,8 @@ using std::chrono::milliseconds;
 using std::chrono::seconds;
 
 TEST(BucketTimer, Init) {
-  TestRegistry r;
+  ManualClock m;
+  TestRegistry r{&m};
 
   auto id = r.CreateId("test", kEmptyTags);
   BucketTimer t(&r, id, Age(milliseconds{100}));
@@ -26,7 +28,8 @@ TEST(BucketTimer, Init) {
 static constexpr auto kMillisToSecs = 1 / 1000.0;
 
 TEST(BucketTimer, Record) {
-  TestRegistry r;
+  ManualClock manual_clock;
+  TestRegistry r{&manual_clock};
   r.SetWall(1000);
 
   auto id = r.CreateId("test", kEmptyTags);
@@ -62,7 +65,8 @@ TEST(BucketTimer, Record) {
 }
 
 TEST(BucketTimer, Latency) {
-  TestRegistry r;
+  ManualClock m;
+  TestRegistry r{&m};
   r.SetWall(1000);
 
   auto id = r.CreateId("bucket.t", kEmptyTags);

@@ -47,15 +47,19 @@ class AtlasRegistry : public Registry {
 
   Meters meters() const noexcept override;
 
-  Measurements measurements() const noexcept override;
+  Measurements measurements() noexcept override;
 
   std::shared_ptr<Gauge<double>> max_gauge(IdPtr id) noexcept override;
+
+ protected:
+  void expire_meters() noexcept;
 
  private:
   const Clock* clock_;
   int64_t freq_millis_;
   Tags freq_tags;
   mutable std::shared_ptr<Gauge<double>> meters_size;
+  mutable std::shared_ptr<Counter> expired_meters;
 
   std::shared_ptr<Meter> InsertIfNeeded(std::shared_ptr<Meter> meter) noexcept;
   std::shared_ptr<Meter> GetMeter(IdPtr id) noexcept;

@@ -6,8 +6,9 @@ using namespace atlas::meter;
 using atlas::util::intern_str;
 
 TEST(PercentileTimer, Percentile) {
-  TestRegistry registry;
-  PercentileTimer t{&registry, registry.CreateId("foo", kEmptyTags)};
+  ManualClock manual_clock;
+  TestRegistry r{&manual_clock};
+  PercentileTimer t{&r, r.CreateId("foo", kEmptyTags)};
 
   for (auto i = 0; i < 100000; ++i) {
     t.Record(std::chrono::milliseconds{i});
@@ -21,12 +22,13 @@ TEST(PercentileTimer, Percentile) {
 }
 
 TEST(PercentileTimer, HasProperStatistic) {
-  TestRegistry registry;
-  PercentileTimer t{&registry, registry.CreateId("foo", kEmptyTags)};
+  ManualClock manual_clock;
+  TestRegistry r{&manual_clock};
+  PercentileTimer t{&r, r.CreateId("foo", kEmptyTags)};
 
   t.Record(std::chrono::milliseconds{42});
 
-  auto ms = registry.meters();
+  auto ms = r.meters();
   auto percentileRef = intern_str("percentile");
   auto statisticRef = intern_str("statistic");
   for (const auto& m : ms) {
@@ -38,8 +40,9 @@ TEST(PercentileTimer, HasProperStatistic) {
 }
 
 TEST(PercentileTimer, CountTotal) {
-  TestRegistry registry;
-  PercentileTimer t{&registry, registry.CreateId("foo", kEmptyTags)};
+  ManualClock manual_clock;
+  TestRegistry r{&manual_clock};
+  PercentileTimer t{&r, r.CreateId("foo", kEmptyTags)};
 
   for (auto i = 0; i < 100; ++i) {
     t.Record(std::chrono::nanoseconds(i));

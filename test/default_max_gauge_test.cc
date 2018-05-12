@@ -9,19 +9,18 @@ using atlas::util::kMainFrequencyMillis;
 
 static ManualClock manual_clock;
 
-static TestRegistry test_registry;
-static auto id = test_registry.CreateId("foo", kEmptyTags);
-
 static std::unique_ptr<DefaultMaxGaugeInt> newMaxGaugeInt() {
   manual_clock.SetWall(0);
-  return std::make_unique<DefaultMaxGaugeInt>(id, manual_clock,
-                                              kMainFrequencyMillis);
+  return std::make_unique<DefaultMaxGaugeInt>(
+      std::make_shared<Id>("foo", kEmptyTags), manual_clock,
+      kMainFrequencyMillis);
 }
 
 static std::unique_ptr<DefaultMaxGauge<double>> newMaxGaugeDouble() {
   manual_clock.SetWall(0);
-  return std::make_unique<DefaultMaxGauge<double>>(id, manual_clock,
-                                                   kMainFrequencyMillis);
+  return std::make_unique<DefaultMaxGauge<double>>(
+      std::make_shared<Id>("foo", kEmptyTags), manual_clock,
+      kMainFrequencyMillis);
 }
 
 TEST(DefaultMaxGaugeInt, Init) {

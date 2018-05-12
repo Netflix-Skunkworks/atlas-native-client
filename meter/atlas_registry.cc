@@ -43,15 +43,28 @@ class AtlasRegistry::impl {
   }
 
   Meters GetMeters() const noexcept {
-    std::lock_guard<std::mutex> lock(meters_mutex);
-
     Meters res;
     res.reserve(meters_.size());
-
-    for (auto m : meters_) {
+    for (auto& m : meters_) {
       res.push_back(m.second);
     }
     return res;
+  }
+
+  int64_t ExpireMeters() noexcept {
+    int64_t expired = 0;
+    std::lock_guard<std::mutex> lock(meters_mutex);
+
+    auto it = meters_.begin();
+    while (it != meters_.end()) {
+      if (it->second->HasExpired() && it->second.use_count() == 1) {
+        ++expired;
+        it = meters_.erase(it);
+      } else {
+        ++it;
+      }
+    }
+    return expired;
   }
 
  private:
@@ -127,16 +140,17 @@ AtlasRegistry::AtlasRegistry(int64_t freq_millis, const Clock* clock) noexcept
   auto freq_value = util::secs_for_millis(freq_millis);
   freq_tags.add("id", freq_value.c_str());
   meters_size = gauge(CreateId("atlas.numMeters", freq_tags));
+  expired_meters = counter(CreateId("atlas.expiredMeters", freq_tags));
 }
 
-Measurements AtlasRegistry::measurements() const noexcept {
+Measurements AtlasRegistry::measurements() noexcept {
   Measurements res;
 
   // quickly create a copy of the meters to avoid locking while we get the
   // measurements
   const auto all_meters = meters();
 
-  // attempt to guess how big the resulting measurements will be
+  // attempt to guess how big the resulting measurements will be.
   // timers / distribution summaries = 4x, counters = 1x
   // so we pick 2x
   res.reserve(all_meters.size() * 2);
@@ -154,12 +168,19 @@ Measurements AtlasRegistry::measurements() const noexcept {
       }
     }
   }
+
+  expire_meters();
+
   return res;
 }
 
 std::shared_ptr<Gauge<double>> AtlasRegistry::max_gauge(IdPtr id) noexcept {
   return CreateAndRegisterAsNeeded<DefaultMaxGauge<double>>(id, clock(),
                                                             freq_millis_);
+}
+
+void AtlasRegistry::expire_meters() noexcept {
+  expired_meters->Add(impl_->ExpireMeters());
 }
 
 AtlasRegistry::~AtlasRegistry() = default;

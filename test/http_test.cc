@@ -18,6 +18,7 @@
 #include <thread>
 #include <fstream>
 
+using atlas::meter::ManualClock;
 using atlas::meter::Tags;
 using atlas::util::gzip_uncompress;
 using atlas::util::http;
@@ -52,7 +53,8 @@ TEST(HttpTest, Post) {
   logger->info("Server started on port {}", port);
 
   auto cfg = HttpConfig();
-  auto registry = std::make_shared<TestRegistry>();
+  ManualClock clock;
+  auto registry = std::make_shared<TestRegistry>(&clock);
   http client{registry, cfg};
   auto url = fmt::format("http://localhost:{}/foo", port);
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -128,7 +130,8 @@ TEST(HttpTest, PostBatches) {
   logger->info("Server started on port {}", port);
 
   auto cfg = HttpConfig();
-  auto registry = std::make_shared<TestRegistry>();
+  ManualClock clock;
+  auto registry = std::make_shared<TestRegistry>(&clock);
   http client{registry, cfg};
 
   auto url = fmt::format("http://localhost:{}/foo", port);
@@ -181,7 +184,8 @@ TEST(HttpTest, Timeout) {
   auto cfg = HttpConfig();
   cfg.connect_timeout = 1;
   cfg.read_timeout = 1;
-  auto registry = std::make_shared<TestRegistry>();
+  ManualClock clock;
+  auto registry = std::make_shared<TestRegistry>(&clock);
   http client{registry, cfg};
   auto url = fmt::format("http://localhost:{}/foo", port);
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -212,7 +216,8 @@ TEST(HttpTest, ConditionalGet) {
 
   auto cfg = HttpConfig();
   cfg.read_timeout = 60;
-  auto registry = std::make_shared<TestRegistry>();
+  ManualClock clock;
+  auto registry = std::make_shared<TestRegistry>(&clock);
   http client{registry, cfg};
   auto url = fmt::format("http://localhost:{}/get", port);
 
@@ -281,7 +286,8 @@ TEST(HttpTest, CompressedGet) {
 
   auto cfg = HttpConfig();
   cfg.read_timeout = 60;
-  auto registry = std::make_shared<TestRegistry>();
+  ManualClock manual_clock;
+  auto registry = std::make_shared<TestRegistry>(&manual_clock);
   http client{registry, cfg};
 
   auto url = fmt::format("http://localhost:{}/compressed", port);

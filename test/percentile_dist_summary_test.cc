@@ -8,9 +8,9 @@ using namespace atlas::meter;
 using atlas::util::intern_str;
 
 TEST(PercentileDistributionSummary, Percentile) {
-  TestRegistry registry;
-  PercentileDistributionSummary d{&registry,
-                                  registry.CreateId("foo", kEmptyTags)};
+  ManualClock manual_clock;
+  TestRegistry r{&manual_clock};
+  PercentileDistributionSummary d{&r, r.CreateId("foo", kEmptyTags)};
 
   for (auto i = 0; i < 100000; ++i) {
     d.Record(i);
@@ -24,13 +24,12 @@ TEST(PercentileDistributionSummary, Percentile) {
 }
 
 TEST(PercentileDistributionSummary, HasProperStatistic) {
-  TestRegistry registry;
-  PercentileDistributionSummary t{&registry,
-                                  registry.CreateId("foo", kEmptyTags)};
-
+  ManualClock manual_clock;
+  TestRegistry r{&manual_clock};
+  PercentileDistributionSummary t{&r, r.CreateId("foo", kEmptyTags)};
   t.Record(42);
 
-  auto ms = registry.meters();
+  auto ms = r.meters();
   auto percentileRef = intern_str("percentile");
   auto statisticRef = intern_str("statistic");
   for (const auto& m : ms) {
@@ -42,9 +41,9 @@ TEST(PercentileDistributionSummary, HasProperStatistic) {
 }
 
 TEST(PercentileDistributionSummary, CountTotal) {
-  TestRegistry registry;
-  PercentileDistributionSummary d{&registry,
-                                  registry.CreateId("foo", kEmptyTags)};
+  ManualClock manual_clock;
+  TestRegistry r{&manual_clock};
+  PercentileDistributionSummary d{&r, r.CreateId("foo", kEmptyTags)};
 
   for (auto i = 0; i < 100; ++i) {
     d.Record(i);

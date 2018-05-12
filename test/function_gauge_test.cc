@@ -12,8 +12,6 @@ using atlas::meter::Meter;
 
 static ManualClock manual_clock;
 static constexpr auto kNAN = std::numeric_limits<double>::quiet_NaN();
-static TestRegistry testRegistry;
-static auto id = testRegistry.CreateId("foo", kEmptyTags);
 
 void expect_gauge_value(const Meter& m, double expected) {
   auto measures = m.Measure();
@@ -27,6 +25,7 @@ void expect_gauge_value(const Meter& m, double expected) {
 }
 
 TEST(FunctionGauge, Init) {
+  auto id = std::make_shared<Id>("foo", kEmptyTags);
   auto n = std::make_shared<int64_t>(0);
   auto f = [](int64_t v) { return v * 2.0; };
   FunctionGauge<int64_t> fg{id, manual_clock, n, f};
@@ -36,6 +35,7 @@ TEST(FunctionGauge, Init) {
 }
 
 TEST(FunctionGauge, Value) {
+  auto id = std::make_shared<Id>("foo", kEmptyTags);
   auto n = std::make_shared<int64_t>(21);
   auto f = [](int64_t v) { return v * 2.0; };
   FunctionGauge<int64_t> fg{id, manual_clock, n, f};
@@ -45,6 +45,7 @@ TEST(FunctionGauge, Value) {
 }
 
 TEST(FunctionGauge, Expiration) {
+  auto id = std::make_shared<Id>("foo", kEmptyTags);
   auto n = std::make_shared<int64_t>(21);
   auto f = [](int64_t v) { return v * 2.0; };
   FunctionGauge<int64_t> fg{id, manual_clock, n, f};

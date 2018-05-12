@@ -44,7 +44,7 @@ class Registry {
 
   virtual Meters meters() const noexcept = 0;
 
-  virtual Measurements measurements() const noexcept = 0;
+  virtual Measurements measurements() noexcept = 0;
 
   std::shared_ptr<Counter> counter(std::string name,
                                    const Tags& tags = kEmptyTags) {

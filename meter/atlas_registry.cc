@@ -22,7 +22,7 @@ SystemClock system_clock;
 // the interpreter from our public headers
 class AtlasRegistry::impl {
  public:
-  explicit impl() noexcept = default;
+  explicit impl() noexcept {}
 
   std::shared_ptr<Meter> GetMeter(const IdPtr& id) noexcept {
     std::lock_guard<std::mutex> lock(meters_mutex);

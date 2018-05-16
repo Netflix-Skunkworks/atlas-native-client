@@ -134,6 +134,6 @@ void Client::AddCommonTag(const char* key, const char* value) noexcept {
   impl_->AddCommonTag(key, value);
 }
 
-Client::~Client() noexcept = default;
+Client::~Client() noexcept {}
 
 }  // namespace atlas

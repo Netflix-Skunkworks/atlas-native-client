@@ -37,7 +37,7 @@ std::shared_ptr<Counter> PercentileTimer::CounterFor(size_t i) const noexcept {
 }
 
 double PercentileTimer::Percentile(double p) const noexcept {
-  std::array<int64_t, percentile_buckets::Length()> counts{};
+  std::array<int64_t, percentile_buckets::Length()> counts;
   for (size_t i = 0; i < percentile_buckets::Length(); ++i) {
     counts.at(i) = CounterFor(i)->Count();
   }

@@ -39,7 +39,7 @@ std::shared_ptr<Counter> PercentileDistributionSummary::CounterFor(
 }
 
 double PercentileDistributionSummary::Percentile(double p) const noexcept {
-  std::array<int64_t, percentile_buckets::Length()> counts{};
+  std::array<int64_t, percentile_buckets::Length()> counts;
   for (size_t i = 0; i < percentile_buckets::Length(); ++i) {
     counts.at(i) = CounterFor(i)->Count();
   }

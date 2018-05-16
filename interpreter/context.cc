@@ -4,7 +4,7 @@
 namespace atlas {
 namespace interpreter {
 
-Context::Context() : stack_() {}
+Context::Context() {}
 
 static void ensure_stack_notempty(const Context::Stack& stack) {
   if (stack.empty()) {
@@ -44,7 +44,7 @@ void Context::PushToList(std::shared_ptr<Expression> expression) {
   auto top = TopOfStack().get();
   ensure(expression::IsList(*top), "Wrong type. Expecting a list.");
   auto list = static_cast<List*>(top);
-  list->Add(std::move(expression));
+  list->Add(expression);
 }
 
 size_t Context::StackSize() const noexcept { return stack_.size(); }
@@ -65,7 +65,7 @@ std::ostream& Context::Dump(std::ostream& os) const {
   return os;
 }
 
-void Context::Push(std::shared_ptr<Expression> expression) {
+void Context::Push(const std::shared_ptr<Expression>& expression) {
   stack_.push_back(expression);
 }
 

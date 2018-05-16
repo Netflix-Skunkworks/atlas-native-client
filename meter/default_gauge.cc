@@ -1,9 +1,11 @@
 #include "default_gauge.h"
 
+#include <utility>
+
 namespace atlas {
 namespace meter {
 
-DefaultGauge::DefaultGauge(IdPtr id, const Clock& clock)
+DefaultGauge::DefaultGauge(const IdPtr& id, const Clock& clock)
     : Meter(WithDefaultGaugeTags(id), clock), value_(myNaN) {}
 
 double DefaultGauge::Value() const noexcept { return value_; }

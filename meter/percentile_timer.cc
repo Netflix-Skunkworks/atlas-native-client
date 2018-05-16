@@ -6,7 +6,7 @@ namespace meter {
 
 #include "percentile_bucket_tags.inc"
 
-PercentileTimer::PercentileTimer(Registry* registry, IdPtr id)
+PercentileTimer::PercentileTimer(Registry* registry, const IdPtr& id)
     : Meter{id, registry->clock()},
       registry_{registry},
       timer_{registry->timer(id)} {}
@@ -21,9 +21,8 @@ void PercentileTimer::Record(std::chrono::nanoseconds nanos) noexcept {
   CounterFor(percentile_buckets::IndexOf(nanos.count()))->Increment();
 }
 
-const std::string kPercentile{"percentile"};
-
 inline Tag PercentileTag(size_t i) {
+  static std::string kPercentile{"percentile"};
   return Tag::of(kPercentile, kTimerTags.at(i));
 }
 

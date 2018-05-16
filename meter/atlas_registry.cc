@@ -5,14 +5,13 @@
 #include "default_counter.h"
 #include "default_distribution_summary.h"
 #include "default_gauge.h"
-#include "default_max_gauge.h"
 #include "default_long_task_timer.h"
+#include "default_max_gauge.h"
 #include "default_timer.h"
 
 #include <numeric>
 #include <sstream>
-
-using atlas::util::Logger;
+#include <utility>
 
 namespace atlas {
 namespace meter {
@@ -25,7 +24,7 @@ class AtlasRegistry::impl {
  public:
   explicit impl() noexcept {}
 
-  std::shared_ptr<Meter> GetMeter(IdPtr id) noexcept {
+  std::shared_ptr<Meter> GetMeter(const IdPtr& id) noexcept {
     std::lock_guard<std::mutex> lock(meters_mutex);
     auto maybe_meter = meters_.find(id);
     if (maybe_meter != meters_.end()) {
@@ -78,47 +77,47 @@ IdPtr AtlasRegistry::CreateId(std::string name, Tags tags) const noexcept {
   return std::make_shared<Id>(name, tags);
 }
 
-std::shared_ptr<Meter> AtlasRegistry::GetMeter(IdPtr id) noexcept {
+std::shared_ptr<Meter> AtlasRegistry::GetMeter(const IdPtr& id) noexcept {
   return impl_->GetMeter(id);
 }
 
 // only insert if it doesn't exist, otherwise return the existing meter
 std::shared_ptr<Meter> AtlasRegistry::InsertIfNeeded(
     std::shared_ptr<Meter> meter) noexcept {
-  return impl_->InsertIfNeeded(meter);
+  return impl_->InsertIfNeeded(std::move(meter));
 }
 
 std::shared_ptr<Counter> AtlasRegistry::counter(IdPtr id) noexcept {
-  return CreateAndRegisterAsNeeded<DefaultCounter>(id, clock(), freq_millis_);
+  return CreateAndRegisterAsNeeded<DefaultCounter>(id, *clock_, freq_millis_);
 }
 
 std::shared_ptr<DCounter> AtlasRegistry::dcounter(IdPtr id) noexcept {
-  return CreateAndRegisterAsNeeded<DefaultDoubleCounter>(id, clock(),
+  return CreateAndRegisterAsNeeded<DefaultDoubleCounter>(id, *clock_,
                                                          freq_millis_);
 }
 
 std::shared_ptr<Timer> AtlasRegistry::timer(IdPtr id) noexcept {
-  return CreateAndRegisterAsNeeded<DefaultTimer>(id, clock(), freq_millis_);
+  return CreateAndRegisterAsNeeded<DefaultTimer>(id, *clock_, freq_millis_);
 }
 
 std::shared_ptr<Gauge<double>> AtlasRegistry::gauge(IdPtr id) noexcept {
-  return CreateAndRegisterAsNeeded<DefaultGauge>(id, clock());
+  return CreateAndRegisterAsNeeded<DefaultGauge>(id, *clock_);
 }
 
 std::shared_ptr<LongTaskTimer> AtlasRegistry::long_task_timer(
     IdPtr id) noexcept {
-  return CreateAndRegisterAsNeeded<DefaultLongTaskTimer>(id, clock());
+  return CreateAndRegisterAsNeeded<DefaultLongTaskTimer>(id, *clock_);
 }
 
 std::shared_ptr<DDistributionSummary> AtlasRegistry::ddistribution_summary(
     IdPtr id) noexcept {
   return CreateAndRegisterAsNeeded<DefaultDoubleDistributionSummary>(
-      id, clock(), freq_millis_);
+      id, *clock_, freq_millis_);
 }
 
 std::shared_ptr<DistributionSummary> AtlasRegistry::distribution_summary(
     IdPtr id) noexcept {
-  return CreateAndRegisterAsNeeded<DefaultDistributionSummary>(id, clock(),
+  return CreateAndRegisterAsNeeded<DefaultDistributionSummary>(id, *clock_,
                                                                freq_millis_);
 }
 
@@ -135,12 +134,16 @@ void AtlasRegistry::RegisterMonitor(std::shared_ptr<Meter> meter) noexcept {
 AtlasRegistry::AtlasRegistry(int64_t freq_millis, const Clock* clock) noexcept
     : impl_{std::make_unique<impl>()},
       clock_{clock},
-      freq_millis_{freq_millis},
-      freq_tags{} {
+      freq_millis_{freq_millis} {
   auto freq_value = util::secs_for_millis(freq_millis);
   freq_tags.add("id", freq_value.c_str());
-  meters_size = gauge(CreateId("atlas.numMeters", freq_tags));
-  expired_meters = counter(CreateId("atlas.expiredMeters", freq_tags));
+  // avoid using virtual functions from within the constructor
+  // (do not call gauge, counter here)
+  meters_size = CreateAndRegisterAsNeeded<DefaultGauge>(
+      std::make_shared<Id>("atlas.numMeters", freq_tags), *clock_);
+  expired_meters = CreateAndRegisterAsNeeded<DefaultCounter>(
+      std::make_shared<Id>("atlas.expiredMeters", freq_tags), *clock_,
+      freq_millis);
 }
 
 Measurements AtlasRegistry::measurements() noexcept {

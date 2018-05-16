@@ -17,7 +17,7 @@ class AtlasRegistry : public Registry {
   std::unique_ptr<impl> impl_;
 
  public:
-  explicit AtlasRegistry(int64_t freq_millis_,
+  explicit AtlasRegistry(int64_t freq_millis,
                          const Clock* clock = &system_clock) noexcept;
 
   AtlasRegistry(const AtlasRegistry& registry) = delete;
@@ -62,7 +62,7 @@ class AtlasRegistry : public Registry {
   mutable std::shared_ptr<Counter> expired_meters;
 
   std::shared_ptr<Meter> InsertIfNeeded(std::shared_ptr<Meter> meter) noexcept;
-  std::shared_ptr<Meter> GetMeter(IdPtr id) noexcept;
+  std::shared_ptr<Meter> GetMeter(const IdPtr& id) noexcept;
 
   template <typename M, typename... Args>
   std::shared_ptr<M> CreateAndRegisterAsNeeded(IdPtr id,

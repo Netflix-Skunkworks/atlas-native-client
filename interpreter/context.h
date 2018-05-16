@@ -17,7 +17,7 @@ class Context {
 
   std::shared_ptr<Expression> PopExpression();
 
-  void Push(std::shared_ptr<Expression> expression);
+  void Push(const std::shared_ptr<Expression>& expression);
 
   void PushToList(std::shared_ptr<Expression> expression);
 

@@ -1,10 +1,12 @@
 #include "bucket_timer.h"
+
+#include <utility>
 namespace atlas {
 namespace meter {
 
 BucketTimer::BucketTimer(Registry* registry, IdPtr id,
                          BucketFunction bucket_function)
-    : Meter{id, registry->clock()},
+    : Meter{std::move(id), registry->clock()},
       registry_{registry},
       bucket_function_{std::move(bucket_function)} {}
 

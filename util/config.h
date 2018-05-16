@@ -39,7 +39,7 @@ struct HttpConfig {
   int batch_size = 10000;
   bool send_in_parallel = false;
 
-  static HttpConfig FromJson(const rapidjson::Document& json,
+  static HttpConfig FromJson(const rapidjson::Document& document,
                              const HttpConfig& defaults) noexcept;
 };
 std::ostream& operator<<(std::ostream& os, const HttpConfig& http_config);
@@ -58,7 +58,7 @@ struct EndpointConfig {
       "lwc/api/"
       "v1/evaluate");
 
-  static EndpointConfig FromJson(const rapidjson::Document& json,
+  static EndpointConfig FromJson(const rapidjson::Document& document,
                                  const EndpointConfig& defaults) noexcept;
 };
 std::ostream& operator<<(std::ostream& os, const EndpointConfig& endpoints);

@@ -1,6 +1,6 @@
 #include "query.h"
-#include "../util/logger.h"
 #include "../meter/id.h"
+#include "../util/logger.h"
 
 namespace atlas {
 namespace interpreter {

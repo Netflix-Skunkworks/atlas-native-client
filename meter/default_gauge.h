@@ -7,7 +7,7 @@ namespace meter {
 
 class DefaultGauge : public Meter, public Gauge<double> {
  public:
-  DefaultGauge(IdPtr id, const Clock& clock);
+  DefaultGauge(const IdPtr& id, const Clock& clock);
 
   void Update(double d) noexcept override;
   double Value() const noexcept override;

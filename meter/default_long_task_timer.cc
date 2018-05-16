@@ -1,12 +1,14 @@
 #include "default_long_task_timer.h"
+
 #include "../util/logger.h"
 #include "statistic.h"
+#include <utility>
 
 namespace atlas {
 namespace meter {
 
 DefaultLongTaskTimer::DefaultLongTaskTimer(IdPtr id, const Clock& clock)
-    : Meter(id, clock), next_(0), tasks_(EXPECTED_TASKS) {}
+    : Meter(std::move(id), clock), next_(0), tasks_(EXPECTED_TASKS) {}
 
 int64_t DefaultLongTaskTimer::Start() {
   std::lock_guard<std::mutex> lock(tasks_mutex_);

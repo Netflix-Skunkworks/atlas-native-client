@@ -7,7 +7,7 @@ namespace meter {
 #include "percentile_bucket_tags.inc"
 
 PercentileDistributionSummary::PercentileDistributionSummary(Registry* registry,
-                                                             IdPtr id)
+                                                             const IdPtr& id)
     : Meter{id, registry->clock()},
       registry_{registry},
       dist_{registry->distribution_summary(id)} {}
@@ -22,9 +22,8 @@ void PercentileDistributionSummary::Record(int64_t amount) noexcept {
   CounterFor(percentile_buckets::IndexOf(amount))->Increment();
 }
 
-const std::string kPercentile{"percentile"};
-
 inline Tag PercentileTag(size_t i) {
+  static std::string kPercentile{"percentile"};
   return Tag::of(kPercentile, kDistTags.at(i));
 }
 

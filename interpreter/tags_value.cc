@@ -5,7 +5,11 @@ namespace atlas {
 namespace interpreter {
 
 const OptionalString kNone{nullptr};
-const util::StrRef kNameRef = util::intern_str("name");
+
+util::StrRef name_ref() {
+  static util::StrRef name = util::intern_str("name");
+  return name;
+}
 
 void IdTagsValuePair::dump(std::ostream& os) const noexcept {
   os << "IdTagsValuePair(id=" << *id_ << ",common_tags=" << *common_tags_

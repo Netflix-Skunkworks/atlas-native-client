@@ -12,7 +12,7 @@ namespace meter {
 
 class PercentileDistributionSummary : public Meter, public DistributionSummary {
  public:
-  PercentileDistributionSummary(Registry* registry, IdPtr id);
+  PercentileDistributionSummary(Registry* registry, const IdPtr& id);
   void Record(int64_t amount) noexcept override;
   std::ostream& Dump(std::ostream& os) const override;
   Measurements Measure() const override { return Measurements(); };

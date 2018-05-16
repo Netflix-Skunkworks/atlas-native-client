@@ -237,7 +237,7 @@ class AvgWord : public Word {
 };
 
 std::shared_ptr<ValueExpression> value_expr_from(
-    std::shared_ptr<Expression> e) {
+    const std::shared_ptr<Expression>& e) {
   // a constant
   if (expression::IsLiteral(*e)) {
     auto n = std::stod(expression::LiteralToStr(*e));

@@ -1,6 +1,8 @@
 #include "id.h"
+
 #include "id_format.h"
 #include "statistic.h"
+#include <utility>
 
 namespace atlas {
 namespace meter {
@@ -21,18 +23,18 @@ bool Id::operator==(const Id& rhs) const noexcept {
   return std::tie(name_, tags_) == std::tie(rhs.name_, rhs.tags_);
 }
 
-IdPtr WithDefaultTagForId(IdPtr id, const Tag& default_tag) {
+IdPtr WithDefaultTagForId(const IdPtr& id, const Tag& default_tag) {
   bool already_has_key = id->GetTags().has(default_tag.key);
   return already_has_key ? id : id->WithTag(default_tag);
 }
 
 const Tag kGaugeDsType = Tag::of("atlas.dstype", "gauge");
 
-IdPtr WithDefaultGaugeTags(IdPtr id) {
+IdPtr WithDefaultGaugeTags(const IdPtr& id) {
   return WithDefaultGaugeTags(id, statistic::gauge);
 }
 
-IdPtr WithDefaultGaugeTags(IdPtr id, const Tag& stat) {
+IdPtr WithDefaultGaugeTags(const IdPtr& id, const Tag& stat) {
   return WithDefaultTagForId(WithDefaultTagForId(id, stat), kGaugeDsType);
 }
 

@@ -112,7 +112,7 @@ class RegexQuery : public AbstractKeyQuery {
 
   bool Matches(const meter::Tags& tags) const override;
 
-  bool Matches(const TagsValuePair& tags) const override;
+  bool Matches(const TagsValuePair& tv) const override;
 
   std::ostream& Dump(std::ostream& os) const override;
 

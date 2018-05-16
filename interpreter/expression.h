@@ -57,7 +57,7 @@ class List : public Expression {
 
   std::ostream& Dump(std::ostream& os) const override;
 
-  void Add(std::shared_ptr<Expression> expression);
+  void Add(const std::shared_ptr<Expression>& expression);
 
   bool Contains(const std::string& key) const noexcept;
 

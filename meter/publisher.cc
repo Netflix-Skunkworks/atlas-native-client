@@ -1,11 +1,11 @@
 #include "publisher.h"
-#include "validation.h"
 #include "../util/config.h"
 #include "../util/gzip.h"
 #include "../util/http.h"
 #include "../util/intern.h"
 #include "../util/json.h"
 #include "../util/logger.h"
+#include "validation.h"
 #include <chrono>
 
 namespace atlas {
@@ -18,17 +18,19 @@ using interpreter::TagsValuePairs;
 using meter::SubscriptionResults;
 using std::chrono::system_clock;
 
-const static Tags atlas_client_tags{
-    {intern_str("class"), intern_str("NetflixAtlasObserver")},
-    {intern_str("id"), intern_str("main-vip")}};
+static const Tags& atlas_client_tags() {
+  static Tags tags{{intern_str("class"), intern_str("NetflixAtlasObserver")},
+                   {intern_str("id"), intern_str("main-vip")}};
+  return tags;
+}
 
 inline void UpdateSentStat(Registry* registry, int64_t delta) {
-  registry->counter("numMetricsSent", atlas_client_tags)->Add(delta);
+  registry->counter("numMetricsSent", atlas_client_tags())->Add(delta);
 }
 
 inline void UpdateHttpErrorsStat(Registry* registry, int status_code,
                                  int64_t errors) {
-  auto tags = atlas_client_tags;
+  auto tags = atlas_client_tags();
   tags.add("error", "httpError");
   tags.add("statusCode", std::to_string(status_code).c_str());
 
@@ -36,11 +38,11 @@ inline void UpdateHttpErrorsStat(Registry* registry, int status_code,
 }
 
 inline void UpdateTotalSentStat(Registry* registry, int64_t total_sent) {
-  registry->counter("numMetricsTotal", atlas_client_tags)->Add(total_sent);
+  registry->counter("numMetricsTotal", atlas_client_tags())->Add(total_sent);
 }
 
 inline void UpdateValidationErrorStats(Registry* registry, int64_t errors) {
-  auto tags = atlas_client_tags;
+  auto tags = atlas_client_tags();
   tags.add("error", "validationFailed");
   registry->counter("numMetricsDropped", tags)->Add(errors);
 }
@@ -162,7 +164,7 @@ static void SendBatch(Registry* registry, const util::http& client,
   }
 }
 
-static void PushInParallel(std::shared_ptr<Registry> registry,
+static void PushInParallel(const std::shared_ptr<Registry>& registry,
                            const util::Config& config, int64_t now_millis,
                            const interpreter::TagsValuePairs& measurements) {
   static auto timer = registry->timer("atlas.client.parallelPost");
@@ -218,7 +220,7 @@ static void PushInParallel(std::shared_ptr<Registry> registry,
   timer->Record(registry->clock().MonotonicTime() - start);
 }
 
-static void PushSerially(std::shared_ptr<Registry> registry,
+static void PushSerially(const std::shared_ptr<Registry>& registry,
                          const util::Config& config, int64_t now_millis,
                          const interpreter::TagsValuePairs& measurements) {
   const auto& http_cfg = config.HttpConfiguration();

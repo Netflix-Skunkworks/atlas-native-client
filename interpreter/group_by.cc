@@ -1,6 +1,6 @@
 #include "group_by.h"
-#include "singleton_value_expr.h"
 #include "../util/logger.h"
+#include "singleton_value_expr.h"
 
 namespace atlas {
 namespace interpreter {
@@ -11,7 +11,7 @@ using util::Logger;
 namespace expression {
 
 std::shared_ptr<MultipleResults> GetMultipleResults(
-    std::shared_ptr<Expression> e) {
+    const std::shared_ptr<Expression>& e) {
   if (e->GetType() == ExpressionType::MultipleResults) {
     return std::static_pointer_cast<MultipleResults>(e);
   }

@@ -24,7 +24,7 @@ class TagsValuePair {
 };
 
 extern const OptionalString kNone;
-extern const util::StrRef kNameRef;
+util::StrRef name_ref();
 
 class SimpleTagsValuePair : public TagsValuePair {
  public:
@@ -57,7 +57,7 @@ class IdTagsValuePair : public TagsValuePair {
       : id_(std::move(id)), common_tags_(common_tags), value_(value) {}
 
   OptionalString get_value(util::StrRef key) const noexcept override {
-    if (key.get() == kNameRef.get()) {
+    if (key.get() == name_ref().get()) {
       return OptionalString{id_->Name()};
     }
 
@@ -79,7 +79,7 @@ class IdTagsValuePair : public TagsValuePair {
   meter::Tags all_tags() const noexcept override {
     meter::Tags tags{*common_tags_};
     tags.add_all(id_->GetTags());
-    tags.add(kNameRef, id_->NameRef());
+    tags.add(name_ref(), id_->NameRef());
     return tags;
   }
 

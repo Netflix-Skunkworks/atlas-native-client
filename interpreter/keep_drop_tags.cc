@@ -13,21 +13,23 @@ using util::StrRef;
 KeepOrDropTags::KeepOrDropTags(const List& keys,
                                std::shared_ptr<ValueExpression> expr, bool keep)
     : keys_(keys.ToStrings()), expr_(std::move(expr)), keep_(keep) {
+  auto name = name_ref();
   if (keep) {
     // make sure we keep name, it's required
-    if (std::find(keys_->begin(), keys_->end(), kNameRef) == keys_->end()) {
-      keys_->push_back(kNameRef);
+    if (std::find(keys_->begin(), keys_->end(), name) == keys_->end()) {
+      keys_->push_back(name);
     }
   }
 }
 
 using StringRefs = std::vector<StrRef>;
 static StringRefs drop_keys(const meter::Tags& tags, const StringRefs& keys) {
-  StringRefs res{kNameRef};
+  auto name = name_ref();
+  StringRefs res{name};
 
   // add all tag keys that are not in the set of keys to be dropped
   for (const auto& tag : tags) {
-    if (tag.first != kNameRef &&
+    if (tag.first != name &&
         std::find(keys.begin(), keys.end(), tag.first) == keys.end()) {
       res.push_back(tag.first);
     }

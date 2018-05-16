@@ -92,11 +92,11 @@ class Id {
 
 using IdPtr = std::shared_ptr<Id>;
 
-IdPtr WithDefaultTagForId(IdPtr id, const Tag& default_tag);
+IdPtr WithDefaultTagForId(const IdPtr& id, const Tag& default_tag);
 
-IdPtr WithDefaultGaugeTags(IdPtr id);
+IdPtr WithDefaultGaugeTags(const IdPtr& id);
 
-IdPtr WithDefaultGaugeTags(IdPtr id, const Tag& stat);
+IdPtr WithDefaultGaugeTags(const IdPtr& id, const Tag& stat);
 
 }  // namespace meter
 }  // namespace atlas

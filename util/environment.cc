@@ -1,7 +1,7 @@
 #include "environment.h"
 #include "strings.h"
-#include <unistd.h>
 #include <fmt/format.h>
+#include <unistd.h>
 
 namespace atlas {
 namespace util {

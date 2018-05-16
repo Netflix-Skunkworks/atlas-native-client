@@ -11,7 +11,7 @@ namespace meter {
 
 class PercentileTimer : public Meter, public Timer {
  public:
-  PercentileTimer(Registry* registry, IdPtr id);
+  PercentileTimer(Registry* registry, const IdPtr& id);
   void Record(std::chrono::nanoseconds nanos) noexcept override;
   std::ostream& Dump(std::ostream& os) const override;
   Measurements Measure() const override { return Measurements(); };

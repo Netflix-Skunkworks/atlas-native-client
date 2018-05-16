@@ -1,7 +1,7 @@
 #include "config.h"
-#include "logger.h"
-#include "environment.h"
 #include "../meter/id_format.h"
+#include "environment.h"
+#include "logger.h"
 #include <rapidjson/document.h>
 
 namespace atlas {

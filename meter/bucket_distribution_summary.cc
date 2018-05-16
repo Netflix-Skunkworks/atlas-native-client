@@ -1,11 +1,13 @@
 #include "bucket_distribution_summary.h"
 
+#include <utility>
+
 namespace atlas {
 namespace meter {
 
 BucketDistributionSummary::BucketDistributionSummary(
     Registry* registry, IdPtr id, BucketFunction bucket_function)
-    : Meter{id, registry->clock()},
+    : Meter{std::move(id), registry->clock()},
       registry_{registry},
       bucket_function_{std::move(bucket_function)} {}
 
@@ -19,9 +21,8 @@ Measurements BucketDistributionSummary::Measure() const {
   return kEmptyMeasurements;
 }
 
-static const std::string kBucket{"bucket"};
-
 void BucketDistributionSummary::Record(int64_t amount) noexcept {
+  static const std::string kBucket{"bucket"};
   const auto& bucket = bucket_function_(amount);
   registry_->distribution_summary(id_->WithTag(Tag::of(kBucket, bucket)))
       ->Record(amount);

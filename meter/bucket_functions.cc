@@ -1,10 +1,10 @@
 #include "bucket_functions.h"
 
 #include <array>
+#include <fmt/format.h>
 #include <iomanip>
 #include <string>
 #include <vector>
-#include <fmt/format.h>
 
 namespace atlas {
 namespace meter {

@@ -9,7 +9,7 @@ namespace meter {
 
 class IntervalCounter : public Meter, public Counter {
  public:
-  IntervalCounter(Registry* registry, IdPtr id);
+  IntervalCounter(Registry* registry, const IdPtr& id);
   ~IntervalCounter() override = default;
 
   void Increment() noexcept override;

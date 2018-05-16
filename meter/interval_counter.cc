@@ -10,7 +10,7 @@ static std::function<double(int64_t)> age(const Clock& clock) {
   };
 }
 
-IntervalCounter::IntervalCounter(Registry* registry, IdPtr id)
+IntervalCounter::IntervalCounter(Registry* registry, const IdPtr& id)
     : Meter{id, registry->clock()},
       counter_{registry->counter(id->WithTag(statistic::count))},
       counter_updated{std::make_shared<int64_t>(0)},

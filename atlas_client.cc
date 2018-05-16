@@ -6,9 +6,6 @@
 #include "util/logger.h"
 #include <iostream>
 
-using atlas::interpreter::ClientVocabulary;
-using atlas::interpreter::Interpreter;
-using atlas::meter::AtlasRegistry;
 using atlas::meter::Registry;
 using atlas::meter::SubscriptionManager;
 using atlas::meter::SystemClockWithOffset;
@@ -16,11 +13,15 @@ using atlas::util::ConfigManager;
 using atlas::util::http;
 using atlas::util::Logger;
 
-const std::vector<const char*> env_vars{"NETFLIX_CLUSTER", "EC2_OWNER_ID",
-                                        "EC2_REGION", "NETFLIX_ENVIRONMENT"};
+std::vector<const char*>& env_vars() {
+  static std::vector<const char*> vars{"NETFLIX_CLUSTER", "EC2_OWNER_ID",
+                                       "EC2_REGION", "NETFLIX_ENVIRONMENT"};
+  return vars;
+}
 
 inline bool is_sane_environment() {
-  return std::all_of(env_vars.begin(), env_vars.end(), [](const char* var) {
+  auto& env = env_vars();
+  return std::all_of(env.begin(), env.end(), [](const char* var) {
     return std::getenv(var) != nullptr;
   });
 }
@@ -31,8 +32,7 @@ class Client::impl {
  public:
   impl()
       : started{false},
-        clock{},
-        config_manager{},
+        config_manager{util::kLocalFileName, util::kConfigRefreshMillis},
         subscription_manager{config_manager} {}
   void Start() noexcept {
     if (started) {
@@ -49,7 +49,7 @@ class Client::impl {
       logger->info("atlas-client initialized");
     } else {
       logger->error("Not sending metrics from a development environment");
-      for (const char* v : env_vars) {
+      for (const char* v : env_vars()) {
         const auto env_value = std::getenv(v);
         const auto value = env_value == nullptr ? "(null)" : env_value;
         logger->info("{}={}", v, value);

@@ -30,7 +30,7 @@ class GroupBy : public MultipleResults {
 
 namespace expression {
 std::shared_ptr<MultipleResults> GetMultipleResults(
-    std::shared_ptr<Expression> e);
+    const std::shared_ptr<Expression>& e);
 }  // namespace expression
 }  // namespace interpreter
 }  // namespace atlas

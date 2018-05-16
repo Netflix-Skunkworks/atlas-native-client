@@ -22,26 +22,30 @@ static bool is_key_restricted(StrRef k) noexcept {
   return StartsWith(k, "nf.") || StartsWith(k, "atlas.");
 }
 
-static std::unordered_set<StrRef> kValidNfTags = {
-    intern_str("nf.node"),          intern_str("nf.cluster"),
-    intern_str("nf.app"),           intern_str("nf.asg"),
-    intern_str("nf.stack"),         intern_str("nf.ami"),
-    intern_str("nf.vmtype"),        intern_str("nf.zone"),
-    intern_str("nf.region"),        intern_str("nf.account"),
-    intern_str("nf.country"),       intern_str("nf.task"),
-    intern_str("nf.country.rollup")};
+const std::unordered_set<StrRef>& valid_nf_tags() {
+  static std::unordered_set<StrRef> kValidNfTags = {
+      intern_str("nf.node"),          intern_str("nf.cluster"),
+      intern_str("nf.app"),           intern_str("nf.asg"),
+      intern_str("nf.stack"),         intern_str("nf.ami"),
+      intern_str("nf.vmtype"),        intern_str("nf.zone"),
+      intern_str("nf.region"),        intern_str("nf.account"),
+      intern_str("nf.country"),       intern_str("nf.task"),
+      intern_str("nf.country.rollup")};
 
-static auto kDsType = intern_str("atlas.dstype");
-static auto kLegacy = intern_str("atlas.legacy");
-static auto kNameRef = intern_str("name");
+  return kValidNfTags;
+}
 
 static bool is_user_key_invalid(StrRef k) noexcept {
+  static auto kDsType = intern_str("atlas.dstype");
+  static auto kLegacy = intern_str("atlas.legacy");
+
   if (StartsWith(k, "atlas.")) {
     return k != kDsType && k != kLegacy;
   }
 
+  auto& valid_tags = valid_nf_tags();
   if (StartsWith(k, "nf.")) {
-    return kValidNfTags.find(k) == kValidNfTags.end();
+    return valid_tags.find(k) == valid_tags.end();
   }
 
   return false;
@@ -50,6 +54,8 @@ static bool is_user_key_invalid(StrRef k) noexcept {
 bool empty_or_null(StrRef r) { return r.is_null() || r.length() == 0; }
 
 bool IsValid(const Tags& tags) noexcept {
+  static auto kNameRef = intern_str("name");
+
   std::string err_msg;
   size_t user_tags = 0;
   auto logger = util::Logger();

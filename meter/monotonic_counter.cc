@@ -5,7 +5,7 @@
 namespace atlas {
 namespace meter {
 
-MonotonicCounter::MonotonicCounter(Registry* registry, IdPtr id)
+MonotonicCounter::MonotonicCounter(Registry* registry, const IdPtr& id)
     : Meter{WithDefaultTagForId(id, statistic::count), registry->clock()},
       value_(0),
       registry_(registry),

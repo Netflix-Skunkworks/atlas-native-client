@@ -13,7 +13,6 @@ using atlas::util::Logger;
 
 using atlas::interpreter::ClientVocabulary;
 using atlas::interpreter::Interpreter;
-using atlas::interpreter::kNameRef;
 using atlas::interpreter::TagsValuePair;
 using atlas::interpreter::TagsValuePairs;
 using namespace atlas::meter;

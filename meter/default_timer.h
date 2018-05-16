@@ -9,7 +9,7 @@ namespace meter {
 
 class DefaultTimer : public Meter, public Timer {
  public:
-  DefaultTimer(IdPtr id, const Clock& clock, int64_t freq_millis);
+  DefaultTimer(const IdPtr& id, const Clock& clock, int64_t freq_millis);
 
   Measurements Measure() const override;
 

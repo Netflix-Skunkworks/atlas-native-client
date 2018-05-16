@@ -5,7 +5,8 @@
 namespace atlas {
 namespace meter {
 
-DefaultTimer::DefaultTimer(IdPtr id, const Clock& clock, int64_t freq_millis)
+DefaultTimer::DefaultTimer(const IdPtr& id, const Clock& clock,
+                           int64_t freq_millis)
     : Meter{id, clock},
       count_(0),
       total_time_(0),

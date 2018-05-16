@@ -1,6 +1,6 @@
 #include "buffer.h"
-#include "logger.h"
 #include "gzip.h"
+#include "logger.h"
 
 namespace atlas {
 namespace util {

@@ -55,7 +55,7 @@ std::ostream& List::Dump(std::ostream& os) const {
   return os;
 }
 
-void List::Add(std::shared_ptr<Expression> expression) {
+void List::Add(const std::shared_ptr<Expression>& expression) {
   list_.push_back(expression);
 }
 

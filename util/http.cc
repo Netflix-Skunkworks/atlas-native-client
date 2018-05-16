@@ -1,10 +1,10 @@
 #include "http.h"
+#include "buffer.h"
 #include "gzip.h"
 #include "json.h"
 #include "logger.h"
 #include "memory.h"
 #include "strings.h"
-#include "buffer.h"
 
 #include <algorithm>
 #include <curl/curl.h>

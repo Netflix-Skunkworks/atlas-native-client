@@ -54,8 +54,8 @@ class DefaultDistributionSummaryNum : public Meter,
           static_cast<double>(amount) * static_cast<double>(amount);
       sub_total_sq_.Add(amount_sq);
       sub_max_.Update(amount);
-      Updated();
     }
+    Updated();
   }
 
   int64_t Count() const noexcept override {

@@ -16,7 +16,7 @@ class DefaultCounterNumber : public Meter, public CounterNumber<T> {
 
  public:
   DefaultCounterNumber(IdPtr id, const Clock& clock, int64_t freq_millis)
-      : Meter(WithDefaultTagForId(std::move(id), statistic::count), clock),
+      : Meter(WithDefaultTagForId(id, statistic::count), clock),
         step_number_(0, freq_millis, clock),
         value_(0) {
     Updated();
@@ -43,6 +43,7 @@ class DefaultCounterNumber : public Meter, public CounterNumber<T> {
   void Add(T amount) noexcept override {
     step_number_.Add(amount);
     Add(amount, type<T>());
+    Updated();
   }
 
   T Count() const noexcept override {

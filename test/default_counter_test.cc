@@ -62,3 +62,25 @@ TEST(DefaultCounterTest, Measure) {
     EXPECT_DOUBLE_EQ(2.0 / 60.0, m.value);
   }
 }
+
+TEST(DefaultCounter, Expiration) {
+  ManualClock manual_clock;
+  TestRegistry r{&manual_clock};
+
+  auto id = r.CreateId("test", kEmptyTags);
+  r.counter(id)->Increment();
+
+  r.SetWall(60000);
+  EXPECT_EQ(r.measurements_for_name("test").size(), 1);
+
+  auto t = atlas::meter::MAX_IDLE_TIME + 60000;
+  r.SetWall(t);
+
+  auto ms = r.measurements_for_name("test");
+  EXPECT_EQ(ms.size(), 0);
+
+  r.counter(id)->Increment();
+  r.SetWall(t + 60000);
+  ms = r.measurements_for_name("test");
+  EXPECT_EQ(ms.size(), 1);
+}

@@ -28,8 +28,8 @@ void DefaultTimer::Record(std::chrono::nanoseconds nanos) {
         static_cast<double>(nanos_count) * static_cast<double>(nanos_count);
     sub_total_sq_.Add(nanos_sq);
     sub_max_.Update(nanos_count);
-    Updated();
   }
+  Updated();
 }
 
 int64_t DefaultTimer::Count() const noexcept {

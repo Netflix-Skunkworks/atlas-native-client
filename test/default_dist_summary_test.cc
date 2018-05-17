@@ -78,3 +78,25 @@ TEST(DefaultDistSummary, Measure) {
     }
   }
 }
+
+TEST(DefaultDistSummary, Expiration) {
+  ManualClock manual_clock;
+  TestRegistry r{&manual_clock};
+
+  auto id = r.CreateId("test", kEmptyTags);
+  r.distribution_summary(id)->Record(1);
+
+  r.SetWall(60000);
+  EXPECT_EQ(r.measurements_for_name("test").size(), 4);
+
+  auto t = atlas::meter::MAX_IDLE_TIME + 60000;
+  r.SetWall(t);
+
+  auto ms = r.measurements_for_name("test");
+  EXPECT_EQ(ms.size(), 0);
+
+  r.distribution_summary(id)->Record(2);
+  r.SetWall(t + 60000);
+  ms = r.measurements_for_name("test");
+  EXPECT_EQ(ms.size(), 4);
+}

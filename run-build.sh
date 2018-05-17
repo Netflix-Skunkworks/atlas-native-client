@@ -19,7 +19,7 @@ cd build
 if [ $CC = gcc ] ; then
   cmake -DCMAKE_BUILD_TYPE=Debug ..
 else
-  cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
+  cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DASAN=ON ..
 fi
 
 make -j4

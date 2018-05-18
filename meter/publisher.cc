@@ -95,7 +95,7 @@ rapidjson::Document MeasurementsToJson(
       continue;
     }
     auto tags = measure->all_tags();
-    if (validate && !validation::IsValid(tags)) {
+    if (validate && !AreTagsValid(tags)) {
       continue;
     }
     Value json_metric{kObjectType};

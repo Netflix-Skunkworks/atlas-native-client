@@ -175,8 +175,8 @@ ValidationIssues AnalyzeTags(const Tags& tags) noexcept {
       }
       if (v_length > MAX_VAL_LENGTH) {
         result.emplace(ValidationIssue::Err(
-            fmt::format("Tag value '{}' exceeds length limits ({}-{})",
-                        v_ref.get(), v_length, MAX_VAL_LENGTH)));
+            fmt::format("Tag value '{}' for key '{}' exceeds length limits ({}-{})",
+                        v_ref.get(), k_ref.get(), v_length, MAX_VAL_LENGTH)));
       }
 
       if (!is_key_restricted(k_ref)) {

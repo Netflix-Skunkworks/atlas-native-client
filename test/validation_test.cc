@@ -123,7 +123,7 @@ TEST(ValidationA, EmptyKeyOrValue) {
 
   Tags empty_value{{"name", "n"}, {"k1", ""}, {"k2", ""}, {"k3", "v"}};
   res = AnalyzeTags(empty_value);
-  EXPECT_EQ(res.size(), 1);
+  EXPECT_EQ(res.size(), 2);
 }
 
 TEST(ValidationA, InvalidKey) {

@@ -145,9 +145,15 @@ ValidationIssues AnalyzeTags(const Tags& tags) noexcept {
                       v_ref.get(), k_ref.get(), validated_val.get())));
     }
 
-    if (empty_or_null(k_ref) || empty_or_null(v_ref)) {
-      result.emplace(
-          ValidationIssue::Err("Tag keys or values cannot be empty"));
+    if (empty_or_null(k_ref) && empty_or_null(v_ref)) {
+      result.emplace(ValidationIssue::Err(
+          "Tags cannot be empty. Found empty key and value."));
+    } else if (empty_or_null(k_ref)) {
+      result.emplace(ValidationIssue::Err(
+          fmt::format("Empty key found with value '{}'", v_ref.get())));
+    } else if (empty_or_null(v_ref)) {
+      result.emplace(ValidationIssue::Err(
+          fmt::format("Tag value for key '{}' cannot be empty", k_ref.get())));
     }
 
     if (k_ref == kNameRef) {

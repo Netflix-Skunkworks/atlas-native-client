@@ -5,6 +5,7 @@
 #include "../meter/subscription_manager.h"
 #include "../util/json.h"
 #include "../util/logger.h"
+#include "../util/config.h"
 
 using atlas::util::Logger;
 
@@ -14,7 +15,7 @@ SubscriptionResults generate_sub_results(
     const interpreter::Evaluator& evaluator, const Subscriptions& subs,
     const interpreter::TagsValuePairs& pairs);
 
-Subscriptions* ParseSubscriptions(const std::string& subs_str);
+ParsedSubscriptions ParseSubscriptions(const std::string& subs_str);
 rapidjson::Document MeasurementsToJson(
     int64_t now_millis,
     const interpreter::TagsValuePairs::const_iterator& first,
@@ -28,19 +29,21 @@ rapidjson::Document SubResultsToJson(
 }  // namespace atlas
 
 using namespace atlas::meter;
+using atlas::util::kMainFrequencyMillis;
+using atlas::util::kMainMultiple;
 TEST(SubscriptionsManager, ParseSubs) {
   std::ifstream one_sub("./resources/subs1.json");
   std::stringstream buffer;
   buffer << one_sub.rdbuf();
 
-  auto subs = std::unique_ptr<Subscriptions>(ParseSubscriptions(buffer.str()));
+  auto subs = ParseSubscriptions(buffer.str());
   auto expected = Subscriptions{
-      Subscription{"So3yA1c1xN_vzZASUQdORBqd9hM", 60000,
+      Subscription{"So3yA1c1xN_vzZASUQdORBqd9hM", kMainFrequencyMillis,
                    "nf.cluster,skan-test,:eq,name,foometric,:eq,:and,:sum"},
-      Subscription{"tphgPWqODm0ZUhgUCwj23lpEs1o", 60000,
+      Subscription{"tphgPWqODm0ZUhgUCwj23lpEs1o", kMainFrequencyMillis,
                    "nf.cluster,skan,:re,name,foometric,:eq,:and,:sum"}};
-  EXPECT_EQ(subs->size(), 2);
-  EXPECT_EQ(*subs, expected);
+  EXPECT_EQ(subs[kMainMultiple - 1].size(), 2);
+  EXPECT_EQ(subs[kMainMultiple - 1], expected);
 }
 
 TEST(SubscriptionsManager, ParseLotsOfSubs) {
@@ -50,9 +53,9 @@ TEST(SubscriptionsManager, ParseLotsOfSubs) {
 
   Logger()->set_level(spdlog::level::info);
   // this is very spammy since it'll output all the subscriptions
-  auto subs = std::unique_ptr<Subscriptions>(ParseSubscriptions(buffer.str()));
+  auto subs = ParseSubscriptions(buffer.str());
   Logger()->set_level(spdlog::level::debug);
-  EXPECT_EQ(subs->size(), 3665);
+  EXPECT_EQ(subs[kMainMultiple - 1].size(), 3665);
 }
 
 static std::string json_to_str(const rapidjson::Document& json) {

@@ -16,7 +16,6 @@ void init_tags(Tags* tags) {
 
 int main(int argc, char* argv[]) {
   atlas::util::UseConsoleLogger(1);
-  const auto& logger = atlas::util::Logger();
   atlas::Client atlas_client;
   atlas_client.Start();
   auto registry = atlas_client.GetRegistry();
@@ -24,12 +23,11 @@ int main(int argc, char* argv[]) {
   Tags test_tags;
   init_tags(&test_tags);
   std::string prefix{"atlas.client.test."};
-  for (int minute = 0; minute < 5; ++minute) {
-    logger->info("Starting to generate metrics");
-    for (int i = 0; i < 5; ++i) {
-      registry->counter(prefix + std::to_string(i), test_tags)->Increment();
-    }
-    logger->info("Sleeping for 1s");
+  auto logger = atlas::util::Logger();
+  for (int second = 0; second < 60; ++second) {
+    auto name = prefix + std::to_string(1);
+    logger->info("Incrementing {}", name);
+    registry->counter(name, kEmptyTags)->Increment();
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
   logger->info("Shutting down");

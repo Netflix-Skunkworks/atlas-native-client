@@ -34,6 +34,12 @@ class Client::impl {
       : started{false},
         config_manager{util::kLocalFileName, util::kConfigRefreshMillis},
         subscription_manager{config_manager} {}
+
+  ~impl() {
+    if (started) {
+      Stop();
+    }
+  }
   void Start() noexcept {
     if (started) {
       return;
@@ -58,7 +64,7 @@ class Client::impl {
   }
 
   void Stop() noexcept {
-    const auto& logger = Logger();
+    auto logger = Logger();
     if (started) {
       logger->info("Stopping atlas-client");
       subscription_manager.Stop(&clock);
@@ -66,7 +72,7 @@ class Client::impl {
       started = false;
       http::global_shutdown();
     } else {
-      logger->debug("Ignoring stop request since we were never started");
+      logger->info("Ignoring stop request since we were never started");
     }
   }
 

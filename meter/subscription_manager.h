@@ -5,12 +5,15 @@
 #include "../util/http.h"
 #include "../interpreter/evaluator.h"
 #include "publisher.h"
+#include "aggregate_registry.h"
 #include <condition_variable>
 #include <mutex>
 #include <set>
 
 namespace atlas {
 namespace meter {
+
+using ParsedSubscriptions = std::array<Subscriptions, util::kMainMultiple>;
 
 class SubscriptionManager {
  public:
@@ -34,25 +37,28 @@ class SubscriptionManager {
  private:
   interpreter::Evaluator evaluator_;
   const util::ConfigManager& config_manager_;
-  std::shared_ptr<Registry> registry_;  // main registry
+  std::shared_ptr<Registry> registry_;  // 5s registry
+  AggregateRegistry main_registry_;
   Publisher publisher_;
 
   std::string current_etag;
-  // unfortunately no atomic unique ptrs available yet,
-  // so we use a raw pointer to the current subscriptions
-  std::atomic<Subscriptions*> subscriptions_{nullptr};
+
+  mutable std::mutex subscriptions_mutex;
+  ParsedSubscriptions subscriptions_;
+  std::array<std::unique_ptr<AggregateRegistry>, util::kMainMultiple>
+      sub_registries_;
+
   std::atomic<bool> should_run_{false};
-  std::thread main_sender_thread;
+  std::thread sender_thread;
   std::thread sub_refresher_thread;
-  std::vector<std::thread> sub_senders;
   std::mutex mutex;
   std::condition_variable cv;
 
-  Subscriptions subs_for_frequency(int64_t frequency) const noexcept;
+  Subscriptions subs_for_frequency(size_t sub_idx) const noexcept;
   SubscriptionResults get_lwc_metrics(const Tags* common_tags,
-                                      int64_t frequency) const noexcept;
+                                      size_t sub_idx) const noexcept;
   void sub_refresher() noexcept;
-  void main_sender(std::chrono::seconds initial_delay) noexcept;
+  void main_sender() noexcept;
   void send_subscriptions(int64_t millis) noexcept;
   void update_metrics() noexcept;
 

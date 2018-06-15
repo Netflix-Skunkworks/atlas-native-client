@@ -39,7 +39,6 @@ constexpr const char* const kUserAgent = "atlas-native/1.0";
 class CurlHandle {
  public:
   CurlHandle() noexcept : handle_{curl_easy_init()} {
-    curl_easy_setopt(handle_, CURLOPT_ACCEPT_ENCODING, "gzip");
     curl_easy_setopt(handle_, CURLOPT_USERAGENT, kUserAgent);
   }
 
@@ -155,6 +154,8 @@ int http::conditional_get(const std::string& url, std::string* etag,
                    {"client", "atlas-native-client"}};
 
   CurlHandle curl;
+  curl.set_opt(CURLOPT_ACCEPT_ENCODING, "gzip");
+
   // url to get
   curl.set_url(url);
   // send all data to this function
@@ -194,14 +195,15 @@ int http::conditional_get(const std::string& url, std::string* etag,
       }
     }
   }
+  auto duration = registry_->clock().MonotonicTime() - start;
   if (!error) {
-    logger->debug("Was able to fetch {} - status code: {}", url, http_code);
+    logger->debug("Was able to fetch {} - status code: {} in {}ms", url,
+                  http_code, duration / 1e6);
     if (http_code == 0) {
       http_code = 200;
     }  // for file:///
     add_status_tags(&tags, curl_res, http_code);
   }
-  auto duration = registry_->clock().MonotonicTime() - start;
   registry_->timer("http.req.complete", tags)->Record(duration);
   return http_code;
 }

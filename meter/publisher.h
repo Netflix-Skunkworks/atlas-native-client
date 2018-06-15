@@ -17,7 +17,7 @@ class Publisher {
   void PushMeasurements(const util::Config& config, int64_t now_millis,
                         const interpreter::TagsValuePairs& measurements) const
       noexcept;
-  void SendSubscriptions(const util::Config& config,
+  void SendSubscriptions(const util::Config& config, int64_t freq_millis,
                          const SubscriptionResults& sub_results) const noexcept;
 
  private:

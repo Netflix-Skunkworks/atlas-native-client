@@ -37,10 +37,10 @@ AbstractKeyQuery::AbstractKeyQuery(std::string key) noexcept
 const OptionalString AbstractKeyQuery::getvalue(const meter::Tags& tags) const
     noexcept {
   auto k = tags.at(KeyRef());
-  if (*k.get() == '\0') {
-    return kNone;
+  if (k.valid()) {
+    return OptionalString{k.get()};
   }
-  return OptionalString{k.get()};
+  return kNone;
 }
 
 const std::string& AbstractKeyQuery::Key() const noexcept { return key_; }

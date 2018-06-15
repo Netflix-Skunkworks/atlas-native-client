@@ -63,10 +63,6 @@ TEST(Interpreter, SplitWithTrim) {
   result.clear();
 }
 
-static Tags common_tags{{"nf.node", "i-1234"},
-                        {"nf.cluster", "foo-main"},
-                        {"nf.asg", "foo-main-v001"}};
-
 static Context exec(const std::string& expr) {
   Interpreter interpreter{std::make_unique<ClientVocabulary>()};
   Context context;
@@ -164,6 +160,16 @@ TEST(Interpreter, GroupBy) {
   }
 }
 
+TEST(Interpreter, ZeroCountInGroupBy) {
+  auto context = exec("nf.app,foo,:eq,:count,(,k2,),:by");
+  auto expr = context.PopExpression();
+  auto all = std::static_pointer_cast<MultipleResults>(expr);
+
+  auto measurements = get_measurements();
+  auto res = all->Apply(measurements);
+  EXPECT_EQ(res.size(), 0);
+}
+
 TEST(Interpreter, GroupByFiltering) {
   auto context = exec("name,name1,:eq,:count,(,k2,),:by");
   ASSERT_EQ(1, context.StackSize());
@@ -216,11 +222,12 @@ TEST(Interpreter, DropTags) {
   EXPECT_EQ(res.size(), 2);
 
   Tags t1{{"name", "name1"}, {"k1", "v1"}};
+  Tags t1_copy{t1};
   Tags t2{{"name", "name1"}, {"k1", "v2"}};
   auto exp1 = TagsValuePair::of(std::move(t1), 1.0);
   auto exp2 = TagsValuePair::of(std::move(t2), 0.0);
   EXPECT_EQ(res.size(), 2);
-  if (res.front()->all_tags() == t1) {
+  if (res.front()->all_tags() == t1_copy) {
     TagsValuePairs expected{std::move(exp1), std::move(exp2)};
     EXPECT_EQ(expected, res);
   } else {

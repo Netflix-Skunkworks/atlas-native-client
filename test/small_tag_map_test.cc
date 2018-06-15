@@ -3,6 +3,10 @@
 
 using atlas::util::SmallTagMap;
 
+static void add(SmallTagMap* map, const char* k, const char* v) {
+  map->add(atlas::util::intern_str(k), atlas::util::intern_str(v));
+}
+
 TEST(SmallTagMap, Init) {
   SmallTagMap map;
   EXPECT_EQ(map.size(), 0);
@@ -10,14 +14,14 @@ TEST(SmallTagMap, Init) {
 
 TEST(SmallTagMap, Add) {
   SmallTagMap map;
-  map.add("test", "value");
-  map.add("test", "value1");
-  map.add("test", "value2");
+  add(&map, "test", "value");
+  add(&map, "test", "value1");
+  add(&map, "test", "value2");
   EXPECT_EQ(map.size(), 1);
   char buf[32];
   for (auto i = 0; i < 20; ++i) {
     snprintf(buf, sizeof buf, "test%d", i);
-    map.add(buf, buf);
+    add(&map, buf, buf);
     EXPECT_EQ(map.size(), i + 2);
   }
 }
@@ -26,21 +30,20 @@ TEST(SmallTagMap, Get) {
   using atlas::util::intern_str;
 
   SmallTagMap map;
-  auto empty = intern_str("");
   auto test_ref = intern_str("test");
-  EXPECT_EQ(map.at(test_ref).get(), empty.get()) << "at on empty map";
+  EXPECT_TRUE(map.at(test_ref).is_null()) << "at on empty map";
 
-  map.add("test", "value");
+  add(&map, "test", "value");
   EXPECT_EQ(map.at(test_ref).get(), intern_str("value").get()) << "simple get";
 
-  map.add("test", "value1");
-  map.add("test", "value2");
+  add(&map, "test", "value1");
+  add(&map, "test", "value2");
   EXPECT_EQ(map.at(test_ref).get(), intern_str("value2").get()) << "simple get";
 
   char buf[32];
   for (auto i = 0; i < 20; ++i) {
     snprintf(buf, sizeof buf, "test%d", i);
-    map.add(buf, buf);
+    add(&map, buf, buf);
     auto buf_ref = intern_str(buf);
     EXPECT_EQ(map.at(buf_ref).get(), buf_ref.get());
   }
@@ -67,18 +70,18 @@ TEST(SmallTagMap, AddAllOverrides) {
 
 TEST(SmallTagMap, CopyConstructor) {
   SmallTagMap common_tags;
-  common_tags.add("nf.app", "foo");
-  common_tags.add("nf.cluster", "foo-main");
-  common_tags.add("nf.x", "foo");
-  common_tags.add("nf.y", "foo");
-  common_tags.add("nf.z", "foo");
-  common_tags.add("nf.a", "foo");
-  common_tags.add("nf.b", "foo");
-  common_tags.add("nf.c", "foo");
-  common_tags.add("nf.d", "foo");
-  common_tags.add("nf.e", "foo");
-  common_tags.add("nf.f", "foo");
-  common_tags.add("nf.g", "foo");
+  add(&common_tags, "nf.app", "foo");
+  add(&common_tags, "nf.cluster", "foo-main");
+  add(&common_tags, "nf.x", "foo");
+  add(&common_tags, "nf.y", "foo");
+  add(&common_tags, "nf.z", "foo");
+  add(&common_tags, "nf.a", "foo");
+  add(&common_tags, "nf.b", "foo");
+  add(&common_tags, "nf.c", "foo");
+  add(&common_tags, "nf.d", "foo");
+  add(&common_tags, "nf.e", "foo");
+  add(&common_tags, "nf.f", "foo");
+  add(&common_tags, "nf.g", "foo");
   SmallTagMap copy{common_tags};
   EXPECT_EQ(copy, common_tags);
 }

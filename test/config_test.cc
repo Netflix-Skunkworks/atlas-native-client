@@ -81,8 +81,7 @@ TEST(EndpointConfig, ParseAndCompose) {
   const char* cfgStr = R"json(
       {"evaluateUrl": "http://foo.$EndpointConfigTest.bar/eval",
        "subscriptionsUrl": "http://foo.$EndpointConfigTest.bar/subs",
-       "publishUrl": "http://foo.$EndpointConfigTest.bar/pub",
-       "checkClusterUrl": "http://foo.$EndpointConfigTest.bar/check"
+       "publishUrl": "http://foo.$EndpointConfigTest.bar/pub"
       })json";
   rapidjson::Document document;
   document.Parse(cfgStr);
@@ -103,7 +102,6 @@ TEST(EndpointConfig, ParseAndCompose) {
 TEST(Features, Parse) {
   const char* cfgStr = R"json(
       {"validateMetrics": false,
-       "notifyAlertServer": false,
        "publishConfig": ["class,:has,:all", ":true,(,nf.node,),:drop-tags"],
        "forceStart": true,
        "publishEnabled": true,

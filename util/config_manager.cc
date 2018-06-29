@@ -101,9 +101,5 @@ void ConfigManager::AddCommonTag(const char* key, const char* value) noexcept {
   extra_tags_.add(key, value);
 }
 
-void ConfigManager::SetNotifyAlertServer(bool notify) noexcept {
-  default_notify_ = notify;
-}
-
 }  // namespace util
 }  // namespace atlas

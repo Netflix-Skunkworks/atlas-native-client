@@ -30,8 +30,6 @@ class ConfigManager {
 
   void AddCommonTag(const char* key, const char* value) noexcept;
 
-  void SetNotifyAlertServer(bool notify) noexcept;
-
  private:
   mutable std::mutex config_mutex;
   std::mutex cv_mutex;
@@ -41,7 +39,6 @@ class ConfigManager {
   std::shared_ptr<Config> current_config_;
   std::atomic<bool> should_run_{false};
   meter::Tags extra_tags_;
-  bool default_notify_ = true;
 
   void refresher() noexcept;
   void refresh_configs() noexcept;

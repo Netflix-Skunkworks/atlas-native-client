@@ -72,7 +72,7 @@ static double count_af(const Query& filter,
       ++count;
     }
   }
-  return count;
+  return count > 0 ? count : kNAN;
 }
 
 static const double MAX_VALUE = std::numeric_limits<double>::max();

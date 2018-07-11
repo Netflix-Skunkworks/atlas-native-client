@@ -21,80 +21,106 @@
 namespace atlas {
 namespace meter {
 
-using atlas::util::kMainFrequencyMillis;
-
-SubscriptionManager::SubscriptionManager(
-    const util::ConfigManager& config_manager) noexcept
-    : config_manager_(config_manager),
-      registry_(std::make_shared<AtlasRegistry>(kMainFrequencyMillis)),
-      publisher_(registry_) {}
-
 using interpreter::Evaluator;
 using interpreter::TagsValuePairs;
+using util::kFastestFrequencyMillis;
 using util::kMainFrequencyMillis;
+using util::kMainMultiple;
 using util::Logger;
 
 using std::chrono::duration_cast;
 using std::chrono::milliseconds;
 using std::chrono::system_clock;
 
+SubscriptionManager::SubscriptionManager(
+    const util::ConfigManager& config_manager) noexcept
+    : config_manager_(config_manager),
+      registry_(std::make_shared<AtlasRegistry>(kFastestFrequencyMillis)),
+      main_registry_(kFastestFrequencyMillis, kMainFrequencyMillis),
+      publisher_(registry_) {
+  for (auto i = 0; i < kMainMultiple; ++i) {
+    sub_registries_[i] = std::make_unique<ConsolidationRegistry>(
+        kFastestFrequencyMillis, kFastestFrequencyMillis * (i + 1));
+  }
+}
+
 static constexpr int64_t kMinWaitMillis = 1;
 
-void SubscriptionManager::main_sender(
-    std::chrono::seconds initial_delay) noexcept {
-  Logger()->info("Waiting for {} seconds to send the first batch to main.",
-                 initial_delay.count());
-
-  {
-    std::unique_lock<std::mutex> lock{mutex};
-    cv.wait_for(lock, initial_delay);
-  }
+void SubscriptionManager::main_sender() noexcept {
+  int64_t run = 0;
+  Logger()->info("Starting main sender thread");
   while (should_run_) {
+    auto logger = Logger();
+    ++run;
     auto start = system_clock::now();
+    update_metrics();
     const auto& config = config_manager_.GetConfig();
+
+    auto measurements = registry_->measurements();
     if (config->IsMainEnabled()) {
-      Logger()->debug("send_to_main()");
+      logger->debug("updating main registry from {} measurements",
+                    measurements.size());
+      main_registry_.update_from(measurements);
+    }
+    auto idx = run % kMainMultiple;
+    if (idx == (kMainMultiple - 1) && config->IsMainEnabled()) {
+      logger->debug("Sending metrics to publish using the main registry");
       try {
-        update_metrics();
         send_to_main();
       } catch (const std::exception& e) {
-        Logger()->error("Error sending to main publish cluster: {}", e.what());
+        logger->error("Error sending to main publish cluster: {}", e.what());
       }
-    } else {
-      Logger()->info(
+    } else if (idx == kMainMultiple - 1) {
+      logger->info(
           "Not sending anything to the main publish cluster (disabled)");
     }
 
     if (config->AreSubsEnabled()) {
-      Logger()->debug("sending subscriptions");
-      try {
-        send_subscriptions(kMainFrequencyMillis);
-      } catch (const std::exception& e) {
-        Logger()->error("Error sending sending subscriptions {}", e.what());
+      // update all freq intervals that have subscriptions
+      for (auto i = 0; i < kMainMultiple; ++i) {
+        if (!subscriptions_[i].empty()) {
+          logger->debug("updating values for subs with freq={}",
+                        (i + 1) * kFastestFrequencyMillis);
+          sub_registries_[i]->update_from(measurements);
+        }
+      }
+
+      // send sub results if needed
+      if (!subscriptions_[idx].empty()) {
+        auto sub_millis = (idx + 1) * kFastestFrequencyMillis;
+        logger->debug("sending subscriptions results for {}ms", sub_millis);
+        try {
+          send_subscriptions(sub_millis);
+        } catch (const std::exception& e) {
+          logger->error("Error sending sending subscriptions {}", e.what());
+        }
       }
     } else {
-      Logger()->debug("subscriptions are disabled.");
+      logger->debug("subscriptions are disabled.");
     }
     auto elapsed_millis =
         duration_cast<milliseconds>(system_clock::now() - start).count();
     auto wait_millis =
-        std::max(kMinWaitMillis, kMainFrequencyMillis - elapsed_millis);
-    Logger()->debug("Waiting {} millis until next main publish sender run",
-                    wait_millis);
+        std::max(kMinWaitMillis, kFastestFrequencyMillis - elapsed_millis);
+    logger->debug(
+        "Waiting {} millis until next main sender/updater run ({}/{})",
+        wait_millis, idx, kMainMultiple - 1);
     std::unique_lock<std::mutex> lock{mutex};
     cv.wait_for(lock, milliseconds(wait_millis));
   }
 }
 
 void SubscriptionManager::sub_refresher() noexcept {
+  Logger()->debug("Starting sub_refresher thread");
   while (should_run_) {
+    auto logger = Logger();
     try {
       auto start = system_clock::now();
       const auto& config = config_manager_.GetConfig();
       const auto& endpoints = config->EndpointConfiguration();
       auto subs_endpoint = endpoints.subscriptions;
       if (config->AreSubsEnabled()) {
-        Logger()->info("Refreshing subscriptions from {}", subs_endpoint);
+        logger->info("Refreshing subscriptions from {}", subs_endpoint);
         refresh_subscriptions(subs_endpoint);
       }
       auto end = system_clock::now();
@@ -102,40 +128,57 @@ void SubscriptionManager::sub_refresher() noexcept {
       auto refresh_millis = config->SubRefreshMillis();
       auto wait_millis =
           std::max(kMinWaitMillis, refresh_millis - elapsed_millis);
-      Logger()->debug("Waiting {}ms for next refresh subscription cycle",
-                      wait_millis);
+      logger->debug("Waiting {}ms for next refresh subscription cycle",
+                    wait_millis);
       std::unique_lock<std::mutex> lock{mutex};
       cv.wait_for(lock, milliseconds(wait_millis));
     } catch (std::exception& e) {
-      Logger()->info("Ignoring exception while refreshing configs: {}",
-                     e.what());
+      logger->info("Ignoring exception while refreshing configs: {}", e.what());
     }
   }
 }
 
-Subscriptions* ParseSubscriptions(const std::string& subs_str) {
+ParsedSubscriptions ParseSubscriptions(const std::string& subs_str) {
   using rapidjson::Document;
   using rapidjson::kParseCommentsFlag;
   using rapidjson::kParseNanAndInfFlag;
 
   Document document;
   document.Parse<kParseCommentsFlag | kParseNanAndInfFlag>(subs_str.c_str());
-  auto subs = new Subscriptions;
+  ParsedSubscriptions subs;
+  auto logger = Logger();
   if (document.IsObject()) {
     auto expressions = document["expressions"].GetArray();
     for (auto& e : expressions) {
       if (e.IsObject()) {
         auto expr = e.GetObject();
-        subs->emplace_back(Subscription{expr["id"].GetString(),
-                                        expr["frequency"].GetInt64(),
-                                        expr["expression"].GetString()});
+        auto freq = expr["frequency"].GetInt64();
+        auto multiple = freq / kFastestFrequencyMillis;
+        if (multiple >= 1 && multiple <= kMainMultiple) {
+          subs[multiple - 1].emplace_back(Subscription{
+              expr["id"].GetString(), freq, expr["expression"].GetString()});
+        } else {
+          logger->warn("Ignoring id={} expr={} freq={}", expr["id"].GetString(),
+                       expr["expression"].GetString(), freq);
+        }
       }
     }
   }
-  Logger()->debug("Got subscriptions: {}", *subs);
+  if (logger->should_log(spdlog::level::debug)) {
+    for (auto i = 0u; i < kMainMultiple; ++i) {
+      const auto& s = subs[i];
+      if (!s.empty()) {
+        logger->debug("Number of subs for {}ms: {}",
+                      (i + 1) * kFastestFrequencyMillis, s.size());
+        logger->trace("Subs for {}ms: {}", (i + 1) * kFastestFrequencyMillis,
+                      s);
+      }
+    }
+  }
 
   return subs;
 }
+
 void SubscriptionManager::refresh_subscriptions(
     const std::string& subs_endpoint) {
   auto timer_refresh_subs = registry_->timer("atlas.client.refreshSubs");
@@ -152,8 +195,8 @@ void SubscriptionManager::refresh_subscriptions(
   if (http_res == 200) {
     try {
       auto subscriptions = ParseSubscriptions(subs_str);
-      auto old_subs = subscriptions_.exchange(subscriptions);
-      delete old_subs;
+      std::lock_guard<std::mutex> guard{subscriptions_mutex};
+      subscriptions_ = std::move(subscriptions);
     } catch (...) {
       auto refresh_parsing_errors = registry_->counter(registry_->CreateId(
           "atlas.client.refreshSubsErrors", Tags{{"error", "json"}}));
@@ -179,51 +222,30 @@ void SubscriptionManager::Stop(SystemClockWithOffset* clock) noexcept {
       send_to_main();
     }
     Logger()->debug("Stopping main sender");
-    main_sender_thread.join();
+    sender_thread.join();
     Logger()->debug("Stopping sub_refresher");
     sub_refresher_thread.join();
   }
 }
 
 SubscriptionManager::~SubscriptionManager() {
-  delete subscriptions_.load();
   if (should_run_) {
     Stop();
   }
 }
 
-static constexpr int kMaxSecsToStart = 20;
-static constexpr int kMainFrequencySecs = kMainFrequencyMillis / 1000;
-static std::chrono::seconds GetInitialDelay() {
-  using std::chrono::seconds;
-  std::random_device rd;
-  int rand_seconds = rd();
-  auto targetSecs = std::abs(rand_seconds % kMaxSecsToStart);
-  auto now = system_clock::to_time_t(system_clock::now());
-  auto offset = now % kMainFrequencySecs;
-  auto delay = targetSecs - offset;
-  return seconds(delay >= 0 ? delay : delay + kMainFrequencySecs);
-}
-
 void SubscriptionManager::Start() noexcept {
+  Logger()->debug("Starting subscription manager");
   should_run_ = true;
   sub_refresher_thread = std::thread(&SubscriptionManager::sub_refresher, this);
-  auto initialDelay = GetInitialDelay();
-  main_sender_thread =
-      std::thread(&SubscriptionManager::main_sender, this, initialDelay);
+  sender_thread = std::thread(&SubscriptionManager::main_sender, this);
 }
 
-Subscriptions SubscriptionManager::subs_for_frequency(int64_t frequency) const
+Subscriptions SubscriptionManager::subs_for_frequency(size_t sub_idx) const
     noexcept {
-  //  std::lock_guard<std::mutex> guard(subscriptions_mutex);
-  Subscriptions res;
-  std::copy_if(
-      std::begin(*subscriptions_), std::end(*subscriptions_),
-      std::back_inserter(res), [frequency](const Subscription& subscription) {
-        return subscription.frequency == frequency && !subscription.id.empty();
-      });
-
-  return res;
+  std::lock_guard<std::mutex> guard{subscriptions_mutex};
+  assert(sub_idx < kMainMultiple);
+  return subscriptions_[sub_idx];
 }
 
 void SubscriptionManager::send_subscriptions(int64_t millis) noexcept {
@@ -236,12 +258,13 @@ void SubscriptionManager::send_subscriptions(int64_t millis) noexcept {
   auto cfg = config_manager_.GetConfig();
   auto common_tags = cfg->CommonTags();
 
-  const auto& sub_results = get_lwc_metrics(&common_tags, millis);
+  auto sub_idx = static_cast<size_t>((millis / kFastestFrequencyMillis) - 1);
+  const auto& sub_results = get_lwc_metrics(&common_tags, sub_idx);
   if (sub_results.empty()) {
     Logger()->debug("No subscription results found");
   } else {
     Logger()->debug("Sending {} subscription results", sub_results.size());
-    publisher_.SendSubscriptions(*cfg, sub_results);
+    publisher_.SendSubscriptions(*cfg, millis, sub_results);
     timer->Record(clock.MonotonicTime() - start);
   }
 }
@@ -259,15 +282,15 @@ static void log_rules(const std::vector<std::string>& rules,
   auto logger = Logger();
   if (logger->should_log(spdlog::level::debug)) {
     std::ostringstream os;
-    os << "Applying [\n";
+    os << "Applying [";
     bool first = true;
     for (const auto& rule : rules) {
       if (!first) {
-        os << "\n";
+        os << ", ";
       } else {
         first = false;
       }
-      os << "    " << rule;
+      os << rule;
     }
     os << "] to " << num_measurements << " measurements";
     logger->debug(os.str());
@@ -278,9 +301,11 @@ static void log_measures_for_rule(const std::string& rule,
                                   const interpreter::TagsValuePairs& pairs) {
   auto logger = Logger();
   if (logger->should_log(spdlog::level::debug)) {
-    logger->debug("Rule: {}", rule);
-    for (const auto& pair : pairs) {
-      logger->debug("\t{}", *pair);
+    logger->debug("Rule: [{} - {} measurements]", rule, pairs.size());
+    if (logger->should_log(spdlog::level::trace)) {
+      for (const auto& pair : pairs) {
+        logger->trace("\t{}", *pair);
+      }
     }
   }
 }
@@ -290,7 +315,13 @@ SubscriptionResults generate_sub_results(const Evaluator& evaluator,
                                          const TagsValuePairs& pairs) {
   using interpreter::TagsValuePair;
   SubscriptionResults result;
+  Logger()->info("Generating sub results for {} subscriptions", subs.size());
+  auto i = 0;
   for (auto& s : subs) {
+    i++;
+    if (i % 1000 == 0) {
+      Logger()->debug("Processed {} subs", i);
+    }
     auto expr_result = evaluator.eval(s.expression, pairs);
     for (const auto& pair : expr_result) {
       auto value = pair->value();
@@ -299,20 +330,27 @@ SubscriptionResults generate_sub_results(const Evaluator& evaluator,
       }
     }
   }
+  Logger()->info(
+      "Done generating sub results for {} subscriptions. Number of results = "
+      "{}",
+      subs.size(), result.size());
   return result;
 }
 
 SubscriptionResults SubscriptionManager::get_lwc_metrics(
-    const Tags* common_tags, int64_t frequency) const noexcept {
+    const Tags* common_tags, size_t sub_idx) const noexcept {
   using interpreter::TagsValuePair;
 
   SubscriptionResults result;
-  // get all the subscriptions for a given interval (ignoring main)
-  auto subs = subs_for_frequency(frequency);
+  // get all the subscriptions for a given interval
+  auto subs = subs_for_frequency(sub_idx);
+
+  Logger()->debug("Subs[{}] idx: {}", sub_idx, subs.size());
 
   // get all the measurements that will be used
-  // TODO(dmuino): deal with multiple frequencies
-  auto measurements = registry_->measurements();
+  auto measurements = sub_registries_[sub_idx]->measurements();
+  Logger()->debug("Measurements for subs[{}] idx: {}", sub_idx,
+                  measurements.size());
 
   // gather all metrics generated by our subscriptions
   TagsValuePairs tagsValuePairs;
@@ -330,12 +368,12 @@ SubscriptionResults SubscriptionManager::get_lwc_metrics(
 // the whole send process (get measurements, get tagsvaluepairs, eval, send)
 TagsValuePairs get_main_measurements(const util::Config& cfg,
                                      const Tags* common_tags,
+                                     const Measurements& all_measurements,
                                      Registry* registry,
                                      const Evaluator& evaluator) {
   using interpreter::Query;
   using interpreter::TagsValuePair;
 
-  const auto all_measurements = registry->measurements();
   const auto freq_value = util::secs_for_millis(kMainFrequencyMillis);
   Tags freq_tags{{"id", freq_value.c_str()}};
   registry->gauge("atlas.client.rawMeasurements", freq_tags)
@@ -406,8 +444,9 @@ void SubscriptionManager::send_to_main() {
       std::make_unique<interpreter::ClientVocabulary>()};
   auto config = config_manager_.GetConfig();
   auto common_tags = config->CommonTags();
-  auto metrics =
-      get_main_measurements(*config, &common_tags, registry_.get(), evaluator_);
+  auto metrics = get_main_measurements(*config, &common_tags,
+                                       main_registry_.measurements(),
+                                       registry_.get(), evaluator_);
 
   // all our metrics are normalized, so send them with a timestamp at the start
   // of the step

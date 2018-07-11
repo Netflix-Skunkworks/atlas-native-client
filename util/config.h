@@ -29,8 +29,16 @@ typedef GenericDocument<UTF8<char>, MemoryPoolAllocator<CrtAllocator>,
 namespace atlas {
 namespace util {
 
+// step-size for our highest resolution registry
+static constexpr int kFastestFrequencyMillis{5000};
+
 // step-size for main in milliseconds
 static constexpr int kMainFrequencyMillis{60000};
+
+// how many rounds of update of the fastest frequency are needed before
+// sending metrics to main
+static constexpr auto kMainMultiple =
+    util::kMainFrequencyMillis / util::kFastestFrequencyMillis;
 
 struct HttpConfig {
   // timeout in seconds

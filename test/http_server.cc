@@ -16,7 +16,7 @@ static std::string compress_file(const char* file_name) {
   std::stringstream buffer;
   buffer << to_compress.rdbuf();
   auto raw = buffer.str();
-  size_t buf_len = 1024 * 1024;
+  size_t buf_len = 10 * 1024 * 1024;
   auto buf = std::unique_ptr<char[]>(new char[buf_len]);
   auto gzip_res = gzip_compress(buf.get(), &buf_len, raw.c_str(), raw.length());
   if (gzip_res != Z_OK) {
@@ -192,7 +192,7 @@ void http_server::accept_request(int client) {
   if (read_sleep_ > 0) {
     std::this_thread::sleep_for(std::chrono::milliseconds(read_sleep_));
   }
-  auto response = path_response_[path];
+  const auto& response = path_response_[path];
   auto left_to_write = response.length() + 1;
   auto resp_ptr = response.c_str();
   while (left_to_write > 0) {

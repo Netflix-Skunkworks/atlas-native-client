@@ -1,4 +1,5 @@
 #include "../meter/tag.h"
+#include <cassert>
 #include <memory>
 
 #pragma once
@@ -8,7 +9,6 @@ namespace util {
 
 namespace detail {
 static const size_t constexpr prime_list[] = {3lu, 7lu, 17lu, 29lu, 37lu};
-static const util::StrRef kNotFound = util::intern_str("");
 
 struct prime_number_hash_policy {
   static size_t mod3(size_t hash) { return hash % 3lu; }
@@ -45,13 +45,14 @@ struct prime_number_hash_policy {
   size_t prime_index = 0;
 };
 
-static constexpr size_t kMaxTags = 32u;
+static constexpr size_t kMaxEntries = 32u;
 }  // namespace detail
 
-class SmallTagMap : private detail::prime_number_hash_policy {
-  using value_type = std::pair<util::StrRef, util::StrRef>;
+template <typename K, typename V>
+class SmallMap : private detail::prime_number_hash_policy {
+  using value_type = std::pair<K, V>;
 
-  void init_from(const SmallTagMap& other) {
+  void init_from(const SmallMap& other) {
     prime_index = other.prime_index;
     actual_size_ = other.actual_size_;
     auto N = num_buckets();
@@ -61,53 +62,74 @@ class SmallTagMap : private detail::prime_number_hash_policy {
     }
   }
 
-  void move_from(SmallTagMap&& other) {
+  void move_from(SmallMap&& other) {
     prime_index = other.prime_index;
     entries_ = std::move(other.entries_);
     actual_size_ = other.actual_size_;
   }
 
  public:
-  SmallTagMap() noexcept { init(); }
+  SmallMap() noexcept { init(); }
 
-  SmallTagMap(const SmallTagMap& other) noexcept
-      : prime_number_hash_policy(other) {
+  SmallMap(const SmallMap& other) noexcept : prime_number_hash_policy(other) {
     init_from(other);
   }
 
-  SmallTagMap& operator=(const SmallTagMap& other) noexcept {
+  SmallMap& operator=(const SmallMap& other) noexcept {
     init_from(other);
     return *this;
   }
 
-  SmallTagMap(SmallTagMap&& other) noexcept { move_from(std::move(other)); }
+  SmallMap(SmallMap&& other) noexcept { move_from(std::move(other)); }
 
-  SmallTagMap& operator=(SmallTagMap&& other) noexcept {
+  SmallMap& operator=(SmallMap&& other) noexcept {
     move_from(std::move(other));
     return *this;
   }
 
-  SmallTagMap(std::initializer_list<meter::Tag> vs) {
+  SmallMap(std::initializer_list<meter::Tag> vs) {
     init();
     for (const auto& tag : vs) {
       add(tag.key, tag.value);
     }
   }
 
-  SmallTagMap(std::initializer_list<std::pair<const char*, const char*>> vs) {
+  SmallMap(std::initializer_list<std::pair<const char*, const char*>> vs) {
     init();
     for (const auto& tag : vs) {
-      add(tag.first, tag.second);
+      add(util::intern_str(tag.first), util::intern_str(tag.second));
     }
   }
 
-  void add(const char* k, const char* v) noexcept {
-    add(util::intern_str(k), util::intern_str(v));
+  void add(K k_ref, V v_ref) noexcept {
+    const auto pos = pos_for_key(k_ref);
+    auto i = pos;
+    auto ki = entries_[i].first;
+    while (ki.get() != nullptr && ki.get() != k_ref.get()) {
+      i = index_for_hash(i + 1);  // avoid expensive mod variable operation
+      if (i == pos) {
+        if (actual_size_ >= detail::kMaxEntries) {
+          // too many entries
+          return;
+        }
+        resize(actual_size_ + 1);
+        add(k_ref, v_ref);
+        return;
+      }
+      ki = entries_[i].first;
+    }
+
+    if (ki.get() != nullptr) {
+      entries_[i].second = v_ref;
+    } else {
+      assert(entries_[i].first.is_null());
+      entries_[i].first = k_ref;
+      entries_[i].second = v_ref;
+      ++actual_size_;
+    }
   }
 
-  void add(util::StrRef k_ref, util::StrRef v_ref) noexcept;
-
-  void add_all(const SmallTagMap& other) {
+  void add_all(const SmallMap& other) {
     auto other_buckets = other.num_buckets();
     for (auto i = 0u; i < other_buckets; ++i) {
       const auto& ki = other.entries_[i].first;
@@ -117,17 +139,54 @@ class SmallTagMap : private detail::prime_number_hash_policy {
     }
   }
 
-  util::StrRef at(util::StrRef key) const noexcept;
-
-  bool has(util::StrRef key) const noexcept {
-    return at(key) != detail::kNotFound;
+  V at(K key) const noexcept {
+    auto pos = pos_for_key(key);
+    auto i = pos;
+    auto ki = entries_[i].first;
+    while (ki.get() != nullptr && ki.get() != key.get()) {
+      i = index_for_hash(i + 1);
+      if (i == pos) {
+        return V{};
+      }
+      ki = entries_[i].first;
+    }
+    return ki.get() == nullptr ? V{} : entries_[i].second;
   }
+
+  bool has(K key) const noexcept { return at(key) != V{}; }
 
   size_t size() const noexcept { return actual_size_; }
 
-  size_t hash() const noexcept;
+  size_t hash() const noexcept {
+    auto res = 0u;
+    auto N = num_buckets();
+    for (auto i = 0u; i < N; ++i) {
+      const auto& entry = entries_[i];
+      if (entry.first.valid()) {
+        res +=
+            (std::hash<K>()(entry.first) << 1) ^ std::hash<V>()(entry.second);
+      }
+    }
+    return res;
+  }
 
-  bool operator==(const SmallTagMap& other) const noexcept;
+  bool operator==(const SmallMap& other) const noexcept {
+    if (other.size() != size()) {
+      return false;
+    }
+
+    const auto N = num_buckets();
+    for (auto i = 0u; i < N; ++i) {
+      const auto& entry = entries_[i];
+      if (entry.first.valid()) {
+        bool eq = entry.second == other.at(entry.first);
+        if (!eq) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
 
   template <typename ValueType>
   struct templated_iterator {
@@ -193,8 +252,26 @@ class SmallTagMap : private detail::prime_number_hash_policy {
     entries_.reset(new value_type[buckets]);
   }
 
-  void resize(size_t new_desired_size) noexcept;
+  void resize(size_t new_desired_size) noexcept {
+    auto prev_entries = std::move(entries_);
+    auto prev_buckets = num_buckets();
+
+    auto new_bucket_count = new_desired_size;
+    auto new_idx = next_size_over(&new_bucket_count);
+    entries_.reset(new value_type[new_bucket_count]);
+    commit(new_idx);
+
+    actual_size_ = 0;
+    for (auto i = 0u; i < prev_buckets; ++i) {
+      const auto& entry = prev_entries[i];
+      if (entry.first.valid()) {
+        add(entry.first, entry.second);
+      }
+    }
+  }
 };
+
+using SmallTagMap = SmallMap<util::StrRef, util::StrRef>;
 
 }  // namespace util
 }  // namespace atlas

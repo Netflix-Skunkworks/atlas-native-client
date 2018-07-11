@@ -95,7 +95,7 @@ target_link_libraries(native_client atlasclient pthread)
 
 # test configuration
 enable_testing()
-file(GLOB TEST_SOURCE_FILES test/*.cc)
+file(GLOB TEST_SOURCE_FILES test/*.cc test/*.h)
 
 add_executable(runtests ${TEST_SOURCE_FILES})
 set_target_properties(runtests PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")

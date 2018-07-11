@@ -33,7 +33,7 @@ class SimpleTagsValuePair : public TagsValuePair {
 
   OptionalString get_value(util::StrRef key) const noexcept override {
     auto v = tags_.at(key);
-    if (*v.get() != '\0') {
+    if (v.valid()) {
       return OptionalString{v.get()};
     }
 
@@ -63,12 +63,12 @@ class IdTagsValuePair : public TagsValuePair {
 
     const auto& tags = id_->GetTags();
     auto v = tags.at(key);
-    if (*v.get() != '\0') {
+    if (v.valid()) {
       return OptionalString{v.get()};
     }
 
     auto cv = common_tags_->at(key);
-    if (*cv.get() != '\0') {
+    if (cv.valid()) {
       return OptionalString{cv.get()};
     }
     return kNone;

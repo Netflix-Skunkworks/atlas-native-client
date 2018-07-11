@@ -5,6 +5,7 @@
 #include "../util/intern.h"
 #include "../util/json.h"
 #include "../util/logger.h"
+#include "id_format.h"
 #include "validation.h"
 #include <chrono>
 
@@ -85,17 +86,26 @@ rapidjson::Document MeasurementsToJson(
   int64_t added = 0;
   Document payload{kObjectType};
   auto& alloc = payload.GetAllocator();
+  auto logger = Logger();
 
   Value common_tags_section{kObjectType};
 
   Value json_metrics{kArrayType};
+  auto should_debug = logger->should_log(spdlog::level::debug);
   for (auto it = first; it < last; it++) {
     const auto& measure = *it;
     if (std::isnan(measure->value())) {
+      if (should_debug) {
+        logger->debug("{} is NAN - skipping", measure->all_tags());
+      }
       continue;
     }
     auto tags = measure->all_tags();
     if (validate && !AreTagsValid(tags)) {
+      if (should_debug) {
+        logger->debug("{}={} is not valid - skipping", measure->all_tags(),
+                      measure->value());
+      }
       continue;
     }
     Value json_metric{kObjectType};
@@ -321,7 +331,7 @@ void Publisher::PushMeasurements(const Config& config, int64_t now_millis,
   }
 }
 
-void Publisher::SendSubscriptions(const Config& config,
+void Publisher::SendSubscriptions(const Config& config, int64_t freq_millis,
                                   const SubscriptionResults& sub_results) const
     noexcept {
   const auto& http_cfg = config.HttpConfiguration();
@@ -336,7 +346,7 @@ void Publisher::SendSubscriptions(const Config& config,
     auto to_advance = std::min(batch_size, to_end);
     auto to = from;
     std::advance(to, to_advance);
-    batch_to_lwc(client, config, util::kMainFrequencyMillis, from, to);
+    batch_to_lwc(client, config, freq_millis, from, to);
     from = to;
   }
 }

@@ -218,22 +218,12 @@ TEST(Interpreter, DropTags) {
   auto all = std::static_pointer_cast<MultipleResults>(expr);
 
   auto measurements = get_measurements();
-  auto res = all->Apply(measurements);
-  EXPECT_EQ(res.size(), 2);
-
   Tags t1{{"name", "name1"}, {"k1", "v1"}};
-  Tags t1_copy{t1};
-  Tags t2{{"name", "name1"}, {"k1", "v2"}};
   auto exp1 = TagsValuePair::of(std::move(t1), 1.0);
-  auto exp2 = TagsValuePair::of(std::move(t2), 0.0);
-  EXPECT_EQ(res.size(), 2);
-  if (res.front()->all_tags() == t1_copy) {
-    TagsValuePairs expected{std::move(exp1), std::move(exp2)};
-    EXPECT_EQ(expected, res);
-  } else {
-    TagsValuePairs expected{std::move(exp2), std::move(exp1)};
-    EXPECT_EQ(expected, res);
-  }
+
+  auto res = all->Apply(measurements);
+  TagsValuePairs expected{std::move(exp1)};
+  EXPECT_EQ(expected, res);
 }
 
 TEST(Interpreter, GetQuery) {

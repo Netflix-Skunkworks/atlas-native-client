@@ -1,4 +1,4 @@
-#include "aggregate_registry.h"
+#include "consolidation_registry.h"
 #include "../util/logger.h"
 #include "id_format.h"
 
@@ -46,14 +46,15 @@ static double maxnan(double a, double b) {
   return std::max(a, b);
 }
 
-AggregateRegistry::AggregateRegistry(int64_t update_frequency,
-                                     int64_t reporting_frequency) noexcept
+ConsolidationRegistry::ConsolidationRegistry(
+    int64_t update_frequency, int64_t reporting_frequency) noexcept
     : update_multiple{reporting_frequency / update_frequency} {
   assert(reporting_frequency % update_frequency == 0);
   assert(update_frequency % 1000 == 0);
 }
 
-void AggregateRegistry::update_from(const Measurements& measurements) noexcept {
+void ConsolidationRegistry::update_from(
+    const Measurements& measurements) noexcept {
   std::lock_guard<std::mutex> guard{mutex};
 
   double new_value;
@@ -75,7 +76,7 @@ void AggregateRegistry::update_from(const Measurements& measurements) noexcept {
   }
 }
 
-Measurements AggregateRegistry::measurements() const noexcept {
+Measurements ConsolidationRegistry::measurements() const noexcept {
   std::lock_guard<std::mutex> guard{mutex};
 
   Measurements result;

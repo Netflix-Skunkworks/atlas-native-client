@@ -39,7 +39,7 @@ SubscriptionManager::SubscriptionManager(
       main_registry_(kFastestFrequencyMillis, kMainFrequencyMillis),
       publisher_(registry_) {
   for (auto i = 0; i < kMainMultiple; ++i) {
-    sub_registries_[i] = std::make_unique<AggregateRegistry>(
+    sub_registries_[i] = std::make_unique<ConsolidationRegistry>(
         kFastestFrequencyMillis, kFastestFrequencyMillis * (i + 1));
   }
 }

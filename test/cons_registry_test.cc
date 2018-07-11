@@ -1,9 +1,9 @@
-#include "../meter/aggregate_registry.h"
+#include "../meter/consolidation_registry.h"
 #include "test_utils.h"
 #include "../util/config.h"
 #include <gtest/gtest.h>
 
-using atlas::meter::AggregateRegistry;
+using atlas::meter::ConsolidationRegistry;
 using atlas::meter::Id;
 using atlas::meter::Measurement;
 using atlas::meter::Measurements;
@@ -11,8 +11,8 @@ using atlas::meter::Tags;
 using atlas::util::kFastestFrequencyMillis;
 using atlas::util::kMainFrequencyMillis;
 
-TEST(AggregateRegistry, Empty) {
-  AggregateRegistry registry{kFastestFrequencyMillis, kMainFrequencyMillis};
+TEST(ConsolidationRegistry, Empty) {
+  ConsolidationRegistry registry{kFastestFrequencyMillis, kMainFrequencyMillis};
   auto ms = registry.measurements();
   ASSERT_TRUE(ms.empty());
 
@@ -26,8 +26,8 @@ bool operator==(const atlas::meter::Measurement& a,
          std::abs(a.value - b.value) < 1e-9;
 }
 
-TEST(AggregateRegistry, UpdateOne) {
-  AggregateRegistry registry{kFastestFrequencyMillis, kMainFrequencyMillis};
+TEST(ConsolidationRegistry, UpdateOne) {
+  ConsolidationRegistry registry{kFastestFrequencyMillis, kMainFrequencyMillis};
 
   auto gauge_id = std::make_shared<Id>("gauge", Tags{{"statistic", "gauge"}});
   auto random_id = std::make_shared<Id>("random", Tags{});
@@ -57,8 +57,8 @@ TEST(AggregateRegistry, UpdateOne) {
   EXPECT_TRUE(registry.measurements().empty()) << "Resets after being measured";
 }
 
-TEST(AggregateRegistry, Aggregate) {
-  AggregateRegistry registry{kFastestFrequencyMillis, kMainFrequencyMillis};
+TEST(ConsolidationRegistry, Consolidate) {
+  ConsolidationRegistry registry{kFastestFrequencyMillis, kMainFrequencyMillis};
 
   auto gauge_id = std::make_shared<Id>("gauge", Tags{{"statistic", "gauge"}});
   auto random_id = std::make_shared<Id>("random", Tags{});

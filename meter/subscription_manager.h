@@ -5,7 +5,7 @@
 #include "../util/http.h"
 #include "../interpreter/evaluator.h"
 #include "publisher.h"
-#include "aggregate_registry.h"
+#include "consolidation_registry.h"
 #include <condition_variable>
 #include <mutex>
 #include <set>
@@ -38,14 +38,14 @@ class SubscriptionManager {
   interpreter::Evaluator evaluator_;
   const util::ConfigManager& config_manager_;
   std::shared_ptr<Registry> registry_;  // 5s registry
-  AggregateRegistry main_registry_;
+  ConsolidationRegistry main_registry_;
   Publisher publisher_;
 
   std::string current_etag;
 
   mutable std::mutex subscriptions_mutex;
   ParsedSubscriptions subscriptions_;
-  std::array<std::unique_ptr<AggregateRegistry>, util::kMainMultiple>
+  std::array<std::unique_ptr<ConsolidationRegistry>, util::kMainMultiple>
       sub_registries_;
 
   std::atomic<bool> should_run_{false};

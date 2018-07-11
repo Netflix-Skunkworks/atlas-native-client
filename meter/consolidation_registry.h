@@ -5,10 +5,10 @@ namespace atlas {
 
 namespace meter {
 
-class AggregateRegistry {
+class ConsolidationRegistry {
  public:
-  AggregateRegistry(int64_t update_frequency,
-                    int64_t reporting_frequency) noexcept;
+  ConsolidationRegistry(int64_t update_frequency,
+                        int64_t reporting_frequency) noexcept;
   void update_from(const Measurements& measurements) noexcept;
   Measurements measurements() const noexcept;
 

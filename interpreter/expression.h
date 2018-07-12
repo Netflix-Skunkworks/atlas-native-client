@@ -53,7 +53,7 @@ class Literal : public Expression {
 
 class List : public Expression {
  public:
-  List() {}
+  List() = default;
 
   std::ostream& Dump(std::ostream& os) const override;
 

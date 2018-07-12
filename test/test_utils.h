@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../meter/measurement.h"
+#include "../interpreter/expression.h"
 #include <algorithm>
 #include <iterator>
 #include <fmt/format.h>
@@ -45,4 +46,10 @@ inline bool operator<(const atlas::meter::Id& a, const atlas::meter::Id& b) {
   }
 
   return a.GetTags() < b.GetTags();
+}
+
+inline std::string to_str(const atlas::interpreter::Expression& expression) {
+  std::ostringstream os;
+  expression.Dump(os);
+  return os.str();
 }

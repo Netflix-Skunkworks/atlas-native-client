@@ -108,7 +108,7 @@ class RelopQuery : public AbstractKeyQuery {
 class RegexQuery : public AbstractKeyQuery {
  public:
   RegexQuery(std::string k, const std::string& pattern, bool ignore_case);
-  ~RegexQuery();
+  ~RegexQuery() override;
 
   bool Matches(const meter::Tags& tags) const override;
 
@@ -122,7 +122,8 @@ class RegexQuery : public AbstractKeyQuery {
     if (query.GetQueryType() != GetQueryType()) return false;
 
     const auto& q = static_cast<const RegexQuery&>(query);
-    return Key() == q.Key() && str_pattern == q.str_pattern;
+    return Key() == q.Key() && ignore_case_ == q.ignore_case_ &&
+           str_pattern == q.str_pattern;
   }
 
   QueryType GetQueryType() const noexcept override { return QueryType::Regex; }
@@ -130,6 +131,7 @@ class RegexQuery : public AbstractKeyQuery {
  private:
   pcre* pattern;
   const std::string str_pattern;
+  bool ignore_case_;
 };
 
 class InQuery : public AbstractKeyQuery {

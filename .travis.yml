@@ -12,11 +12,7 @@ addons:
       - lcov
 
 after_success:
-  # Creating report
-  - cd ${TRAVIS_BUILD_DIR}
-  - lcov --directory . --capture --output-file coverage.info # capture coverage info
-  - lcov --remove coverage.info '/usr/*' '*/usr/*' '*/3rd-party/*' --output-file coverage.info # filter out system and 3rd-party stuff
-  - lcov --list coverage.info #debug info
+  - ./create-lcov-report.sh
   # Uploading report to CodeCov
   - bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
 

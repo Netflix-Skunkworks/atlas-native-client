@@ -23,6 +23,7 @@ bool Literal::IsWord() const noexcept { return str_[0] == ':'; }
 const std::string Literal::GetWord() const {
   if (!this->IsWord()) {
     Logger()->error("Internal error: GetWord() called on non-word: ", *this);
+    return str_;
   }
   return str_.substr(1);
 }

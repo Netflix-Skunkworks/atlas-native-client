@@ -1,4 +1,5 @@
 #include "../interpreter/query.h"
+#include "test_utils.h"
 #include <gtest/gtest.h>
 
 using namespace atlas::meter;
@@ -153,6 +154,8 @@ TEST(Queries, RelopGT) {
 
   auto q5 = query::gt("k", "c");
   EXPECT_FALSE(q5->Matches(tags));
+
+  EXPECT_EQ("RelopQuery(k>c)", to_str(*q5));
 }
 
 TEST(Queries, In) {
@@ -161,11 +164,13 @@ TEST(Queries, In) {
   EXPECT_TRUE(in1->Matches(tags));
 
   EXPECT_FALSE(in1->Matches(tags2));
+  EXPECT_EQ("InQuery(k,[foo,bar,baz])", to_str(*in1));
 }
 
 TEST(Queries, True) {
   auto q = query::true_q();
   EXPECT_TRUE(q->Matches(tags));
+  EXPECT_EQ(to_str(*q), "TrueQuery");
 }
 
 TEST(Queries, False) {
@@ -182,6 +187,10 @@ TEST(Queries, Not) {
 
   auto not_eq_q = query::not_q(query::eq("name", "foo"));
   EXPECT_FALSE(not_eq_q->Matches(tags));
+
+  EXPECT_EQ("TrueQuery", to_str(*not_false));
+  EXPECT_EQ("FalseQuery", to_str(*not_true));
+  EXPECT_EQ("NotQuery(RelopQuery(name=foo))", to_str(*not_eq_q));
 }
 
 TEST(Queries, And) {
@@ -196,8 +205,13 @@ TEST(Queries, And) {
   auto and3 = query::and_q(query::reic("name", "FO"), query::eq("k", "bar"));
   EXPECT_TRUE(and3->Matches(tags));
 
-  auto and4 = query::and_q(query::re("name", "FO"), query::eq("k", "sps"));
+  auto and4 = query::and_q(query::re("name", "FO"), query::le("k", "sps"));
   EXPECT_FALSE(and4->Matches(tags));
+
+  EXPECT_EQ(
+      "AndQuery(RelopQuery(k<="
+      "sps), RegexQuery(name ~ FO))",
+      to_str(*and4));
 }
 
 TEST(Queries, Or) {
@@ -212,6 +226,67 @@ TEST(Queries, Or) {
   auto or3 = query::or_q(query::reic("name", "FO"), query::eq("k", "baz"));
   EXPECT_TRUE(or3->Matches(tags));
 
-  auto or4 = query::or_q(query::re("name", "FO"), query::eq("k", "bar"));
+  auto or4 = query::or_q(query::re("name", "FO"), query::ge("k", "bar"));
   EXPECT_TRUE(or4->Matches(tags));
+
+  EXPECT_EQ("OrQuery(RelopQuery(k>=bar), RegexQuery(name ~ FO))", to_str(*or4));
+}
+
+TEST(Queries, Equals) {
+  EXPECT_TRUE(query::eq("foo", "bar")->Equals(*query::eq("foo", "bar")));
+  EXPECT_FALSE(query::eq("foo", "bar")->Equals(*query::eq("foo", "bar1")));
+  EXPECT_TRUE(query::re("foo", "bar")->Equals(*query::re("foo", "bar")));
+  EXPECT_FALSE(query::re("foo", "bar")->Equals(*query::re("foo", "bar1")));
+  EXPECT_FALSE(query::re("foo", "bar")->Equals(*query::reic("foo", "bar")));
+  EXPECT_TRUE(query::reic("foo", "bar")->Equals(*query::reic("foo", "bar")));
+  EXPECT_FALSE(query::reic("foo", "bar")->Equals(*query::reic("foo", "barx")));
+  EXPECT_FALSE(query::reic("foo", "bar")->Equals(*query::re("foo", "bar")));
+  EXPECT_TRUE(query::gt("foo", "bar")->Equals(*query::gt("foo", "bar")));
+  EXPECT_FALSE(query::gt("foo", "bar")->Equals(*query::gt("foox", "bar")));
+  EXPECT_FALSE(query::gt("foo", "bar")->Equals(*query::ge("foo", "bar")));
+  EXPECT_TRUE(query::lt("foo", "bar")->Equals(*query::lt("foo", "bar")));
+  EXPECT_FALSE(query::lt("foo", "bar")->Equals(*query::lt("foox", "bar")));
+  EXPECT_FALSE(query::lt("foo", "bar")->Equals(*query::le("foo", "bar")));
+
+  EXPECT_TRUE(
+      query::and_q(query::eq("a", "b"), query::re("c", "d"))
+          ->Equals(*query::and_q(query::eq("a", "b"), query::re("c", "d"))));
+  EXPECT_TRUE(
+      query::or_q(query::eq("a", "b"), query::re("c", "d"))
+          ->Equals(*query::or_q(query::eq("a", "b"), query::re("c", "d"))));
+  EXPECT_FALSE(
+      query::and_q(query::eq("a", "b"), query::re("c", "d"))
+          ->Equals(*query::and_q(query::eq("a", "b"), query::reic("c", "d"))));
+  EXPECT_FALSE(
+      query::or_q(query::eq("a", "b"), query::re("c", "d"))
+          ->Equals(*query::or_q(query::eq("a", "b"), query::reic("c", "d"))));
+
+  EXPECT_TRUE(query::not_q(query::eq("a", "b"))
+                  ->Equals(*query::not_q(query::eq("a", "b"))));
+  EXPECT_FALSE(query::not_q(query::eq("a", "b"))
+                   ->Equals(*query::not_q(query::lt("a", "b"))));
+
+  auto lst1 = StringRefs{intern_str("a"), intern_str("b")};
+  auto lst2 = StringRefs{intern_str("a"), intern_str("b")};
+  EXPECT_TRUE(query::in("foo", lst1)->Equals(*query::in("foo", lst2)));
+
+  lst2[0] = intern_str("aa");
+  EXPECT_FALSE(query::in("foo", lst1)->Equals(*query::in("foo", lst2)));
+
+  EXPECT_TRUE(HasKeyQuery("foo").Equals(HasKeyQuery("foo")));
+  EXPECT_FALSE(HasKeyQuery("foo").Equals(HasKeyQuery("bar")));
+
+  EXPECT_TRUE(TrueQuery{}.Equals(TrueQuery{}));
+  EXPECT_FALSE(TrueQuery{}.Equals(HasKeyQuery{"foo"}));
+  EXPECT_TRUE(FalseQuery{}.Equals(FalseQuery{}));
+  EXPECT_FALSE(FalseQuery{}.Equals(TrueQuery{}));
+}
+
+TEST(Queries, InvalidRegex) {
+  auto q = RegexQuery("name", "*foo*", false);
+  Tags t{{"k", "v"}};
+  // make sure it doesn't throw
+  EXPECT_FALSE(q.Matches(t));
+
+  EXPECT_EQ("RegexQuery(name ~ *foo*)", to_str(q));
 }

@@ -26,6 +26,7 @@ class TagsValuePair {
 extern const OptionalString kNone;
 util::StrRef name_ref();
 
+// A TagsValuePair created from a full set of tags and a value
 class SimpleTagsValuePair : public TagsValuePair {
  public:
   SimpleTagsValuePair(meter::Tags&& tags, double value)
@@ -51,6 +52,7 @@ class SimpleTagsValuePair : public TagsValuePair {
   double value_;
 };
 
+// A TagsValuePair where tags are provided by an id and common tags
 class IdTagsValuePair : public TagsValuePair {
  public:
   IdTagsValuePair(meter::IdPtr id, const meter::Tags* common_tags, double value)

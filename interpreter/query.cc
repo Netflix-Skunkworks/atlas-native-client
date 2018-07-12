@@ -115,7 +115,8 @@ RegexQuery::RegexQuery(std::string k, const std::string& pattern,
                        bool ignore_case)
     : AbstractKeyQuery(std::move(k)),
       pattern(get_pattern(pattern, ignore_case)),
-      str_pattern(pattern) {}
+      str_pattern(pattern),
+      ignore_case_(ignore_case) {}
 
 static constexpr size_t kOffsetsMax = 30;
 
@@ -170,7 +171,7 @@ bool RegexQuery::Matches(const TagsValuePair& tv) const {
 }
 
 std::ostream& RegexQuery::Dump(std::ostream& os) const {
-  os << "RegexQuery(" << Key() << " ~ " << str_pattern << "])";
+  os << "RegexQuery(" << Key() << " ~ " << str_pattern << ")";
   return os;
 }
 
@@ -225,7 +226,20 @@ bool InQuery::Matches(const TagsValuePair& tv) const {
   return matches_value(value);
 }
 
-std::ostream& InQuery::Dump(std::ostream& os) const { return os; }
+std::ostream& InQuery::Dump(std::ostream& os) const {
+  os << "InQuery(" << Key() << ",[";
+  auto first = true;
+  for (const auto sr : *vs_) {
+    if (first) {
+      first = false;
+    } else {
+      os << ',';
+    }
+    os << sr.get();
+  }
+  os << "])";
+  return os;
+}
 
 std::ostream& TrueQuery::Dump(std::ostream& os) const {
   os << "TrueQuery";

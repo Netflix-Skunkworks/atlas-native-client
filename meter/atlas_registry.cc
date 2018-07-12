@@ -16,8 +16,6 @@
 namespace atlas {
 namespace meter {
 
-SystemClock system_clock;
-
 // we mostly use this class to avoid adding an external dependency to
 // the interpreter from our public headers
 class AtlasRegistry::impl {

@@ -17,8 +17,8 @@ using ParsedSubscriptions = std::array<Subscriptions, util::kMainMultiple>;
 
 class SubscriptionManager {
  public:
-  explicit SubscriptionManager(
-      const util::ConfigManager& config_manager) noexcept;
+  SubscriptionManager(SystemClockWithOffset* clock,
+                      const util::ConfigManager& config_manager) noexcept;
   ~SubscriptionManager();
 
   SubscriptionManager(const SubscriptionManager&) = delete;
@@ -27,7 +27,7 @@ class SubscriptionManager {
 
   void Start() noexcept;
 
-  void Stop(SystemClockWithOffset* clock = nullptr) noexcept;
+  void Stop() noexcept;
 
   void PushMeasurements(int64_t now_millis,
                         const interpreter::TagsValuePairs& measurements) const;
@@ -35,6 +35,7 @@ class SubscriptionManager {
   std::shared_ptr<Registry> GetRegistry() { return registry_; }
 
  private:
+  SystemClockWithOffset* clock_;
   interpreter::Evaluator evaluator_;
   const util::ConfigManager& config_manager_;
   std::shared_ptr<Registry> registry_;  // 5s registry
@@ -66,6 +67,8 @@ class SubscriptionManager {
   // for testing
   void refresh_subscriptions(const std::string& subs_endpoint);
   void send_to_main();
+  void flush_metrics() noexcept;
+  void update_registries() noexcept;
 };
 }  // namespace meter
 }  // namespace atlas

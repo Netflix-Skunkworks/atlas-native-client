@@ -57,6 +57,12 @@ TEST(ConsolidationRegistry, UpdateOne) {
   EXPECT_TRUE(registry.measurements().empty()) << "Resets after being measured";
 }
 
+static void update_timestamp(Measurements* measurements, int64_t ts) {
+  for (auto& m : *measurements) {
+    m.timestamp = ts;
+  }
+}
+
 TEST(ConsolidationRegistry, Consolidate) {
   ConsolidationRegistry registry{kFastestFrequencyMillis, kMainFrequencyMillis};
 
@@ -71,11 +77,14 @@ TEST(ConsolidationRegistry, Consolidate) {
   auto measurements = Measurements{gauge, random, counter};
 
   registry.update_from(measurements);
+
+  update_timestamp(&measurements, 2L);
   registry.update_from(measurements);
 
   for (auto& m : measurements) {
     m.value += 1 / 5.0;
   }
+  update_timestamp(&measurements, 3L);
   registry.update_from(measurements);
   auto ms = registry.measurements();
   auto measure_cmp = [](const Measurement& a, const Measurement& b) {
@@ -90,4 +99,21 @@ TEST(ConsolidationRegistry, Consolidate) {
   EXPECT_EQ(ms[1].value, 1.2);  // max
   EXPECT_EQ(ms[2].id, random.id);
   EXPECT_EQ(ms[2].value, 42.2);  // max
+}
+
+TEST(ConsolidationRegistry, IgnoreDupes) {
+  ConsolidationRegistry registry{kFastestFrequencyMillis, kMainFrequencyMillis};
+
+  auto counter_id =
+      std::make_shared<Id>("counter", Tags{{"statistic", "count"}});
+
+  auto counter = Measurement{counter_id, 1L, 1 / 5.0};
+  auto measurements = Measurements{counter};
+
+  registry.update_from(measurements);
+  registry.update_from(measurements);
+  registry.update_from(measurements);
+  auto ms = registry.measurements();
+  ASSERT_EQ(ms.size(), 1);
+  EXPECT_EQ(ms[0].value, 1.0 / 60);
 }

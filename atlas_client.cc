@@ -33,7 +33,7 @@ class Client::impl {
   impl()
       : started{false},
         config_manager{util::kLocalFileName, util::kConfigRefreshMillis},
-        subscription_manager{config_manager} {}
+        subscription_manager{&clock, config_manager} {}
 
   ~impl() {
     if (started) {
@@ -67,7 +67,7 @@ class Client::impl {
     auto logger = Logger();
     if (started) {
       logger->info("Stopping atlas-client");
-      subscription_manager.Stop(&clock);
+      subscription_manager.Stop();
       config_manager.Stop();
       started = false;
       http::global_shutdown();

@@ -10,15 +10,12 @@ namespace atlas {
 
 namespace meter {
 
-extern SystemClock system_clock;
-
 class AtlasRegistry : public Registry {
   class impl;
   std::unique_ptr<impl> impl_;
 
  public:
-  explicit AtlasRegistry(int64_t freq_millis,
-                         const Clock* clock = &system_clock) noexcept;
+  AtlasRegistry(int64_t freq_millis, const Clock* clock) noexcept;
 
   AtlasRegistry(const AtlasRegistry& registry) = delete;
   ~AtlasRegistry() override;

@@ -61,6 +61,10 @@ void ConsolidationRegistry::update_from(
   for (const auto& m : measurements) {
     auto& my_m = my_measures[m.id];
     my_m.id = m.id;
+    if (my_m.timestamp == m.timestamp) {
+      // duplicate update
+      continue;
+    }
     my_m.timestamp = m.timestamp;
     auto op = aggregate_op(m);
     switch (op) {
@@ -84,8 +88,9 @@ Measurements ConsolidationRegistry::measurements() const noexcept {
   for (const auto& m : my_measures) {
     result.push_back(m.second);
   }
-  Logger()->debug("Returning {} measurements, and resetting aggregate registry",
-                  result.size());
+  Logger()->debug(
+      "Returning {} measurements, and resetting consolidation registry",
+      result.size());
   my_measures.clear();
   return result;
 }

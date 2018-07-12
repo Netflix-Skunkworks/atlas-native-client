@@ -33,9 +33,12 @@ using std::chrono::milliseconds;
 using std::chrono::system_clock;
 
 SubscriptionManager::SubscriptionManager(
+    SystemClockWithOffset* clock,
     const util::ConfigManager& config_manager) noexcept
-    : config_manager_(config_manager),
-      registry_(std::make_shared<AtlasRegistry>(kFastestFrequencyMillis)),
+    : clock_(clock),
+      config_manager_(config_manager),
+      registry_(
+          std::make_shared<AtlasRegistry>(kFastestFrequencyMillis, clock_)),
       main_registry_(kFastestFrequencyMillis, kMainFrequencyMillis),
       publisher_(registry_) {
   for (auto i = 0; i < kMainMultiple; ++i) {
@@ -46,6 +49,29 @@ SubscriptionManager::SubscriptionManager(
 
 static constexpr int64_t kMinWaitMillis = 1;
 
+void SubscriptionManager::update_registries() noexcept {
+  const auto& config = config_manager_.GetConfig();
+
+  auto measurements = registry_->measurements();
+  auto logger = Logger();
+  if (config->IsMainEnabled()) {
+    logger->debug("updating main registry from {} measurements",
+                  measurements.size());
+    main_registry_.update_from(measurements);
+  }
+
+  if (config->AreSubsEnabled()) {
+    // update all freq intervals that have subscriptions
+    for (auto i = 0; i < kMainMultiple; ++i) {
+      if (!subscriptions_[i].empty()) {
+        logger->debug("updating values for subs with freq={}",
+                      (i + 1) * kFastestFrequencyMillis);
+        sub_registries_[i]->update_from(measurements);
+      }
+    }
+  }
+}
+
 void SubscriptionManager::main_sender() noexcept {
   int64_t run = 0;
   Logger()->info("Starting main sender thread");
@@ -54,14 +80,9 @@ void SubscriptionManager::main_sender() noexcept {
     ++run;
     auto start = system_clock::now();
     update_metrics();
-    const auto& config = config_manager_.GetConfig();
+    update_registries();
 
-    auto measurements = registry_->measurements();
-    if (config->IsMainEnabled()) {
-      logger->debug("updating main registry from {} measurements",
-                    measurements.size());
-      main_registry_.update_from(measurements);
-    }
+    auto config = config_manager_.GetConfig();
     auto idx = run % kMainMultiple;
     if (idx == (kMainMultiple - 1) && config->IsMainEnabled()) {
       logger->debug("Sending metrics to publish using the main registry");
@@ -76,15 +97,6 @@ void SubscriptionManager::main_sender() noexcept {
     }
 
     if (config->AreSubsEnabled()) {
-      // update all freq intervals that have subscriptions
-      for (auto i = 0; i < kMainMultiple; ++i) {
-        if (!subscriptions_[i].empty()) {
-          logger->debug("updating values for subs with freq={}",
-                        (i + 1) * kFastestFrequencyMillis);
-          sub_registries_[i]->update_from(measurements);
-        }
-      }
-
       // send sub results if needed
       if (!subscriptions_[idx].empty()) {
         auto sub_millis = (idx + 1) * kFastestFrequencyMillis;
@@ -92,7 +104,8 @@ void SubscriptionManager::main_sender() noexcept {
         try {
           send_subscriptions(sub_millis);
         } catch (const std::exception& e) {
-          logger->error("Error sending sending subscriptions {}", e.what());
+          logger->error("Error sending subscriptions for {}s {}",
+                        sub_millis / 1000, e.what());
         }
       }
     } else {
@@ -212,19 +225,52 @@ void SubscriptionManager::refresh_subscriptions(
   }
 }
 
-void SubscriptionManager::Stop(SystemClockWithOffset* clock) noexcept {
+void SubscriptionManager::flush_metrics() noexcept {
+  auto logger = Logger();
+
+  logger->debug("Updating registries before flushing");
+  // update registries with the partial set of metrics from the 5s registry
+  update_registries();
+
+  // send all
+  auto config = config_manager_.GetConfig();
+  if (config->IsMainEnabled()) {
+    try {
+      logger->info("Sending to main publish cluster");
+      send_to_main();
+    } catch (const std::exception& e) {
+      logger->error("Error sending to main publish cluster: {}", e.what());
+    }
+  }
+  if (config->AreSubsEnabled()) {
+    for (auto i = 0; i < kMainMultiple; ++i) {
+      if (!subscriptions_[i].empty()) {
+        auto millis = (i + 1) * kFastestFrequencyMillis;
+        try {
+          logger->info("Sending subs for {}s", millis / 1000);
+          send_subscriptions(millis);
+        } catch (const std::exception& e) {
+          logger->error("Error sending subscriptions for {}s: {}",
+                        millis / 1000, e.what());
+        }
+      }
+    }
+  }
+}
+
+void SubscriptionManager::Stop() noexcept {
   if (should_run_) {
     should_run_ = false;
     cv.notify_all();
-    if (clock != nullptr) {
-      Logger()->info("Advancing clock and flushing metrics");
-      clock->SetOffset(59900);
-      send_to_main();
-    }
     Logger()->debug("Stopping main sender");
     sender_thread.join();
     Logger()->debug("Stopping sub_refresher");
     sub_refresher_thread.join();
+
+    flush_metrics();
+    Logger()->info("Advancing clock and flushing metrics");
+    clock_->SetOffset(4990);
+    flush_metrics();
   }
 }
 
@@ -465,6 +511,5 @@ void SubscriptionManager::PushMeasurements(
   auto config = config_manager_.GetConfig();
   publisher_.PushMeasurements(*config, now_millis, measurements);
 }
-
 }  // namespace meter
 }  // namespace atlas

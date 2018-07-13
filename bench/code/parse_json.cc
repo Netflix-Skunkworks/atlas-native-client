@@ -2,19 +2,16 @@
 #include <benchmark/benchmark.h>
 #include "../../meter/subscription.h"
 
-// Reading the rapidjson docs suggests that using ParseInsitu(buffer) is more
-// efficient than Parse(read-only-buffer)
-//
-// Running the benchmark shows that it's not faster, even though the gains might
-// be related to just avoiding memory allocations
+// rapidjson::Document::ParseInsitu(buffer) is more efficient than the
+// Parse version (by around 12-13% on a payload with around 30k subscriptions)
 //
 // Run on (8 X 2793.31 MHz CPU s)
-// 2018-07-13 16:41:30
+// 2018-07-13 22:00:56
 // --------------------------------------------------
 // Benchmark           Time           CPU Iterations
 // --------------------------------------------------
-// BM_insitu         115 ns        115 ns    6069279
-// BM_copy           101 ns        101 ns    6938868
+// BM_insitu    37849961 ns   37850002 ns         19
+// BM_copy      43675883 ns   43676134 ns         16
 
 using atlas::meter::Subscription;
 using atlas::meter::Subscriptions;
@@ -24,8 +21,9 @@ char* read_file(const char* fname) {
   assert(fp != nullptr);
   fseek(fp, 0, SEEK_END);
   auto filesize = static_cast<size_t>(ftell(fp));
+  fseek(fp, 0, SEEK_SET);
   auto buffer = static_cast<char*>(malloc(filesize + 1));
-  auto readLength = fread(buffer, filesize, 1, fp);
+  auto readLength = fread(buffer, 1, filesize, fp);
   buffer[readLength] = '\0';
   fclose(fp);
   return buffer;

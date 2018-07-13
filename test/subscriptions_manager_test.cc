@@ -15,7 +15,7 @@ SubscriptionResults generate_sub_results(
     const interpreter::Evaluator& evaluator, const Subscriptions& subs,
     const interpreter::TagsValuePairs& pairs);
 
-ParsedSubscriptions ParseSubscriptions(const std::string& subs_str);
+ParsedSubscriptions ParseSubscriptions(char* subs_buffer);
 rapidjson::Document MeasurementsToJson(
     int64_t now_millis,
     const interpreter::TagsValuePairs::const_iterator& first,
@@ -36,7 +36,7 @@ TEST(SubscriptionsManager, ParseSubs) {
   std::stringstream buffer;
   buffer << one_sub.rdbuf();
 
-  auto subs = ParseSubscriptions(buffer.str());
+  auto subs = ParseSubscriptions(const_cast<char*>(buffer.str().c_str()));
   auto expected = Subscriptions{
       Subscription{"So3yA1c1xN_vzZASUQdORBqd9hM", kMainFrequencyMillis,
                    "nf.cluster,skan-test,:eq,name,foometric,:eq,:and,:sum"},
@@ -53,7 +53,7 @@ TEST(SubscriptionsManager, ParseLotsOfSubs) {
 
   Logger()->set_level(spdlog::level::info);
   // this is very spammy since it'll output all the subscriptions
-  auto subs = ParseSubscriptions(buffer.str());
+  auto subs = ParseSubscriptions(const_cast<char*>(buffer.str().c_str()));
   Logger()->set_level(spdlog::level::debug);
   EXPECT_EQ(subs[kMainMultiple - 1].size(), 3665);
 }
@@ -136,7 +136,7 @@ TEST(SubscriptionManager, SubResToJson) {
       "\"v2\",\"name\":\"n1\"},\"value\":24.0}]}";
 
   Document expected_json;
-  expected_json.Parse<kParseCommentsFlag | kParseNanAndInfFlag>(expected);
+  expected_json.Parse(expected);
   expect_eq_json(expected_json, json);
 }
 

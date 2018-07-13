@@ -151,13 +151,11 @@ void SubscriptionManager::sub_refresher() noexcept {
   }
 }
 
-ParsedSubscriptions ParseSubscriptions(const std::string& subs_str) {
+ParsedSubscriptions ParseSubscriptions(char* subs_buffer) {
   using rapidjson::Document;
-  using rapidjson::kParseCommentsFlag;
-  using rapidjson::kParseNanAndInfFlag;
 
   Document document;
-  document.Parse(subs_str.c_str());
+  document.ParseInsitu(subs_buffer);
   ParsedSubscriptions subs;
   auto logger = Logger();
   if (document.IsObject()) {
@@ -207,7 +205,8 @@ void SubscriptionManager::refresh_subscriptions(
   timer_refresh_subs->Record(registry_->clock().MonotonicTime() - start);
   if (http_res == 200) {
     try {
-      auto subscriptions = ParseSubscriptions(subs_str);
+      auto subscriptions =
+          ParseSubscriptions(const_cast<char*>(subs_str.c_str()));
       std::lock_guard<std::mutex> guard{subscriptions_mutex};
       subscriptions_ = std::move(subscriptions);
     } catch (...) {

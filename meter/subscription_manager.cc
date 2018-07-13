@@ -157,7 +157,7 @@ ParsedSubscriptions ParseSubscriptions(const std::string& subs_str) {
   using rapidjson::kParseNanAndInfFlag;
 
   Document document;
-  document.Parse<kParseCommentsFlag | kParseNanAndInfFlag>(subs_str.c_str());
+  document.Parse(subs_str.c_str());
   ParsedSubscriptions subs;
   auto logger = Logger();
   if (document.IsObject()) {

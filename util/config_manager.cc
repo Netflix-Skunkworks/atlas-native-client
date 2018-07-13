@@ -23,7 +23,7 @@ static std::unique_ptr<Config> DocToConfig(
 static std::unique_ptr<Config> ParseConfigFile(
     const std::string& file_name, std::unique_ptr<Config> defaults) noexcept {
   if (access(file_name.c_str(), R_OK) == 0) {
-    const auto& logger = Logger();
+    auto logger = Logger();
     std::ifstream cfg_file(file_name);
     std::ostringstream buffer;
     buffer << cfg_file.rdbuf();

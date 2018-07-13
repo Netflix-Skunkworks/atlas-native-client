@@ -1,6 +1,7 @@
 #include "../util/intern.h"
 #include "../meter/id.h"
 #include "../util/small_tag_map.h"
+#include <algorithm>
 #include <benchmark/benchmark.h>
 #include <unordered_map>
 
@@ -40,10 +41,10 @@ class Tags {
   }
 };
 
-
 class VectorTags {
   using value_t = util::StrRef;
   using entry_t = std::pair<value_t, value_t>;
+
  public:
   void add(const char* k, const char* v) {
     entries_.emplace_back(util::intern_str(k), util::intern_str(v));
@@ -54,13 +55,15 @@ class VectorTags {
   }
 
   value_t at(value_t key) const {
-    auto it = std::find_if(entries_.rbegin(), entries_.rend(),
-    [key](const entry_t& entry) { return entry.first == key; });
+    auto it = std::find_if(
+        entries_.rbegin(), entries_.rend(),
+        [key](const entry_t& entry) { return entry.first == key; });
     if (it != entries_.rend()) {
       return it->second;
     }
     return util::intern_str("");  // cannot throw exceptions on nodejs
   }
+
  private:
   std::vector<entry_t> entries_;
 };
@@ -68,7 +71,7 @@ class VectorTags {
 template <typename T>
 static void add_tags(benchmark::State& state) {
   std::string prefix{"some.random.string.for.testing."};
-  const char* value = "some.random.value.for.testing";
+  auto value = "some.random.value.for.testing";
   for (auto _ : state) {
     T tags;
     for (int i = 0; i < state.range(0); ++i) {
@@ -92,6 +95,13 @@ using UnorderedMap = std::unordered_map<util::StrRef, util::StrRef>;
 using OrderedMap = std::map<util::StrRef, util::StrRef>;
 using util::SmallTagMap;
 
+class SM : public SmallTagMap {
+ public:
+  void add(const char* k, const char* v) {
+    SmallTagMap::add(util::intern_str(k), util::intern_str(v));
+  }
+};
+
 static void BM_TagsUnorderedMap(benchmark::State& state) {
   add_tags<Tags<UnorderedMap>>(state);
 }
@@ -107,9 +117,7 @@ static void BM_VectorTags(benchmark::State& state) {
 }
 BENCHMARK(BM_VectorTags)->RangeMultiplier(2)->Range(2, 32);
 
-static void BM_SmallTags(benchmark::State& state) {
-  add_tags<SmallTagMap>(state);
-}
+static void BM_SmallTags(benchmark::State& state) { add_tags<SM>(state); }
 BENCHMARK(BM_SmallTags)->RangeMultiplier(2)->Range(2, 32);
 
 template <typename T>
@@ -142,9 +150,7 @@ static void BM_VectorTagsGet(benchmark::State& state) {
   do_tags_get<VectorTags>(state);
 }
 
-static void BM_SmallTagsGet(benchmark::State& state) {
-  do_tags_get<SmallTagMap>(state);
-}
+static void BM_SmallTagsGet(benchmark::State& state) { do_tags_get<SM>(state); }
 
 BENCHMARK(BM_TagsUnorderedGet)->RangeMultiplier(2)->Ranges({{8, 24}, {8, 16}});
 BENCHMARK(BM_TagsOrderedGet)->RangeMultiplier(2)->Ranges({{8, 24}, {8, 16}});

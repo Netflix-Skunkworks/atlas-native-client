@@ -4,6 +4,9 @@ if [ x$TRAVIS_BUILD_DIR != x ]; then
   cd $TRAVIS_BUILD_DIR
 fi
 echo $PWD
-lcov --directory . --capture --output-file coverage.info # capture coverage info
-lcov --remove coverage.info '/usr/*' '*/usr/*' '*/3rd-party/*' --output-file coverage.info # filter out system and 3rd-party stuff
-lcov --list coverage.info #debug info
+# capture coverage info
+lcov --directory . --capture --output-file coverage.info
+# filter out system, build, tests and 3rd-party code from our test coverage
+lcov --remove coverage.info '/usr/*' '*/usr/*' '*/3rd-party/*' '*/build/*' '*/test/*'--output-file coverage.info
+# print report to stdout for debugging
+lcov --list coverage.info

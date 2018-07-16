@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <mutex>
-#include <unordered_map>
+#include <ska/flat_hash_map.hpp>
 
 namespace atlas {
 namespace util {
@@ -36,7 +36,7 @@ class StringPool {
   size_t alloc_size() const noexcept { return alloc_size_; }
 
  private:
-  std::unordered_map<const char*, StrRef, CStrHasher, CStrComparer> table;
+  ska::flat_hash_map<const char*, StrRef, CStrHasher, CStrComparer> table;
   size_t alloc_size_ = 0;
 
   std::mutex mutex;

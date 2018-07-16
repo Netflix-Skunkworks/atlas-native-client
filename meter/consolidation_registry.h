@@ -1,5 +1,7 @@
 #pragma once
 
+#include <mutex>
+#include <ska/flat_hash_map.hpp>
 #include "registry.h"
 namespace atlas {
 
@@ -14,7 +16,7 @@ class ConsolidationRegistry {
 
  private:
   int64_t update_multiple;
-  mutable std::unordered_map<IdPtr, Measurement> my_measures;
+  mutable ska::flat_hash_map<IdPtr, Measurement> my_measures;
   mutable std::mutex mutex;
 };
 

@@ -3,7 +3,7 @@
 
 #include "../util/logger.h"
 #include "../util/strings.h"
-#include <unordered_set>
+#include <ska/flat_hash_map.hpp>
 
 namespace atlas {
 namespace meter {
@@ -21,8 +21,8 @@ static bool is_key_restricted(StrRef k) noexcept {
   return StartsWith(k, "nf.") || StartsWith(k, "atlas.");
 }
 
-static const std::unordered_set<StrRef>& valid_nf_tags() {
-  static std::unordered_set<StrRef> kValidNfTags = {
+static const ska::flat_hash_set<StrRef>& valid_nf_tags() {
+  static ska::flat_hash_set<StrRef> kValidNfTags = {
       intern_str("nf.node"),          intern_str("nf.cluster"),
       intern_str("nf.app"),           intern_str("nf.asg"),
       intern_str("nf.stack"),         intern_str("nf.ami"),

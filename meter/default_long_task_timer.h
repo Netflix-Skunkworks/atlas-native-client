@@ -1,6 +1,9 @@
 #pragma once
 
 #include "long_task_timer.h"
+#include <atomic>
+#include <mutex>
+#include <ska/flat_hash_map.hpp>
 
 namespace atlas {
 namespace meter {
@@ -30,7 +33,7 @@ class DefaultLongTaskTimer : public Meter, public LongTaskTimer {
   static const int EXPECTED_TASKS = 8;
   std::atomic<int64_t> next_;
   mutable std::mutex tasks_mutex_;
-  std::unordered_map<int64_t, int64_t> tasks_;
+  ska::flat_hash_map<int64_t, int64_t> tasks_;
 };
 }  // namespace meter
 }  // namespace atlas

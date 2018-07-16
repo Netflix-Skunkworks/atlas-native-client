@@ -59,19 +59,18 @@ class IdTagsValuePair : public TagsValuePair {
       : id_(std::move(id)), common_tags_(common_tags), value_(value) {}
 
   OptionalString get_value(util::StrRef key) const noexcept override {
-    if (key.get() == name_ref().get()) {
-      return OptionalString{id_->Name()};
+    if (key == name_ref()) {
+      return OptionalString{id_->NameRef()};
     }
 
-    const auto& tags = id_->GetTags();
-    auto v = tags.at(key);
+    auto v = id_->GetTags().at(key);
     if (v.valid()) {
-      return OptionalString{v.get()};
+      return OptionalString{v};
     }
 
     auto cv = common_tags_->at(key);
     if (cv.valid()) {
-      return OptionalString{cv.get()};
+      return OptionalString{cv};
     }
     return kNone;
   }

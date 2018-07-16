@@ -15,7 +15,9 @@ bool Query::IsFalse() const noexcept { return false; }
 
 bool Query::IsRegex() const noexcept { return false; }
 
-HasKeyQuery::HasKeyQuery(std::string key) : AbstractKeyQuery(std::move(key)) {}
+HasKeyQuery::HasKeyQuery(StrRef key_ref) : AbstractKeyQuery(key_ref) {}
+
+HasKeyQuery::HasKeyQuery(const char* key) : AbstractKeyQuery(intern_str(key)) {}
 
 bool HasKeyQuery::Matches(const meter::Tags& tags) const {
   return tags.has(KeyRef());
@@ -31,8 +33,8 @@ std::ostream& HasKeyQuery::Dump(std::ostream& os) const {
   return os;
 }
 
-AbstractKeyQuery::AbstractKeyQuery(std::string key) noexcept
-    : key_(std::move(key)) {}
+AbstractKeyQuery::AbstractKeyQuery(StrRef key_ref) noexcept
+    : key_ref_(key_ref) {}
 
 const OptionalString AbstractKeyQuery::getvalue(const meter::Tags& tags) const
     noexcept {
@@ -43,24 +45,24 @@ const OptionalString AbstractKeyQuery::getvalue(const meter::Tags& tags) const
   return kNone;
 }
 
-const std::string& AbstractKeyQuery::Key() const noexcept { return key_; }
+const char* AbstractKeyQuery::Key() const noexcept { return key_ref_.get(); }
 
-StrRef AbstractKeyQuery::KeyRef() const noexcept { return intern_str(key_); }
+StrRef AbstractKeyQuery::KeyRef() const noexcept { return key_ref_; }
 
-RelopQuery::RelopQuery(std::string k, std::string v, RelOp op)
-    : AbstractKeyQuery(std::move(k)), op_(op), value_(std::move(v)) {}
+RelopQuery::RelopQuery(util::StrRef k, util::StrRef v, RelOp op)
+    : AbstractKeyQuery(k), op_(op), value_ref_(v) {}
 
 bool RelopQuery::Matches(const meter::Tags& tags) const {
   auto current_value = getvalue(tags);
-  return do_query(current_value, value_, op_);
+  return do_query(current_value, value_ref_, op_);
 }
 
 bool RelopQuery::Matches(const TagsValuePair& tv) const {
   auto current_value = tv.get_value(KeyRef());
-  return do_query(current_value, value_, op_);
+  return do_query(current_value, value_ref_, op_);
 }
 
-bool RelopQuery::do_query(const OptionalString& cur_value, const std::string& v,
+bool RelopQuery::do_query(const OptionalString& cur_value, const StrRef v,
                           RelOp op) {
   if (!cur_value) {
     return false;
@@ -84,13 +86,13 @@ bool RelopQuery::do_query(const OptionalString& cur_value, const std::string& v,
 }
 
 std::ostream& RelopQuery::Dump(std::ostream& os) const {
-  os << "RelopQuery(" << Key() << op_ << value_ << ")";
+  os << "RelopQuery(" << Key() << op_ << value_ref_.get() << ")";
   return os;
 }
 
 meter::Tags RelopQuery::Tags() const noexcept {
   if (op_ == RelOp::EQ) {
-    return meter::Tags{{KeyRef(), intern_str(value_)}};
+    return meter::Tags{{KeyRef(), value_ref_}};
   }
   return meter::Tags();
 }
@@ -111,9 +113,16 @@ static pcre* get_pattern(const std::string& v, bool ignore_case) {
   return re;
 }
 
-RegexQuery::RegexQuery(std::string k, const std::string& pattern,
+RegexQuery::RegexQuery(const char* key, const std::string& pattern,
                        bool ignore_case)
-    : AbstractKeyQuery(std::move(k)),
+    : AbstractKeyQuery(intern_str(key)),
+      pattern(get_pattern(pattern, ignore_case)),
+      str_pattern(pattern),
+      ignore_case_(ignore_case) {}
+
+RegexQuery::RegexQuery(StrRef key_ref, const std::string& pattern,
+                       bool ignore_case)
+    : AbstractKeyQuery(key_ref),
       pattern(get_pattern(pattern, ignore_case)),
       str_pattern(pattern),
       ignore_case_(ignore_case) {}
@@ -132,8 +141,8 @@ static bool MatchesRegex(pcre* pattern, const std::string& str_pattern,
 
   int offsets[kOffsetsMax];
   auto rc =
-      pcre_exec(pattern, nullptr, value->c_str(),
-                static_cast<int>(value->length()), 0, 0, offsets, kOffsetsMax);
+      pcre_exec(pattern, nullptr, value.get(), static_cast<int>(value.length()),
+                0, 0, offsets, kOffsetsMax);
   if (rc >= 0) {
     return true;
   }
@@ -156,7 +165,7 @@ static bool MatchesRegex(pcre* pattern, const std::string& str_pattern,
       error_msg = "Unknown error executing regular expression.";
   }
   Logger()->error("Error executing regular expression {} against {}: {}",
-                  str_pattern, *value, error_msg);
+                  str_pattern, value.get(), error_msg);
   return false;
 }
 
@@ -204,8 +213,8 @@ std::ostream& operator<<(std::ostream& os, const RelOp& op) {
   return os;
 }
 
-InQuery::InQuery(std::string key, std::unique_ptr<StringRefs> vs) noexcept
-    : AbstractKeyQuery(std::move(key)), vs_(std::move(vs)) {}
+InQuery::InQuery(StrRef key, std::unique_ptr<StringRefs> vs) noexcept
+    : AbstractKeyQuery(key), vs_(std::move(vs)) {}
 
 bool InQuery::matches_value(const OptionalString& value) const {
   if (!value) {

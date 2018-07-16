@@ -13,7 +13,7 @@ namespace {
 class HasKeyWord : public Word {
  public:
   OptionalString Execute(Context* context) override {
-    const std::string& k = context->PopString();
+    auto k = context->PopString();
     auto expression = std::make_unique<HasKeyQuery>(k);
     context->Push(std::move(expression));
     return kNone;
@@ -22,8 +22,8 @@ class HasKeyWord : public Word {
 
 OptionalString do_query(Context* context, RelOp op) {
   try {
-    const std::string v = context->PopString();
-    const std::string k = context->PopString();
+    auto v = context->PopString();
+    auto k = context->PopString();
     auto expression = std::make_unique<RelopQuery>(k, v, op);
     context->Push(std::move(expression));
     return kNone;
@@ -89,9 +89,9 @@ class RegexWord : public Word {
   explicit RegexWord(bool ignore_case) : ignore_case_(ignore_case) {}
 
   OptionalString Execute(Context* context) override {
-    const auto v = context->PopString();
-    const auto k = context->PopString();
-    auto expression = std::make_unique<RegexQuery>(k, v, ignore_case_);
+    auto v = context->PopString();
+    auto k = context->PopString();
+    auto expression = std::make_unique<RegexQuery>(k, v.get(), ignore_case_);
 
     context->Push(std::move(expression));
     return kNone;
@@ -240,7 +240,7 @@ std::shared_ptr<ValueExpression> value_expr_from(
     const std::shared_ptr<Expression>& e) {
   // a constant
   if (expression::IsLiteral(*e)) {
-    auto n = std::stod(expression::LiteralToStr(*e));
+    auto n = std::stod(expression::LiteralToStr(*e).get());
     return std::make_shared<ConstantExpression>(n);
   }
 
@@ -295,7 +295,7 @@ class DropKeepTagsWord : public Word {
         "{}-tags was expecting a list and a data expression or "
         "query on the stack",
         keep_ ? ":keep" : ":drop");
-    return OptionalString{msg};
+    return OptionalString{msg.c_str()};
   }
 
  private:
@@ -360,7 +360,8 @@ OptionalString ClientVocabulary::Execute(Context* context,
                                          const std::string& token) const {
   auto w = words.find(token);
   if (w == words.end()) {
-    return OptionalString{"Unknown word " + token};
+    std::string err_msg = "Unknown word " + token;
+    return OptionalString{err_msg.c_str()};
   }
   return w->second->Execute(context);
 }

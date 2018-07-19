@@ -15,7 +15,7 @@ class Vocabulary {
 class ClientVocabulary : public Vocabulary {
  public:
   ClientVocabulary();
-  virtual ~ClientVocabulary() = default;
+  ~ClientVocabulary() override = default;
 
   OptionalString Execute(Context* context,
                          const std::string& token) const override;

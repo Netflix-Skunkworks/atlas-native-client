@@ -21,8 +21,7 @@ TagsValuePairs Evaluator::eval(const std::string& expression,
 
   // for each expression on the stack
   while (context.StackSize() > 0) {
-    auto expr = context.PopExpression();
-    auto by = interpreter::expression::GetMultipleResults(std::move(expr));
+    auto by = interpreter::GetMultipleResultsExpr(context.PopExpression());
     if (by) {
       auto expression_result = by->Apply(measurements);
       std::move(expression_result.begin(), expression_result.end(),

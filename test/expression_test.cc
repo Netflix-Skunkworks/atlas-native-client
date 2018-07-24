@@ -55,7 +55,7 @@ TEST(Literal, Word) {
 
 TEST(Literal, Basic) {
   Literal literal("name");
-  EXPECT_EQ(literal.AsString(), "name");
+  EXPECT_EQ(strcmp(literal.AsString().get(), "name"), 0);
   EXPECT_TRUE(literal.Is("name"));
 
   EXPECT_EQ(to_str(literal), "Literal(name)");

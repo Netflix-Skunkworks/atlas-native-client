@@ -1,9 +1,10 @@
 #include "../util/intern.h"
 #include "../meter/id.h"
-#include "../util/small_tag_map.h"
+#include "../../util/small_tag_map.h"
 #include <algorithm>
 #include <benchmark/benchmark.h>
 #include <unordered_map>
+#include <ska/flat_hash_map.hpp>
 
 namespace std {
 template <>
@@ -93,6 +94,7 @@ static T get_tags(int keys) {
 
 using UnorderedMap = std::unordered_map<util::StrRef, util::StrRef>;
 using OrderedMap = std::map<util::StrRef, util::StrRef>;
+using FlatHashMap = ska::flat_hash_map<util::StrRef, util::StrRef>;
 using util::SmallTagMap;
 
 class SM : public SmallTagMap {
@@ -142,6 +144,10 @@ static void BM_TagsUnorderedGet(benchmark::State& state) {
   do_tags_get<Tags<UnorderedMap>>(state);
 }
 
+static void BM_FlatHashGet(benchmark::State& state) {
+  do_tags_get<Tags<FlatHashMap>>(state);
+}
+
 static void BM_TagsOrderedGet(benchmark::State& state) {
   do_tags_get<Tags<OrderedMap>>(state);
 }
@@ -153,6 +159,7 @@ static void BM_VectorTagsGet(benchmark::State& state) {
 static void BM_SmallTagsGet(benchmark::State& state) { do_tags_get<SM>(state); }
 
 BENCHMARK(BM_TagsUnorderedGet)->RangeMultiplier(2)->Ranges({{8, 24}, {8, 16}});
+BENCHMARK(BM_FlatHashGet)->RangeMultiplier(2)->Ranges({{8, 24}, {8, 16}});
 BENCHMARK(BM_TagsOrderedGet)->RangeMultiplier(2)->Ranges({{8, 24}, {8, 16}});
 BENCHMARK(BM_VectorTagsGet)->RangeMultiplier(2)->Ranges({{8, 24}, {8, 16}});
 BENCHMARK(BM_SmallTagsGet)->RangeMultiplier(2)->Ranges({{8, 24}, {8, 16}});

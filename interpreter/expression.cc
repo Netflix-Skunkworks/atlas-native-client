@@ -9,26 +9,29 @@ using meter::Measurements;
 using util::intern_str;
 using util::Logger;
 
-Literal::Literal(std::string str) noexcept : str_(std::move(str)) {}
+Literal::Literal(const std::string& str) noexcept
+    : s_ref(intern_str(str.c_str())) {}
 
-bool Literal::Is(const std::string& str) const noexcept { return str_ == str; }
+bool Literal::Is(const std::string& str) const noexcept {
+  return strcmp(s_ref.get(), str.c_str()) == 0;
+}
 
 std::ostream& Literal::Dump(std::ostream& os) const {
-  os << "Literal(" << str_ << ")";
+  os << "Literal(" << s_ref.get() << ")";
   return os;
 }
 
-bool Literal::IsWord() const noexcept { return str_[0] == ':'; }
+bool Literal::IsWord() const noexcept { return s_ref.get()[0] == ':'; }
 
 const std::string Literal::GetWord() const {
   if (!this->IsWord()) {
     Logger()->error("Internal error: GetWord() called on non-word: ", *this);
-    return str_;
+    return s_ref.get();
   }
-  return str_.substr(1);
+  return std::string(s_ref.get() + 1);
 }
 
-std::string Literal::AsString() const noexcept { return str_; }
+util::StrRef Literal::AsString() const noexcept { return s_ref; }
 
 std::ostream& ConstantExpression::Dump(std::ostream& os) const {
   os << "ConstantExpression(" << value_ << ")";
@@ -60,7 +63,7 @@ void List::Add(const std::shared_ptr<Expression>& expression) {
   list_.push_back(expression);
 }
 
-bool List::Contains(const std::string& key) const noexcept {
+bool List::Contains(const char* key) const noexcept {
   auto contains_key = [&key](const std::shared_ptr<Expression>& s) {
     return expression::Is(*s, key);
   };
@@ -72,7 +75,7 @@ std::unique_ptr<StringRefs> List::ToStrings() const {
   strs->reserve(list_.size());
   for (auto& e : list_) {
     if (expression::IsLiteral(*e)) {
-      strs->push_back(intern_str(expression::LiteralToStr(*e)));
+      strs->push_back(expression::LiteralToStr(*e));
     }
   }
   return strs;

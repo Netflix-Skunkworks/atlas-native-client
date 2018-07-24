@@ -31,7 +31,7 @@ static void ensure(bool b, const std::string& msg) {
   }
 }
 
-std::string Context::PopString() {
+util::StrRef Context::PopString() {
   ensure_stack_notempty(stack_);
   auto maybe_str = PopExpression();
   ensure(expression::IsLiteral(*maybe_str),

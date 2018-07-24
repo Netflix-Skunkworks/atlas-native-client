@@ -48,11 +48,12 @@ struct prime_number_hash_policy {
 static constexpr size_t kMaxEntries = 32u;
 }  // namespace detail
 
-template <typename K, typename V>
-class SmallMap : private detail::prime_number_hash_policy {
+class SmallTagMap : private detail::prime_number_hash_policy {
+  using K = StrRef;
+  using V = StrRef;
   using value_type = std::pair<K, V>;
 
-  void init_from(const SmallMap& other) {
+  void init_from(const SmallTagMap& other) {
     prime_index = other.prime_index;
     actual_size_ = other.actual_size_;
     auto N = num_buckets();
@@ -62,39 +63,40 @@ class SmallMap : private detail::prime_number_hash_policy {
     }
   }
 
-  void move_from(SmallMap&& other) {
+  void move_from(SmallTagMap&& other) {
     prime_index = other.prime_index;
     entries_ = std::move(other.entries_);
     actual_size_ = other.actual_size_;
   }
 
  public:
-  SmallMap() noexcept { init(); }
+  SmallTagMap() noexcept { init(); }
 
-  SmallMap(const SmallMap& other) noexcept : prime_number_hash_policy(other) {
+  SmallTagMap(const SmallTagMap& other) noexcept
+      : prime_number_hash_policy(other) {
     init_from(other);
   }
 
-  SmallMap& operator=(const SmallMap& other) noexcept {
+  SmallTagMap& operator=(const SmallTagMap& other) noexcept {
     init_from(other);
     return *this;
   }
 
-  SmallMap(SmallMap&& other) noexcept { move_from(std::move(other)); }
+  SmallTagMap(SmallTagMap&& other) noexcept { move_from(std::move(other)); }
 
-  SmallMap& operator=(SmallMap&& other) noexcept {
+  SmallTagMap& operator=(SmallTagMap&& other) noexcept {
     move_from(std::move(other));
     return *this;
   }
 
-  SmallMap(std::initializer_list<meter::Tag> vs) {
+  SmallTagMap(std::initializer_list<meter::Tag> vs) {
     init();
     for (const auto& tag : vs) {
       add(tag.key, tag.value);
     }
   }
 
-  SmallMap(std::initializer_list<std::pair<const char*, const char*>> vs) {
+  SmallTagMap(std::initializer_list<std::pair<const char*, const char*>> vs) {
     init();
     for (const auto& tag : vs) {
       add(util::intern_str(tag.first), util::intern_str(tag.second));
@@ -105,7 +107,7 @@ class SmallMap : private detail::prime_number_hash_policy {
     const auto pos = pos_for_key(k_ref);
     auto i = pos;
     auto ki = entries_[i].first;
-    while (ki.get() != nullptr && ki.get() != k_ref.get()) {
+    while (ki.valid() && ki != k_ref) {
       i = index_for_hash(i + 1);  // avoid expensive mod variable operation
       if (i == pos) {
         if (actual_size_ >= detail::kMaxEntries) {
@@ -129,7 +131,7 @@ class SmallMap : private detail::prime_number_hash_policy {
     }
   }
 
-  void add_all(const SmallMap& other) {
+  void add_all(const SmallTagMap& other) {
     auto other_buckets = other.num_buckets();
     for (auto i = 0u; i < other_buckets; ++i) {
       const auto& ki = other.entries_[i].first;
@@ -143,7 +145,7 @@ class SmallMap : private detail::prime_number_hash_policy {
     auto pos = pos_for_key(key);
     auto i = pos;
     auto ki = entries_[i].first;
-    while (ki.get() != nullptr && ki.get() != key.get()) {
+    while (ki.valid() && ki.get() != key.get()) {
       i = index_for_hash(i + 1);
       if (i == pos) {
         return V{};
@@ -170,7 +172,7 @@ class SmallMap : private detail::prime_number_hash_policy {
     return res;
   }
 
-  bool operator==(const SmallMap& other) const noexcept {
+  bool operator==(const SmallTagMap& other) const noexcept {
     if (other.size() != size()) {
       return false;
     }
@@ -270,8 +272,6 @@ class SmallMap : private detail::prime_number_hash_policy {
     }
   }
 };
-
-using SmallTagMap = SmallMap<util::StrRef, util::StrRef>;
 
 }  // namespace util
 }  // namespace atlas

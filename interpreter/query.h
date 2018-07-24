@@ -39,14 +39,14 @@ inline bool operator==(const Query& q1, const Query& q2) {
 
 class AbstractKeyQuery : public Query {
  public:
-  explicit AbstractKeyQuery(std::string key) noexcept;
+  explicit AbstractKeyQuery(util::StrRef key_ref) noexcept;
 
-  const std::string& Key() const noexcept;
+  const char* Key() const noexcept;
 
   util::StrRef KeyRef() const noexcept;
 
  private:
-  const std::string key_;
+  const util::StrRef key_ref_;
 
  protected:
   const OptionalString getvalue(const meter::Tags& tags) const noexcept;
@@ -54,7 +54,8 @@ class AbstractKeyQuery : public Query {
 
 class HasKeyQuery : public AbstractKeyQuery {
  public:
-  explicit HasKeyQuery(std::string key);
+  explicit HasKeyQuery(util::StrRef key_ref);
+  explicit HasKeyQuery(const char* key);
 
   std::ostream& Dump(std::ostream& os) const override;
 
@@ -68,7 +69,7 @@ class HasKeyQuery : public AbstractKeyQuery {
     if (query.GetQueryType() != GetQueryType()) return false;
 
     const auto& q = static_cast<const HasKeyQuery&>(query);
-    return Key() == q.Key();
+    return KeyRef() == q.KeyRef();
   }
 };
 
@@ -78,7 +79,7 @@ std::ostream& operator<<(std::ostream& os, const RelOp& op);
 
 class RelopQuery : public AbstractKeyQuery {
  public:
-  RelopQuery(std::string k, std::string v, RelOp op);
+  RelopQuery(util::StrRef k, util::StrRef v, RelOp op);
 
   std::ostream& Dump(std::ostream& os) const override;
 
@@ -86,7 +87,7 @@ class RelopQuery : public AbstractKeyQuery {
 
   bool Matches(const TagsValuePair& tv) const override;
 
-  static bool do_query(const OptionalString& cur_value, const std::string& v,
+  static bool do_query(const OptionalString& cur_value, util::StrRef v,
                        RelOp op);
 
   meter::Tags Tags() const noexcept override;
@@ -95,19 +96,21 @@ class RelopQuery : public AbstractKeyQuery {
     if (query.GetQueryType() != GetQueryType()) return false;
 
     const auto& q = static_cast<const RelopQuery&>(query);
-    return Key() == q.Key() && op_ == q.op_ && value_ == q.value_;
+    return KeyRef() == q.KeyRef() && op_ == q.op_ && value_ref_ == q.value_ref_;
   }
 
   QueryType GetQueryType() const noexcept override { return QueryType::RelOp; }
 
  private:
   RelOp op_;
-  const std::string value_;
+  const util::StrRef value_ref_;
 };
 
 class RegexQuery : public AbstractKeyQuery {
  public:
-  RegexQuery(std::string k, const std::string& pattern, bool ignore_case);
+  RegexQuery(const char* key, const std::string& pattern, bool ignore_case);
+  RegexQuery(util::StrRef key_ref, const std::string& pattern,
+             bool ignore_case);
   ~RegexQuery() override;
 
   bool Matches(const meter::Tags& tags) const override;
@@ -136,7 +139,7 @@ class RegexQuery : public AbstractKeyQuery {
 
 class InQuery : public AbstractKeyQuery {
  public:
-  InQuery(std::string key, std::unique_ptr<StringRefs> vs) noexcept;
+  InQuery(util::StrRef key, std::unique_ptr<StringRefs> vs) noexcept;
 
   std::ostream& Dump(std::ostream& os) const override;
 
@@ -148,7 +151,7 @@ class InQuery : public AbstractKeyQuery {
     if (query.GetQueryType() != GetQueryType()) return false;
 
     const auto& q = static_cast<const InQuery&>(query);
-    return Key() == q.Key() && *vs_ == *(q.vs_);
+    return KeyRef() == q.KeyRef() && *vs_ == *(q.vs_);
   }
 
   QueryType GetQueryType() const noexcept override { return QueryType::In; }
@@ -268,38 +271,45 @@ class AndQuery : public Query {
 // helper functions to create queries
 namespace query {
 
-inline std::unique_ptr<Query> eq(std::string k, std::string v) noexcept {
-  return std::make_unique<RelopQuery>(std::move(k), std::move(v), RelOp::EQ);
+inline std::unique_ptr<Query> eq(const char* k, const char* v) noexcept {
+  return std::make_unique<RelopQuery>(util::intern_str(k), util::intern_str(v),
+                                      RelOp::EQ);
 }
 
-inline std::unique_ptr<Query> in(std::string k, StringRefs vs) noexcept {
+inline std::unique_ptr<Query> in(const char* k, StringRefs vs) noexcept {
   auto unique_vs = std::make_unique<StringRefs>(std::move(vs));
-  return std::make_unique<InQuery>(std::move(k), std::move(unique_vs));
+  return std::make_unique<InQuery>(util::intern_str(k), std::move(unique_vs));
 }
 
-inline std::unique_ptr<Query> re(std::string k, std::string pattern) noexcept {
-  return std::make_unique<RegexQuery>(std::move(k), std::move(pattern), false);
+inline std::unique_ptr<Query> re(const char* k, std::string pattern) noexcept {
+  return std::make_unique<RegexQuery>(util::intern_str(k), std::move(pattern),
+                                      false);
 }
 
-inline std::unique_ptr<Query> reic(std::string k,
+inline std::unique_ptr<Query> reic(const char* k,
                                    std::string pattern) noexcept {
-  return std::make_unique<RegexQuery>(std::move(k), std::move(pattern), true);
+  return std::make_unique<RegexQuery>(util::intern_str(k), std::move(pattern),
+                                      true);
 }
 
-inline std::unique_ptr<Query> gt(std::string k, std::string v) noexcept {
-  return std::make_unique<RelopQuery>(std::move(k), std::move(v), RelOp::GT);
+inline std::unique_ptr<Query> gt(const char* k, const char* v) noexcept {
+  return std::make_unique<RelopQuery>(util::intern_str(k), util::intern_str(v),
+                                      RelOp::GT);
 }
 
-inline std::unique_ptr<Query> ge(std::string k, std::string v) noexcept {
-  return std::make_unique<RelopQuery>(std::move(k), std::move(v), RelOp::GE);
+inline std::unique_ptr<Query> ge(const char* k, const char* v) noexcept {
+  return std::make_unique<RelopQuery>(util::intern_str(k), util::intern_str(v),
+                                      RelOp::GE);
 }
 
-inline std::unique_ptr<Query> lt(std::string k, std::string v) noexcept {
-  return std::make_unique<RelopQuery>(std::move(k), std::move(v), RelOp::LT);
+inline std::unique_ptr<Query> lt(const char* k, const char* v) noexcept {
+  return std::make_unique<RelopQuery>(util::intern_str(k), util::intern_str(v),
+                                      RelOp::LT);
 }
 
-inline std::unique_ptr<Query> le(std::string k, std::string v) noexcept {
-  return std::make_unique<RelopQuery>(std::move(k), std::move(v), RelOp::LE);
+inline std::unique_ptr<Query> le(const char* k, const char* v) noexcept {
+  return std::make_unique<RelopQuery>(util::intern_str(k), util::intern_str(v),
+                                      RelOp::LE);
 }
 
 inline std::unique_ptr<Query> true_q() noexcept {

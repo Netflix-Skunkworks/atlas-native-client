@@ -31,9 +31,9 @@ std::ostream& operator<<(std::ostream& os, const Expression& expression);
 
 class Literal : public Expression {
  public:
-  explicit Literal(std::string str) noexcept;
+  explicit Literal(const std::string& str) noexcept;
 
-  std::string AsString() const noexcept;
+  util::StrRef AsString() const noexcept;
 
   bool Is(const std::string& str) const noexcept;
 
@@ -48,7 +48,7 @@ class Literal : public Expression {
   }
 
  private:
-  const std::string str_;
+  util::StrRef s_ref;
 };
 
 class List : public Expression {
@@ -59,7 +59,7 @@ class List : public Expression {
 
   void Add(const std::shared_ptr<Expression>& expression);
 
-  bool Contains(const std::string& key) const noexcept;
+  bool Contains(const char* key) const noexcept;
 
   std::unique_ptr<StringRefs> ToStrings() const;
 
@@ -117,8 +117,9 @@ inline bool IsQuery(const Expression& e) noexcept {
   return e.GetType() == ExpressionType::Query;
 }
 
-inline bool Is(const Expression& e, const std::string& s) noexcept {
-  return IsLiteral(e) && static_cast<const Literal&>(e).AsString() == s;
+inline bool Is(const Expression& e, const char* s) noexcept {
+  return IsLiteral(e) &&
+         static_cast<const Literal&>(e).AsString() == util::intern_str(s);
 }
 
 inline bool IsWord(const Expression& e) noexcept {
@@ -129,7 +130,7 @@ inline const std::string GetWord(const Expression& e) noexcept {
   return static_cast<const Literal&>(e).GetWord();
 }
 
-inline const std::string LiteralToStr(const Expression& e) noexcept {
+inline util::StrRef LiteralToStr(const Expression& e) noexcept {
   return static_cast<const Literal&>(e).AsString();
 }
 

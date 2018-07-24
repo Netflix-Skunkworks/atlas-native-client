@@ -66,7 +66,7 @@ class AtlasRegistry::impl {
 
  private:
   mutable std::mutex meters_mutex{};
-  std::unordered_map<IdPtr, std::shared_ptr<Meter>> meters_{};
+  ska::flat_hash_map<IdPtr, std::shared_ptr<Meter>> meters_{};
 };
 
 const Clock& AtlasRegistry::clock() const noexcept { return *clock_; }

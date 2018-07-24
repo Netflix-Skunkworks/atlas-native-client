@@ -1,6 +1,7 @@
 #include "group_by.h"
 #include "../util/logger.h"
 #include "singleton_value_expr.h"
+#include <ska/flat_hash_map.hpp>
 
 namespace atlas {
 namespace interpreter {
@@ -39,7 +40,7 @@ std::ostream& GroupBy::Dump(std::ostream& os) const {
 
 TagsValuePairs GroupBy::Apply(const TagsValuePairs& measurements) {
   // group metrics by keys
-  std::unordered_map<meter::Tags, TagsValuePairs> grouped;
+  ska::flat_hash_map<meter::Tags, TagsValuePairs> grouped;
   for (auto& tagsValuePair : measurements) {
     auto should_keep = true;
     meter::Tags group_by_vals;
@@ -53,7 +54,7 @@ TagsValuePairs GroupBy::Apply(const TagsValuePairs& measurements) {
       }
     }
     if (should_keep) {
-      grouped[group_by_vals].push_back(tagsValuePair);
+      grouped[std::move(group_by_vals)].push_back(tagsValuePair);
     }
   }
 

@@ -1,44 +1,63 @@
 #pragma once
 
+#include "intern.h"
+
 class OptionalString {
  public:
-  explicit OptionalString(const char* string) noexcept
-      : has_value(string != nullptr), s(string != nullptr ? string : "") {}
+  explicit OptionalString(atlas::util::StrRef ref) noexcept : s_ref(ref) {}
 
-  explicit OptionalString(const std::string& string)
-      : has_value{true}, s{string} {}
+  explicit OptionalString(const char* string) noexcept {
+    if (string != nullptr) {
+      s_ref = atlas::util::intern_str(string);
+    }
+  }
 
-  operator bool() const { return has_value; }
+  operator bool() const { return s_ref.valid(); }
 
-  operator const std::string&() const { return s; };
+  operator const char*() const { return s_ref.get(); };
 
   bool operator==(const std::string& other) const {
-    return has_value && s == other;
+    return s_ref.valid() && std::string(s_ref.get()) == other;
   }
 
-  bool operator<(const std::string& other) const {
-    return has_value && s < other;
+  bool operator==(const char* other) const {
+    return s_ref.valid() && atlas::util::intern_str(other) == s_ref;
   }
 
-  bool operator<=(const std::string& other) const {
-    return has_value && s <= other;
+  bool operator==(atlas::util::StrRef other) const { return s_ref == other; }
+
+  bool operator<(atlas::util::StrRef other) const {
+    if (s_ref.valid() && other.valid()) {
+      return strcmp(s_ref.get(), other.get()) < 0;
+    }
+    return false;
   }
 
-  bool operator>(const std::string& other) const {
-    return has_value && s > other;
+  bool operator<=(atlas::util::StrRef other) const {
+    if (s_ref.valid() && other.valid()) {
+      return strcmp(s_ref.get(), other.get()) <= 0;
+    }
+    return false;
   }
 
-  bool operator>=(const std::string& other) const {
-    return has_value && s >= other;
+  bool operator>(atlas::util::StrRef other) const {
+    if (s_ref.valid() && other.valid()) {
+      return strcmp(s_ref.get(), other.get()) > 0;
+    }
+    return false;
   }
 
-  const std::string* operator->() const { return &s; }
+  bool operator>=(atlas::util::StrRef other) const {
+    if (s_ref.valid() && other.valid()) {
+      return strcmp(s_ref.get(), other.get()) >= 0;
+    }
+    return false;
+  }
 
-  const std::string& operator*() const { return s; }
+  const char* get() const { return s_ref.get(); }
 
-  const std::string& get() const { return s; }
+  size_t length() const { return s_ref.length(); }
 
  private:
-  bool has_value;
-  std::string s;
+  atlas::util::StrRef s_ref;
 };

@@ -2,6 +2,7 @@
 #include "../meter/id.h"
 #include "../meter/measurement.h"
 #include <algorithm>
+#include <ska/flat_hash_map.hpp>
 
 namespace atlas {
 namespace interpreter {
@@ -39,7 +40,7 @@ static StringRefs drop_keys(const meter::Tags& tags, const StringRefs& keys) {
 
 TagsValuePairs KeepOrDropTags::Apply(const TagsValuePairs& measurements) {
   // group metrics by keys
-  std::unordered_map<meter::Tags, TagsValuePairs> grouped;
+  ska::flat_hash_map<meter::Tags, TagsValuePairs> grouped;
   for (auto& valuePair : measurements) {
     auto should_keep = true;
     meter::Tags group_by_vals;

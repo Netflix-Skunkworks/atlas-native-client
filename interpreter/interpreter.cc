@@ -51,7 +51,7 @@ void split(const std::string& s, Expressions* result) {
 Interpreter::Interpreter(std::unique_ptr<Vocabulary> vocabulary)
     : vocabulary_(std::move(vocabulary)) {}
 
-const static std::string UNBALANCED = "Unbalanced parenthesis";
+static const char* UNBALANCED = "Unbalanced parenthesis";
 
 static OptionalString do_program(Context* context, const Vocabulary& vocabulary,
                                  Expressions* tokens, int depth) {

@@ -9,7 +9,7 @@ using atlas::util::Logger;
 
 using namespace atlas::interpreter;
 using namespace atlas::meter;
-using Strings = std::vector<std::string>;
+using Strings = std::vector<const char*>;
 
 TEST(Interpreter, SplitEmpty) {
   Expressions result;

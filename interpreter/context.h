@@ -13,7 +13,7 @@ class Context {
 
   Context();
 
-  std::string PopString();
+  util::StrRef PopString();
 
   std::shared_ptr<Expression> PopExpression();
 

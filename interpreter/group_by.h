@@ -28,9 +28,8 @@ class GroupBy : public MultipleResults {
   std::shared_ptr<ValueExpression> expr_;
 };
 
-namespace expression {
-std::shared_ptr<MultipleResults> GetMultipleResults(
-    const std::shared_ptr<Expression>& e);
-}  // namespace expression
+std::shared_ptr<MultipleResults> GetMultipleResultsExpr(
+    std::shared_ptr<Expression> e);
+
 }  // namespace interpreter
 }  // namespace atlas

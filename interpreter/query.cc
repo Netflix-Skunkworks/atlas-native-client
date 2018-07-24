@@ -1,6 +1,8 @@
+#include <numeric>
 #include "query.h"
 #include "../meter/id.h"
 #include "../util/logger.h"
+#include "../util/vector.h"
 
 namespace atlas {
 namespace interpreter {
@@ -8,12 +10,6 @@ namespace interpreter {
 using util::intern_str;
 using util::Logger;
 using util::StrRef;
-
-bool Query::IsTrue() const noexcept { return false; }
-
-bool Query::IsFalse() const noexcept { return false; }
-
-bool Query::IsRegex() const noexcept { return false; }
 
 HasKeyQuery::HasKeyQuery(StrRef key_ref) : AbstractKeyQuery(key_ref) {}
 
@@ -36,7 +32,7 @@ std::ostream& HasKeyQuery::Dump(std::ostream& os) const {
 AbstractKeyQuery::AbstractKeyQuery(StrRef key_ref) noexcept
     : key_ref_(key_ref) {}
 
-const OptionalString AbstractKeyQuery::getvalue(const meter::Tags& tags) const
+OptionalString AbstractKeyQuery::getvalue(const meter::Tags& tags) const
     noexcept {
   auto k = tags.at(KeyRef());
   if (k.valid()) {
@@ -49,7 +45,7 @@ const char* AbstractKeyQuery::Key() const noexcept { return key_ref_.get(); }
 
 StrRef AbstractKeyQuery::KeyRef() const noexcept { return key_ref_; }
 
-RelopQuery::RelopQuery(util::StrRef k, util::StrRef v, RelOp op)
+RelopQuery::RelopQuery(util::StrRef k, util::StrRef v, RelOp op) noexcept
     : AbstractKeyQuery(k), op_(op), value_ref_(v) {}
 
 bool RelopQuery::Matches(const meter::Tags& tags) const {
@@ -183,8 +179,6 @@ std::ostream& RegexQuery::Dump(std::ostream& os) const {
   os << "RegexQuery(" << Key() << " ~ " << str_pattern << ")";
   return os;
 }
-
-bool RegexQuery::IsRegex() const noexcept { return true; }
 
 RegexQuery::~RegexQuery() {
   if (pattern != nullptr) {
@@ -347,10 +341,11 @@ std::shared_ptr<Query> query::or_q(std::shared_ptr<Query> q1,
   if (*q1 == *q2) {
     return q1;
   }
-  if (q1->IsRegex()) {
-    return std::make_shared<OrQuery>(q2, q1);
-  }
-  return std::make_shared<OrQuery>(q1, q2);
+  auto q1Type = q1->GetQueryType();
+  auto isExpensive = q1Type == QueryType::Regex || q1Type == QueryType::And ||
+                     q1Type == QueryType::Or;
+  return isExpensive ? std::make_shared<OrQuery>(q2, q1)
+                     : std::make_shared<OrQuery>(q1, q2);
 }
 
 std::shared_ptr<Query> query::and_q(std::shared_ptr<Query> q1,
@@ -370,10 +365,59 @@ std::shared_ptr<Query> query::and_q(std::shared_ptr<Query> q1,
   if (*q1 == *q2) {
     return q1;
   }
-  if (q1->IsRegex()) {
-    return std::make_shared<AndQuery>(q2, q1);
-  }
-  return std::make_shared<AndQuery>(q1, q2);
+
+  auto q1Type = q1->GetQueryType();
+  auto isExpensive = q1Type == QueryType::Regex || q1Type == QueryType::And ||
+                     q1Type == QueryType::Or;
+  return isExpensive ? std::make_shared<AndQuery>(q2, q1)
+                     : std::make_shared<AndQuery>(q1, q2);
 }
+
+std::shared_ptr<Query> query::and_queries(
+    std::vector<std::shared_ptr<Query>> queries) noexcept {
+  std::shared_ptr<Query> true_query = true_q();
+  return std::accumulate(queries.begin(), queries.end(), true_query,
+                         query::and_q);
+}
+
+/// Converts the input query into a list of sub-queries that should be ORd
+/// together.
+std::vector<std::shared_ptr<Query>> query::dnf_list(
+    std::shared_ptr<Query> query) {
+  std::vector<std::shared_ptr<Query>> res;
+
+  switch (query->GetQueryType()) {
+    case QueryType::And: {
+      auto& and_query = static_cast<AndQuery&>(*query);
+      return vector_cross_product(dnf_list(and_query.q1_),
+                                  dnf_list(and_query.q2_), query::and_q);
+    }
+    case QueryType::Or: {
+      auto& or_q = static_cast<OrQuery&>(*query);
+      return vector_concat(dnf_list(or_q.q1_), dnf_list(or_q.q2_));
+    }
+    case QueryType::Not: {
+      auto& not_query = static_cast<NotQuery&>(*query).query_;
+      auto not_q_type = not_query->GetQueryType();
+      if (not_q_type == QueryType::And) {
+        auto& and_query = static_cast<AndQuery&>(*not_query);
+        append_to_vector(&res, dnf_list(query::not_q(and_query.q1_)));
+        append_to_vector(&res, dnf_list(query::not_q(and_query.q2_)));
+      } else if (not_q_type == QueryType::Or) {
+        auto& or_query = static_cast<OrQuery&>(*not_query);
+        append_to_vector(&res,
+                         dnf_list(query::and_q(query::not_q(or_query.q1_),
+                                               query::not_q(or_query.q2_))));
+      } else if (not_q_type == QueryType::Not) {
+        res.emplace_back(std::static_pointer_cast<NotQuery>(not_query)->query_);
+      } else {
+        res.emplace_back(query);
+      }
+    }
+    default: { res.emplace_back(query); }
+  }
+  return res;
+}
+
 }  // namespace interpreter
 }  // namespace atlas

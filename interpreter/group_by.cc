@@ -9,10 +9,8 @@ namespace interpreter {
 using util::intern_str;
 using util::Logger;
 
-namespace expression {
-
-std::shared_ptr<MultipleResults> GetMultipleResults(
-    const std::shared_ptr<Expression>& e) {
+std::shared_ptr<MultipleResults> GetMultipleResultsExpr(
+    std::shared_ptr<Expression> e) {
   if (e->GetType() == ExpressionType::MultipleResults) {
     return std::static_pointer_cast<MultipleResults>(e);
   }
@@ -26,7 +24,6 @@ std::shared_ptr<MultipleResults> GetMultipleResults(
       "Expecting a GroupBy clause or ValueExpression. Got {} instead.", *e);
   return std::shared_ptr<MultipleResults>(nullptr);
 }
-}  // namespace expression
 
 using ::atlas::meter::Measurements;
 
@@ -54,11 +51,12 @@ TagsValuePairs GroupBy::Apply(const TagsValuePairs& measurements) {
       }
     }
     if (should_keep) {
-      grouped[std::move(group_by_vals)].push_back(tagsValuePair);
+      grouped[std::move(group_by_vals)].emplace_back(tagsValuePair);
     }
   }
 
   auto results = TagsValuePairs();
+  results.reserve(grouped.size());
   for (auto& entry : grouped) {
     auto tags = entry.first;
     const auto& pairs_for_key = entry.second;

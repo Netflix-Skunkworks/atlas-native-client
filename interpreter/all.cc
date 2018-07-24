@@ -8,7 +8,7 @@ namespace interpreter {
 All::All(std::shared_ptr<Query> query) : query_(std::move(query)) {}
 
 TagsValuePairs All::Apply(const TagsValuePairs& measurements) {
-  if (query_->IsTrue()) {
+  if (query_->GetQueryType() == QueryType::True) {
     // fast path
     return measurements;
   }

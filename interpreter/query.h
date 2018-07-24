@@ -22,15 +22,15 @@ class Query : public Expression {
 
   virtual meter::Tags Tags() const noexcept { return meter::Tags(); };
 
-  virtual bool IsTrue() const noexcept;
-
-  virtual bool IsFalse() const noexcept;
-
-  virtual bool IsRegex() const noexcept;
+  virtual size_t Hash() const noexcept = 0;
 
   virtual bool Equals(const Query& query) const noexcept = 0;
 
   virtual QueryType GetQueryType() const noexcept = 0;
+
+  bool IsFalse() const noexcept { return QueryType::False == GetQueryType(); }
+
+  bool IsTrue() const noexcept { return QueryType::True == GetQueryType(); }
 };
 
 inline bool operator==(const Query& q1, const Query& q2) {
@@ -45,11 +45,9 @@ class AbstractKeyQuery : public Query {
 
   util::StrRef KeyRef() const noexcept;
 
- private:
-  const util::StrRef key_ref_;
-
  protected:
-  const OptionalString getvalue(const meter::Tags& tags) const noexcept;
+  util::StrRef key_ref_;
+  OptionalString getvalue(const meter::Tags& tags) const noexcept;
 };
 
 class HasKeyQuery : public AbstractKeyQuery {
@@ -71,6 +69,12 @@ class HasKeyQuery : public AbstractKeyQuery {
     const auto& q = static_cast<const HasKeyQuery&>(query);
     return KeyRef() == q.KeyRef();
   }
+
+  size_t Hash() const noexcept override {
+    auto n = static_cast<size_t>(GetQueryType());
+    auto h = std::hash<util::StrRef>()(KeyRef());
+    return (n << 16u) ^ h;
+  }
 };
 
 enum class RelOp { GT, LT, GE, LE, EQ };
@@ -79,7 +83,7 @@ std::ostream& operator<<(std::ostream& os, const RelOp& op);
 
 class RelopQuery : public AbstractKeyQuery {
  public:
-  RelopQuery(util::StrRef k, util::StrRef v, RelOp op);
+  RelopQuery(util::StrRef k, util::StrRef v, RelOp op) noexcept;
 
   std::ostream& Dump(std::ostream& os) const override;
 
@@ -99,11 +103,22 @@ class RelopQuery : public AbstractKeyQuery {
     return KeyRef() == q.KeyRef() && op_ == q.op_ && value_ref_ == q.value_ref_;
   }
 
+  size_t Hash() const noexcept override {
+    auto n = static_cast<size_t>(GetQueryType());
+    auto h = std::hash<util::StrRef>()(KeyRef());
+    auto v = std::hash<util::StrRef>()(ValueRef());
+    return (n << 16u) ^ h ^ v;
+  }
+
   QueryType GetQueryType() const noexcept override { return QueryType::RelOp; }
+
+  util::StrRef ValueRef() const noexcept { return value_ref_; }
+
+  RelOp GetRelationalOperator() const noexcept { return op_; }
 
  private:
   RelOp op_;
-  const util::StrRef value_ref_;
+  util::StrRef value_ref_;
 };
 
 class RegexQuery : public AbstractKeyQuery {
@@ -119,14 +134,19 @@ class RegexQuery : public AbstractKeyQuery {
 
   std::ostream& Dump(std::ostream& os) const override;
 
-  bool IsRegex() const noexcept override;
-
   bool Equals(const Query& query) const noexcept override {
     if (query.GetQueryType() != GetQueryType()) return false;
 
     const auto& q = static_cast<const RegexQuery&>(query);
     return Key() == q.Key() && ignore_case_ == q.ignore_case_ &&
            str_pattern == q.str_pattern;
+  }
+
+  size_t Hash() const noexcept override {
+    auto n = static_cast<size_t>(GetQueryType());
+    auto k = std::hash<util::StrRef>()(KeyRef());
+    auto v = std::hash<std::string>()(str_pattern);
+    return (n << 16) ^ k ^ v;
   }
 
   QueryType GetQueryType() const noexcept override { return QueryType::Regex; }
@@ -154,6 +174,17 @@ class InQuery : public AbstractKeyQuery {
     return KeyRef() == q.KeyRef() && *vs_ == *(q.vs_);
   }
 
+  size_t Hash() const noexcept override {
+    auto n = static_cast<size_t>(GetQueryType());
+    auto res = (n << 16) ^ std::hash<util::StrRef>()(KeyRef());
+    for (auto& v : *vs_) {
+      res ^= std::hash<util::StrRef>()(v);
+    }
+    return res;
+  }
+
+  const StringRefs& Values() const noexcept { return *vs_; }
+
   QueryType GetQueryType() const noexcept override { return QueryType::In; }
 
  private:
@@ -171,10 +202,12 @@ class TrueQuery : public Query {
 
   bool Matches(const TagsValuePair&) const override { return true; }
 
-  bool IsTrue() const noexcept override { return true; }
-
   bool Equals(const Query& query) const noexcept override {
-    return query.IsTrue();
+    return query.GetQueryType() == QueryType::True;
+  }
+
+  size_t Hash() const noexcept override {
+    return static_cast<size_t>(GetQueryType());
   }
 
   QueryType GetQueryType() const noexcept override { return QueryType::True; }
@@ -186,14 +219,16 @@ class FalseQuery : public Query {
 
   std::ostream& Dump(std::ostream& os) const override;
 
-  bool IsFalse() const noexcept override { return true; }
-
   bool Matches(const meter::Tags&) const override { return false; }
 
   bool Matches(const TagsValuePair&) const override { return false; }
 
   bool Equals(const Query& query) const noexcept override {
-    return query.IsFalse();
+    return query.GetQueryType() == QueryType::False;
+  }
+
+  size_t Hash() const noexcept override {
+    return static_cast<size_t>(GetQueryType());
   }
 
   QueryType GetQueryType() const noexcept override { return QueryType::False; }
@@ -215,9 +250,10 @@ class NotQuery : public Query {
     return query_->Equals(*(q.query_));
   }
 
+  size_t Hash() const noexcept override { return query_->Hash() - 1; }
+
   QueryType GetQueryType() const noexcept override { return QueryType::Not; }
 
- private:
   std::shared_ptr<Query> query_;
 };
 
@@ -237,9 +273,12 @@ class OrQuery : public Query {
     return q.q1_->Equals(*q1_) && q.q2_->Equals(*q2_);
   }
 
+  size_t Hash() const noexcept override {
+    return q1_->Hash() ^ q2_->Hash() ^ static_cast<size_t>(GetQueryType());
+  }
+
   QueryType GetQueryType() const noexcept override { return QueryType::Or; }
 
- private:
   std::shared_ptr<Query> q1_;
   std::shared_ptr<Query> q2_;
 };
@@ -262,9 +301,12 @@ class AndQuery : public Query {
     return q.q1_->Equals(*q1_) && q.q2_->Equals(*q2_);
   }
 
+  size_t Hash() const noexcept override {
+    return q1_->Hash() ^ q2_->Hash() ^ static_cast<size_t>(GetQueryType());
+  }
+
   QueryType GetQueryType() const noexcept override { return QueryType::And; }
 
- private:
   std::shared_ptr<Query> q1_;
   std::shared_ptr<Query> q2_;
 };
@@ -332,6 +374,33 @@ std::shared_ptr<Query> or_q(std::shared_ptr<Query> q1,
 std::shared_ptr<Query> and_q(std::shared_ptr<Query> q1,
                              std::shared_ptr<Query> q2) noexcept;
 
+std::shared_ptr<Query> and_queries(
+    std::vector<std::shared_ptr<Query>> queries) noexcept;
+
+/// Convert the input query into a list of sub-queris that should be ORd
+/// together
+std::vector<std::shared_ptr<Query>> dnf_list(std::shared_ptr<Query> query);
+
 }  // namespace query
 }  // namespace interpreter
 }  // namespace atlas
+
+namespace std {
+template <>
+struct hash<atlas::interpreter::RelopQuery> {
+  size_t operator()(const atlas::interpreter::RelopQuery& query) const {
+    auto k = std::hash<atlas::util::StrRef>()(query.KeyRef());
+    auto v = std::hash<atlas::util::StrRef>()(query.ValueRef());
+    return k ^ v;
+  }
+};
+
+template <>
+struct equal_to<atlas::interpreter::RelopQuery> {
+  bool operator()(const atlas::interpreter::RelopQuery& lhs,
+                  const atlas::interpreter::RelopQuery& rhs) const {
+    return lhs.Equals(rhs);
+  }
+};
+
+}  // namespace std

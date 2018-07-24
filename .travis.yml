@@ -2,21 +2,31 @@ language: cpp
 dist: trusty
 sudo: true
 script: ./run-build.sh
-compiler:
-  - clang
-  - gcc
 
-addons:
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-    packages:
-      - lcov
-      - g++-5
-      - zlib1g-dev 
-      - uuid-dev 
-      - libblkid-dev 
-      - libpcre3-dev
+matrix:
+  include:
+    - os: linux
+      compiler: gcc5
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+            - lcov
+      env:
+         - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
+
+    - os: linux
+      compiler: clang5
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - clang-5.0
+      env:
+         - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
 
 after_success:
   - ./create-lcov-report.sh

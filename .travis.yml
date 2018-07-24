@@ -8,8 +8,15 @@ compiler:
 
 addons:
   apt:
+    sources:
+      - ubuntu-toolchain-r-test
     packages:
       - lcov
+      - g++-5
+      - zlib1g-dev 
+      - uuid-dev 
+      - libblkid-dev 
+      - libpcre3-dev
 
 after_success:
   - ./create-lcov-report.sh

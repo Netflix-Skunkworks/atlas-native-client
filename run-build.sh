@@ -16,12 +16,12 @@ allert () { echo -e "${RED}$1${NC}"; }
 mkdir -p build
 cd build
 
-if [ $CC = gcc ] ; then
+if [ "$CC" = gcc ] ; then
   export CC=gcc-5
   export CXX=g++-5
 fi
 
-if [ $CC = gcc-5 ] ; then
+if [ "$CC" = gcc-5 ] ; then
   cmake -DCMAKE_BUILD_TYPE=Debug ..
 else
   cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DASAN=ON ..
@@ -40,7 +40,7 @@ fi
 
 showinfo "Running tests ..."
 
-if [ $CC = gcc-5 ]; then
+if [ "$CC" = gcc-5 ]; then
   make -j4 libatlasclient_coverage
 fi
 

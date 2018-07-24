@@ -14,19 +14,16 @@ matrix:
           packages:
             - g++-5
             - lcov
-      env:
-         - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
+      env: CC='gcc-5' CXX='g++-5'
 
     - os: linux
       compiler: clang5
       addons:
         apt:
-          sources:
-            - ubuntu-toolchain-r-test
+          sources: [ 'ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0' ]
           packages:
             - clang-5.0
-      env:
-         - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
+			env: CC='clang-5.0' CXX='clang++-5.0' 
 
 after_success:
   - ./create-lcov-report.sh

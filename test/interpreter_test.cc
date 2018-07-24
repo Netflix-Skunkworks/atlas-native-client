@@ -303,3 +303,22 @@ TEST(Interpreter, InQuery) {
   Tags sps3{{"name", "sps3"}};
   ASSERT_FALSE(query->Matches(sps3));
 }
+
+TEST(Interpreter, NestedInQuery) {
+  auto context = exec("key,(,key,(,a,b,),:in,),:in");
+  ASSERT_EQ(1, context.StackSize());
+
+  auto expr = context.PopExpression();
+  ASSERT_TRUE(expression::IsQuery(*expr));
+
+  auto query = std::static_pointer_cast<Query>(expr);
+
+  Tags a{{"key", "a"}};
+  ASSERT_TRUE(query->Matches(a));
+
+  Tags paren{{"key", ")"}};
+  ASSERT_TRUE(query->Matches(paren));
+
+  Tags in{{"key", ":in"}};
+  ASSERT_TRUE(query->Matches(in));
+}

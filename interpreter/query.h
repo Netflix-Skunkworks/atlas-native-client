@@ -270,7 +270,8 @@ class OrQuery : public Query {
   bool Equals(const Query& query) const noexcept override {
     if (query.GetQueryType() != QueryType::Or) return false;
     const auto& q = static_cast<const OrQuery&>(query);
-    return q.q1_->Equals(*q1_) && q.q2_->Equals(*q2_);
+    return (q.q1_->Equals(*q1_) && q.q2_->Equals(*q2_)) ||
+           (q.q2_->Equals(*q1_) && q.q1_->Equals(*q2_));
   }
 
   size_t Hash() const noexcept override {
@@ -298,7 +299,9 @@ class AndQuery : public Query {
   bool Equals(const Query& query) const noexcept override {
     if (query.GetQueryType() != QueryType::And) return false;
     const auto& q = static_cast<const AndQuery&>(query);
-    return q.q1_->Equals(*q1_) && q.q2_->Equals(*q2_);
+    // a and b == b and a
+    return (q.q1_->Equals(*q1_) && q.q2_->Equals(*q2_)) ||
+           (q.q1_->Equals(*q2_) && q.q2_->Equals(*q1_));
   }
 
   size_t Hash() const noexcept override {

@@ -413,6 +413,7 @@ std::vector<std::shared_ptr<Query>> query::dnf_list(
       } else {
         res.emplace_back(query);
       }
+      break;
     }
     default: { res.emplace_back(query); }
   }

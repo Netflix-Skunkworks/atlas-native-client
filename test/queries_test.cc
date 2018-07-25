@@ -295,7 +295,7 @@ TEST(Queries, DnfSingleQuery) {
   auto dnf = query::dnf_list(q);
   auto expected = Queries{q};
 
-  expect_eq_queries(dnf, expected);
+  EXPECT_EQ_QUERIES(dnf, expected);
 }
 
 TEST(Queries, DnfAnd) {
@@ -303,7 +303,7 @@ TEST(Queries, DnfAnd) {
   auto dnf = query::dnf_list(q);
   auto expected = Queries{q};
 
-  expect_eq_queries(dnf, expected);
+  EXPECT_EQ_QUERIES(dnf, expected);
 }
 
 TEST(Queries, DnfOrAnd) {
@@ -319,7 +319,7 @@ TEST(Queries, DnfOrAnd) {
   QueryPtr ac = query::and_q(a, c);
   QueryPtr bc = query::and_q(b, c);
   auto expected = Queries{ac, bc};
-  expect_eq_queries(dnf, expected);
+  EXPECT_EQ_QUERIES(dnf, expected);
 }
 
 TEST(Queries, DnfOrAndOr) {
@@ -339,7 +339,7 @@ TEST(Queries, DnfOrAndOr) {
   QueryPtr bc = query::and_q(b, c);
   QueryPtr bd = query::and_q(b, d);
   auto expected = Queries{ac, ad, bc, bd};
-  expect_eq_queries(dnf, expected);
+  EXPECT_EQ_QUERIES(dnf, expected);
 }
 
 TEST(Queries, DnfNotOr) {
@@ -355,7 +355,7 @@ TEST(Queries, DnfNotOr) {
   QueryPtr notb = query::not_q(b);
   QueryPtr andq = query::and_q(notb, nota);
   auto expected = Queries{andq};
-  expect_eq_queries(dnf, expected);
+  EXPECT_EQ_QUERIES(dnf, expected);
 }
 
 TEST(Queries, DnfNotAnd) {
@@ -370,5 +370,5 @@ TEST(Queries, DnfNotAnd) {
   QueryPtr nota = query::not_q(a);
   QueryPtr notb = query::not_q(b);
   auto expected = Queries{nota, notb};
-  expect_eq_queries(dnf, expected);
+  EXPECT_EQ_QUERIES(dnf, expected);
 }

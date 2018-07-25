@@ -1,8 +1,8 @@
 #include <numeric>
 #include "query.h"
 #include "../meter/id.h"
+#include "../util/collections.h"
 #include "../util/logger.h"
-#include "../util/vector.h"
 
 namespace atlas {
 namespace interpreter {

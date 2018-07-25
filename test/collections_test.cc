@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "../util/vector.h"
+#include "../util/collections.h"
 #include <string>
 
 TEST(Vector, Concat) {
@@ -33,3 +33,16 @@ TEST(Vector, Cross) {
   std::vector<std::string> expected{"ac", "ad", "bc", "bd"};
   EXPECT_EQ(res, expected);
 };
+
+TEST(Set, Append_to) {
+  std::unordered_set<int> v1{1, 2, 3};
+  std::unordered_set<int> v2{4, 5, 6};
+  std::unordered_set<int> v3{7, 8, 9};
+
+  std::unordered_set<int> result;
+  append_to_set(&result, std::move(v1));
+  append_to_set(&result, std::move(v2));
+  append_to_set(&result, std::move(v3));
+  std::unordered_set<int> expected{1, 2, 3, 4, 5, 6, 7, 8, 9};
+  EXPECT_EQ(expected, result);
+}

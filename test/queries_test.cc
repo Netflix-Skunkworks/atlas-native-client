@@ -1,6 +1,5 @@
-#include "../interpreter/query.h"
+#include "query_utils.h"
 #include "test_utils.h"
-#include <gtest/gtest.h>
 
 using namespace atlas::meter;
 using namespace atlas::interpreter;
@@ -289,4 +288,87 @@ TEST(Queries, InvalidRegex) {
   EXPECT_FALSE(q.Matches(t));
 
   EXPECT_EQ("RegexQuery(name ~ *foo*)", to_str(q));
+}
+
+TEST(Queries, DnfSingleQuery) {
+  auto q = std::make_shared<HasKeyQuery>("a");
+  auto dnf = query::dnf_list(q);
+  auto expected = Queries{q};
+
+  expect_eq_queries(dnf, expected);
+}
+
+TEST(Queries, DnfAnd) {
+  auto q = query::and_q(query::eq("a", "1"), query::eq("b", "2"));
+  auto dnf = query::dnf_list(q);
+  auto expected = Queries{q};
+
+  expect_eq_queries(dnf, expected);
+}
+
+TEST(Queries, DnfOrAnd) {
+  using query::eq;
+
+  QueryPtr a = eq("a", "1");
+  QueryPtr b = eq("b", "2");
+  QueryPtr c = eq("c", "3");
+  QueryPtr or_query = query::or_q(a, b);
+  QueryPtr q = query::and_q(or_query, query::eq("c", "3"));
+
+  auto dnf = query::dnf_list(q);
+  QueryPtr ac = query::and_q(a, c);
+  QueryPtr bc = query::and_q(b, c);
+  auto expected = Queries{ac, bc};
+  expect_eq_queries(dnf, expected);
+}
+
+TEST(Queries, DnfOrAndOr) {
+  using query::eq;
+
+  QueryPtr a = eq("a", "1");
+  QueryPtr b = eq("b", "2");
+  QueryPtr c = eq("c", "3");
+  QueryPtr d = eq("d", "4");
+  QueryPtr or2 = query::or_q(a, b);
+  QueryPtr or1 = query::or_q(c, d);
+  QueryPtr q = query::and_q(or1, or2);
+
+  auto dnf = query::dnf_list(q);
+  QueryPtr ac = query::and_q(a, c);
+  QueryPtr ad = query::and_q(a, d);
+  QueryPtr bc = query::and_q(b, c);
+  QueryPtr bd = query::and_q(b, d);
+  auto expected = Queries{ac, ad, bc, bd};
+  expect_eq_queries(dnf, expected);
+}
+
+TEST(Queries, DnfNotOr) {
+  using query::eq;
+
+  QueryPtr a = eq("a", "1");
+  QueryPtr b = eq("b", "2");
+  QueryPtr or1 = query::or_q(a, b);
+  QueryPtr q = query::not_q(or1);
+
+  auto dnf = query::dnf_list(q);
+  QueryPtr nota = query::not_q(a);
+  QueryPtr notb = query::not_q(b);
+  QueryPtr andq = query::and_q(notb, nota);
+  auto expected = Queries{andq};
+  expect_eq_queries(dnf, expected);
+}
+
+TEST(Queries, DnfNotAnd) {
+  using query::eq;
+
+  QueryPtr a = eq("a", "1");
+  QueryPtr b = eq("b", "2");
+  QueryPtr and1 = query::and_q(a, b);
+  QueryPtr q = query::not_q(and1);
+
+  auto dnf = query::dnf_list(q);
+  QueryPtr nota = query::not_q(a);
+  QueryPtr notb = query::not_q(b);
+  auto expected = Queries{nota, notb};
+  expect_eq_queries(dnf, expected);
 }

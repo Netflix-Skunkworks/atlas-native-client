@@ -321,6 +321,10 @@ inline std::unique_ptr<Query> eq(const char* k, const char* v) noexcept {
                                       RelOp::EQ);
 }
 
+inline std::unique_ptr<Query> has(const char* k) noexcept {
+  return std::make_unique<HasKeyQuery>(util::intern_str(k));
+}
+
 inline std::unique_ptr<Query> in(const char* k, StringRefs vs) noexcept {
   auto unique_vs = std::make_unique<StringRefs>(std::move(vs));
   return std::make_unique<InQuery>(util::intern_str(k), std::move(unique_vs));
@@ -390,19 +394,33 @@ std::vector<std::shared_ptr<Query>> dnf_list(std::shared_ptr<Query> query);
 
 namespace std {
 template <>
-struct hash<atlas::interpreter::RelopQuery> {
-  size_t operator()(const atlas::interpreter::RelopQuery& query) const {
-    auto k = std::hash<atlas::util::StrRef>()(query.KeyRef());
-    auto v = std::hash<atlas::util::StrRef>()(query.ValueRef());
-    return k ^ v;
+struct hash<shared_ptr<atlas::interpreter::Query>> {
+  size_t operator()(const shared_ptr<atlas::interpreter::Query>& query) const {
+    return query->Hash();
   }
 };
 
 template <>
-struct equal_to<atlas::interpreter::RelopQuery> {
-  bool operator()(const atlas::interpreter::RelopQuery& lhs,
-                  const atlas::interpreter::RelopQuery& rhs) const {
-    return lhs.Equals(rhs);
+struct equal_to<shared_ptr<atlas::interpreter::Query>> {
+  bool operator()(const shared_ptr<atlas::interpreter::Query>& lhs,
+                  const shared_ptr<atlas::interpreter::Query>& rhs) const {
+    return lhs->Equals(*rhs);
+  }
+};
+
+template <>
+struct hash<shared_ptr<atlas::interpreter::RelopQuery>> {
+  size_t operator()(
+      const shared_ptr<atlas::interpreter::RelopQuery>& query) const {
+    return query->Hash();
+  }
+};
+
+template <>
+struct equal_to<shared_ptr<atlas::interpreter::RelopQuery>> {
+  bool operator()(const shared_ptr<atlas::interpreter::RelopQuery>& lhs,
+                  const shared_ptr<atlas::interpreter::RelopQuery>& rhs) const {
+    return lhs->Equals(*rhs);
   }
 };
 

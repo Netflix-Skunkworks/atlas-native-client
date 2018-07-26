@@ -1,5 +1,15 @@
 #pragma once
 #include <vector>
+#include <unordered_set>
+
+template <typename T>
+void append_to_set(std::unordered_set<T>* dest,
+                   std::unordered_set<T>&& to_append) {
+  dest->reserve(dest->size() + to_append.size());
+  for (auto&& item : to_append) {
+    dest->emplace(std::move(item));
+  }
+}
 
 template <typename T>
 void append_to_vector(std::vector<T>* dest, std::vector<T>&& to_append) {

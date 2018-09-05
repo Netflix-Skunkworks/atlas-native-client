@@ -1,12 +1,12 @@
 #include "http_server.h"
-#include "../util/logger.h"
 #include "../util/gzip.h"
+#include "../util/logger.h"
 #include <fmt/format.h>
-#include <thread>
-#include <sys/socket.h>
-#include <gtest/gtest.h>
 #include <fstream>
+#include <gtest/gtest.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
+#include <thread>
 
 using atlas::util::gzip_compress;
 using atlas::util::Logger;

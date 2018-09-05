@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "../util/collections.h"
+#include <gtest/gtest.h>
 #include <string>
 
 TEST(Vector, Concat) {

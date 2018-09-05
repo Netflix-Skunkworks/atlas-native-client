@@ -21,6 +21,8 @@ class DefaultTimer : public Meter, public Timer {
 
   int64_t TotalTime() const noexcept override;
 
+  const char* GetClass() const noexcept override { return "DefaultTimer"; }
+
  private:
   // used to conform to the API for timer
   std::atomic<int64_t> count_;

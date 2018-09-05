@@ -19,6 +19,9 @@ class PercentileDistributionSummary : public Meter, public DistributionSummary {
   int64_t Count() const noexcept override { return dist_->Count(); }
   int64_t TotalAmount() const noexcept override { return dist_->TotalAmount(); }
   double Percentile(double p) const noexcept;
+  const char* GetClass() const noexcept override {
+    return "PercentileDistributionSummary";
+  }
 
  private:
   Registry* registry_;

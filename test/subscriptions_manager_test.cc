@@ -3,9 +3,9 @@
 
 #include "../meter/subscription_format.h"
 #include "../meter/subscription_manager.h"
+#include "../util/config.h"
 #include "../util/json.h"
 #include "../util/logger.h"
-#include "../util/config.h"
 
 using atlas::util::Logger;
 

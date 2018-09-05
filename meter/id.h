@@ -3,23 +3,29 @@
 #include <map>
 #include <ostream>
 #include <unordered_map>
+
+#include "../meter/tag.h"
 #include "../util/intern.h"
 #include "../util/memory.h"
-#include "../util/small_tag_map.h"
+#include <ska/flat_hash_map.hpp>
 
 namespace atlas {
 namespace meter {
 
 class Tags {
   using K = util::StrRef;
-  using value_t = util::StrRef;
-  using table_t = util::SmallTagMap;
+  using V = util::StrRef;
+  using table_t = ska::flat_hash_map<K, V>;
   table_t entries_;
 
  public:
   Tags() = default;
 
-  Tags(std::initializer_list<Tag> vs) : entries_(vs) {}
+  Tags(std::initializer_list<Tag> vs) {
+    for (const auto& t : vs) {
+      entries_[t.key] = t.value;
+    }
+  }
 
   Tags(std::initializer_list<std::pair<const char*, const char*>> vs) {
     for (const auto& pair : vs) {
@@ -27,23 +33,39 @@ class Tags {
     }
   }
 
-  void add(const Tag& tag) { entries_.add(tag.key, tag.value); }
+  void add(const Tag& tag) { entries_[tag.key] = tag.value; }
 
-  void add(K k, K v) { entries_.add(k, v); }
+  void add(K k, V v) { entries_[k] = v; }
 
   void add(const char* k, const char* v) {
-    entries_.add(util::intern_str(k), util::intern_str(v));
+    entries_[util::intern_str(k)] = util::intern_str(v);
   }
 
-  size_t hash() const { return entries_.hash(); }
+  size_t hash() const {
+    size_t h = 0;
+    for (const auto& entry : entries_) {
+      h += (std::hash<K>()(entry.first) << 1) ^ std::hash<V>()(entry.second);
+    }
+    return h;
+  }
 
-  void add_all(const Tags& source) { entries_.add_all(source.entries_); }
+  void add_all(const Tags& source) {
+    for (const auto& t : source.entries_) {
+      entries_[t.first] = t.second;
+    }
+  }
 
   bool operator==(const Tags& that) const { return that.entries_ == entries_; }
 
-  bool has(K key) const { return entries_.has(key); }
+  bool has(K key) const { return entries_.find(key) != entries_.end(); }
 
-  K at(K key) const { return entries_.at(key); }
+  K at(K key) const {
+    auto entry = entries_.find(key);
+    if (entry != entries_.end()) {
+      return entry->second;
+    }
+    return {};
+  }
 
   size_t size() const { return entries_.size(); }
 
@@ -87,7 +109,6 @@ class Id {
       // compute hash code, and reuse it
       hash_ = tags_.hash() ^ std::hash<atlas::util::StrRef>()(name_);
     }
-
     return hash_;
   }
 };

@@ -66,6 +66,10 @@ class DefaultDistributionSummaryNum : public Meter,
     return total_amount_.load(std::memory_order_relaxed);
   }
 
+  const char* GetClass() const noexcept override {
+    return "DefaultDistributionSummary";
+  }
+
  private:
   // used to conform to the API for distribution summary
   std::atomic<int64_t> count_;

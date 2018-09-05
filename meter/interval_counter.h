@@ -19,6 +19,7 @@ class IntervalCounter : public Meter, public Counter {
 
   std::ostream& Dump(std::ostream& os) const override;
   Measurements Measure() const override;
+  const char* GetClass() const noexcept override { return "IntervalCounter"; }
 
  private:
   std::shared_ptr<Counter> counter_;

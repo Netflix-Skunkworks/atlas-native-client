@@ -29,6 +29,10 @@ class DefaultLongTaskTimer : public Meter, public LongTaskTimer {
   // Long task timers don't expire
   bool HasExpired() const noexcept override { return false; }
 
+  const char* GetClass() const noexcept override {
+    return "DefaultLongTaskTimer";
+  };
+
  private:
   static const int EXPECTED_TASKS = 8;
   std::atomic<int64_t> next_;

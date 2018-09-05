@@ -41,6 +41,8 @@ class FunctionGauge : public UpdateableMeter {
 
   void Update() noexcept override { value_ = Value(); }
 
+  const char* GetClass() const noexcept override { return "FunctionGauge"; }
+
  private:
   static constexpr auto kNAN = std::numeric_limits<double>::quiet_NaN();
   std::weak_ptr<T> ptr_;

@@ -1,6 +1,6 @@
 #include "../interpreter/interpreter.h"
-#include "../meter/manual_clock.h"
 #include "../meter/atlas_registry.h"
+#include "../meter/manual_clock.h"
 #include "../util/config_manager.h"
 #include "../util/logger.h"
 #include "test_registry.h"
@@ -69,4 +69,21 @@ TEST(AtlasRegistry, MeasurementsExpire) {
   r.measurements();
   auto meters = r.my_meters();
   EXPECT_EQ(meters.size(), 1);
+}
+
+TEST(AtlasRegistry, DiffTypes) {
+  ManualClock manual_clock;
+  TestRegistry r{&manual_clock};
+
+  auto id = r.CreateId("foo", {{"statistic", "test"}});
+  r.timer(id)->Record(21);
+  r.timer(id)->Record(21);
+
+  r.counter(id)->Increment();
+  auto c = r.counter(id);
+  c->Increment();
+
+  EXPECT_EQ(c->Count(), 1);  // this is an isolated object
+  EXPECT_EQ(r.timer(id)->TotalTime(),
+            42);  // the original is still in the registry
 }

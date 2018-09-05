@@ -6,17 +6,17 @@
 #include <sys/types.h>
 #include <zlib.h>
 
+#include "../interpreter/tags_value.h"
 #include "../meter/id_format.h"
 #include "../util/config_manager.h"
 #include "../util/gzip.h"
 #include "../util/http.h"
 #include "../util/logger.h"
 #include "../util/strings.h"
-#include "../interpreter/tags_value.h"
 #include "http_server.h"
 #include "test_registry.h"
-#include <thread>
 #include <fstream>
+#include <thread>
 
 using atlas::meter::ManualClock;
 using atlas::meter::Tags;

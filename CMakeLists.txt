@@ -118,6 +118,8 @@ install(TARGETS atlasclient DESTINATION lib)
 install(FILES atlas_client.h types.h DESTINATION include/atlas)
 install(DIRECTORY meter interpreter util DESTINATION include/atlas
         FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY 3rd-party/ska interpreter util DESTINATION include 
+  FILES_MATCHING PATTERN "*.hpp")
 install(FILES resources/atlas-config-reference.json DESTINATION etc)
 
 if(CMAKE_SYSTEM_NAME STREQUAL Linux)

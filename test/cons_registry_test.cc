@@ -1,6 +1,6 @@
 #include "../meter/consolidation_registry.h"
-#include "test_utils.h"
 #include "../util/config.h"
+#include "test_utils.h"
 #include <gtest/gtest.h>
 
 using atlas::meter::ConsolidationRegistry;

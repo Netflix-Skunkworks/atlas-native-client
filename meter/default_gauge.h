@@ -16,6 +16,8 @@ class DefaultGauge : public Meter, public Gauge<double> {
 
   Measurements Measure() const override;
 
+  const char* GetClass() const noexcept override { return "DefaultGauge"; }
+
  private:
   std::atomic<double> value_;
 };

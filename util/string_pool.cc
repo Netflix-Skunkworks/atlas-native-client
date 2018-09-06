@@ -24,9 +24,9 @@ const StrRef& StringPool::intern(const char* string) noexcept {
   const auto* copy = strdup(string);
   StrRef ref;
   ref.data = copy;
-  table.insert(std::make_pair(copy, ref));
+  auto added = table.insert(std::make_pair(copy, ref));
   alloc_size_ += strlen(copy) + 1;  // null terminator
-  return table.at(copy);
+  return added.first->second;
 }
 
 }  // namespace util

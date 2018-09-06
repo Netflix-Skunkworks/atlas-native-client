@@ -18,6 +18,7 @@ class PercentileTimer : public Meter, public Timer {
   int64_t Count() const noexcept override { return timer_->Count(); }
   int64_t TotalTime() const noexcept override { return timer_->TotalTime(); }
   double Percentile(double p) const noexcept;
+  const char* GetClass() const noexcept override { return "PercentileTimer"; }
 
  private:
   Registry* registry_;

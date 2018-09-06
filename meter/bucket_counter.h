@@ -15,6 +15,7 @@ class BucketCounter : public Meter, public DistributionSummary {
   void Record(int64_t amount) noexcept override;
   int64_t Count() const noexcept override { return 0; };
   int64_t TotalAmount() const noexcept override { return 0; };
+  const char* GetClass() const noexcept override { return "BucketConter"; }
 
  private:
   Registry* registry_;

@@ -15,6 +15,7 @@ class BucketTimer : public Meter, public Timer {
   void Record(std::chrono::nanoseconds duration) override;
   int64_t Count() const noexcept override;
   int64_t TotalTime() const noexcept override;
+  const char* GetClass() const noexcept override { return "BucketTimer"; }
 
  private:
   Registry* registry_;

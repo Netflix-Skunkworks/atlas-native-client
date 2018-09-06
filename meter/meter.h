@@ -39,6 +39,8 @@ class Meter {
 
   virtual bool IsUpdateable() const noexcept { return false; }
 
+  virtual const char* GetClass() const noexcept = 0;
+
  protected:
   std::atomic<int64_t> last_updated_{0};
   const IdPtr id_;

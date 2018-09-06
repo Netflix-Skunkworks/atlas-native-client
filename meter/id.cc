@@ -20,7 +20,7 @@ std::unique_ptr<Id> Id::WithTag(const Tag& tag) const {
 }
 
 bool Id::operator==(const Id& rhs) const noexcept {
-  return std::tie(name_, tags_) == std::tie(rhs.name_, rhs.tags_);
+  return name_ == rhs.name_ && tags_ == rhs.tags_;
 }
 
 IdPtr WithDefaultTagForId(const IdPtr& id, const Tag& default_tag) {

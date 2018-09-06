@@ -50,6 +50,8 @@ class DefaultCounterNumber : public Meter, public CounterNumber<T> {
     return value_.load(std::memory_order_relaxed);
   }
 
+  const char* GetClass() const noexcept override { return "DefaultCounter"; }
+
  private:
   mutable StepNumber<T> step_number_;
   std::atomic<T> value_;  // to keep the total count

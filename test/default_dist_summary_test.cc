@@ -1,6 +1,6 @@
 #include "../meter/manual_clock.h"
-#include "../meter/statistic.h"
 #include "../meter/default_distribution_summary.h"
+#include "../meter/statistic.h"
 #include "test_registry.h"
 #include <gtest/gtest.h>
 

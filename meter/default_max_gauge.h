@@ -48,6 +48,8 @@ class DefaultMaxGauge : public Meter, public Gauge<T> {
     return Measurements{Measurement{id_, start_step, max}};
   }
 
+  const char* GetClass() const noexcept override { return "DefaultMaxGauge"; }
+
  private:
   std::atomic<T> value_;  // to keep the local max
   mutable StepNumber<T> step_number_;

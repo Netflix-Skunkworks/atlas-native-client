@@ -1,7 +1,7 @@
 #include "../meter/default_counter.h"
 #include "../meter/manual_clock.h"
-#include "test_registry.h"
 #include "../util/config.h"
+#include "test_registry.h"
 #include <gtest/gtest.h>
 
 using namespace atlas::meter;

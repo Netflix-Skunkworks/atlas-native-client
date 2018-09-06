@@ -13,6 +13,7 @@ class MonotonicCounter : public Meter {
   std::ostream& Dump(std::ostream& os) const override;
   void Set(int64_t amount) noexcept;
   int64_t Count() const noexcept;
+  const char* GetClass() const noexcept override { return "MonotonicCounter"; }
 
  private:
   std::atomic<int64_t> value_;

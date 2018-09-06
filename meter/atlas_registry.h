@@ -5,6 +5,7 @@
 #include "stepnumber.h"
 #include "subscription.h"
 #include <array>
+#include <mutex>
 
 namespace atlas {
 

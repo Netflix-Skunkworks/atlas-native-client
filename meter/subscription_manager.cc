@@ -268,7 +268,7 @@ void SubscriptionManager::Stop() noexcept {
 
     flush_metrics();
     Logger()->info("Advancing clock and flushing metrics");
-    clock_->SetOffset(4990);
+    clock_->SetOffset(59990);
     flush_metrics();
   }
 }

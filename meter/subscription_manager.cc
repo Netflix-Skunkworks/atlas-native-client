@@ -266,9 +266,13 @@ void SubscriptionManager::Stop() noexcept {
     Logger()->debug("Stopping sub_refresher");
     sub_refresher_thread.join();
 
+    // this is the timestamp that will be used when flushing metrics
+    auto prev_step = clock_->WallTime() / kMainFrequencyMillis * kMainFrequencyMillis;
     flush_metrics();
+    // move the clock forward to send partial increments for step counters
+    auto now_offset = clock_->WallTime() - prev_step;
     Logger()->info("Advancing clock and flushing metrics");
-    clock_->SetOffset(59990);
+    clock_->SetOffset(kMainFrequencyMillis - now_offset);
     flush_metrics();
   }
 }

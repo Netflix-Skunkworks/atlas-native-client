@@ -26,29 +26,12 @@ static AggrOp aggregate_op(const Measurement& measurement) {
   return op_for_statistic(stat);
 }
 
-static double addnan(double a, double b) {
-  if (std::isnan(a)) {
-    return b;
-  }
-  if (std::isnan(b)) {
-    return a;
-  }
-  return a + b;
-}
-
-static double maxnan(double a, double b) {
-  if (std::isnan(a)) {
-    return b;
-  }
-  if (std::isnan(b)) {
-    return a;
-  }
-  return std::max(a, b);
-}
-
-ConsolidationRegistry::ConsolidationRegistry(
-    int64_t update_frequency, int64_t reporting_frequency) noexcept
-    : update_multiple{reporting_frequency / update_frequency} {
+ConsolidationRegistry::ConsolidationRegistry(int64_t update_frequency,
+                                             int64_t reporting_frequency,
+                                             const Clock* clock) noexcept
+    : reporting_frequency_{reporting_frequency},
+      update_multiple{reporting_frequency / update_frequency},
+      clock_{clock} {
   assert(reporting_frequency % update_frequency == 0);
   assert(update_frequency % 1000 == 0);
 }
@@ -57,41 +40,53 @@ void ConsolidationRegistry::update_from(
     const Measurements& measurements) noexcept {
   std::lock_guard<std::mutex> guard{mutex};
 
-  double new_value;
   for (const auto& m : measurements) {
-    auto& my_m = my_measures[m.id];
-    my_m.id = m.id;
-    if (my_m.timestamp == m.timestamp) {
-      // duplicate update
+    if (std::isnan(m.value)) {
       continue;
     }
-    my_m.timestamp = m.timestamp;
+
+    auto it = my_values.find(m.id);
     auto op = aggregate_op(m);
-    switch (op) {
-      case AggrOp::Add:
-        new_value = addnan(my_m.value, m.value / update_multiple);
-        my_m.value = new_value;
-        break;
-      case AggrOp::Max:
-        new_value = maxnan(m.value, my_m.value);
-        my_m.value = new_value;
-        break;
+    if (it == my_values.end()) {
+      it = my_values
+               .emplace(values_map::value_type{
+                   m.id, ConsolidatedValue(op == AggrOp::Max, update_multiple,
+                                           reporting_frequency_, clock_)})
+               .first;
     }
+    auto& my_value = it->second;
+    my_value.update(m.value);
   }
 }
 
-Measurements ConsolidationRegistry::measurements() const noexcept {
+Measurements ConsolidationRegistry::measurements(int64_t timestamp) const
+    noexcept {
   std::lock_guard<std::mutex> guard{mutex};
 
+  std::vector<IdPtr> to_remove;
   Measurements result;
-  result.reserve(my_measures.size());
-  for (const auto& m : my_measures) {
-    result.push_back(m.second);
+  result.reserve(my_values.size());
+  for (auto& m : my_values) {
+    if (m.second.has_value()) {
+      m.second.set_marked(false);
+      result.emplace_back(Measurement{m.first, timestamp, m.second.value()});
+    } else {
+      // check whether we should expire them from our map
+      // if it didn't have any activity during this interval, we mark them
+      // if it was already marked, it means two periods with no activity, then
+      // then we consider the entry safe to be removed
+      if (m.second.marked()) {
+        to_remove.emplace_back(m.first);
+      } else {
+        m.second.set_marked(true);
+      }
+    }
   }
-  Logger()->debug(
-      "Returning {} measurements, and resetting consolidation registry",
-      result.size());
-  my_measures.clear();
+  Logger()->debug("Returning {} measurements - Expiring {} entries",
+                  result.size(), to_remove.size());
+  for (const auto& id : to_remove) {
+    my_values.erase(id);
+  }
   return result;
 }
 

@@ -13,25 +13,40 @@ class StepNumber {
   struct type {};
 
  public:
-  StepNumber& operator=(const StepNumber& s) = delete;
-  StepNumber(const StepNumber& s) = delete;
+  StepNumber(const StepNumber& s) noexcept
+      : init_(s.init_),
+        step_millis_(s.step_millis_),
+        clock_(s.clock_),
+        previous_(s.previous_.load(std::memory_order_relaxed)),
+        current_(s.current_.load(std::memory_order_relaxed)),
+        last_init_pos_(s.last_init_pos_.load(std::memory_order_relaxed)) {}
 
-  StepNumber(T init, int64_t step_millis, const Clock& clock) noexcept
+  StepNumber& operator=(const StepNumber& s) noexcept {
+    init_ = s.init_;
+    step_millis_ = s.step_millis_;
+    clock_ = s.clock_;
+    previous_ = s.previous_.load(std::memory_order_relaxed);
+    current_ = s.current_.load(std::memory_order_relaxed);
+    last_init_pos_ = s.last_init_pos_.load(std::memory_order_relaxed);
+    return *this;
+  }
+
+  StepNumber(T init, int64_t step_millis, const Clock* clock) noexcept
       : init_(init),
         step_millis_(step_millis),
         clock_(clock),
         previous_(init),
         current_(init),
-        last_init_pos_(clock.WallTime() / step_millis) {}
+        last_init_pos_(clock->WallTime() / step_millis) {}
 
   /// Get the value for the last completed interval
-  T Poll() noexcept {
+  T Poll() const noexcept {
     RollCountNow();
     return previous_.load(std::memory_order_relaxed);
   }
 
   /// Get the value for the current interval
-  T Current() noexcept {
+  T Current() const noexcept {
     RollCountNow();
     return current_.load(std::memory_order_relaxed);
   }
@@ -58,12 +73,12 @@ class StepNumber {
  private:
   T init_;
   int64_t step_millis_;
-  const Clock& clock_;
-  std::atomic<T> previous_;
-  std::atomic<T> current_;
-  std::atomic<T> last_init_pos_;
+  const Clock* clock_;
+  mutable std::atomic<T> previous_;
+  mutable std::atomic<T> current_;
+  mutable std::atomic<T> last_init_pos_;
 
-  void RollCount(int64_t now) noexcept {
+  void RollCount(int64_t now) const noexcept {
     const auto step_time = now / step_millis_;
     auto last_init = last_init_pos_.load();
     if (last_init < step_time &&
@@ -76,7 +91,7 @@ class StepNumber {
       previous_.store((last_init == step_time - 1) ? v : init_);
     }
   }
-  void RollCountNow() noexcept { RollCount(clock_.WallTime()); }
+  void RollCountNow() const noexcept { RollCount(clock_->WallTime()); }
 
   template <typename CT>
   void AddAmount(T amount, type<CT>) noexcept {

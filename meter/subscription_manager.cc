@@ -39,11 +39,11 @@ SubscriptionManager::SubscriptionManager(
       config_manager_(config_manager),
       registry_(
           std::make_shared<AtlasRegistry>(kFastestFrequencyMillis, clock_)),
-      main_registry_(kFastestFrequencyMillis, kMainFrequencyMillis),
+      main_registry_(kFastestFrequencyMillis, kMainFrequencyMillis, clock_),
       publisher_(registry_) {
   for (auto i = 0; i < kMainMultiple; ++i) {
     sub_registries_[i] = std::make_unique<ConsolidationRegistry>(
-        kFastestFrequencyMillis, kFastestFrequencyMillis * (i + 1));
+        kFastestFrequencyMillis, kFastestFrequencyMillis * (i + 1), clock_);
   }
 }
 
@@ -267,7 +267,8 @@ void SubscriptionManager::Stop() noexcept {
     sub_refresher_thread.join();
 
     // this is the timestamp that will be used when flushing metrics
-    auto prev_step = clock_->WallTime() / kMainFrequencyMillis * kMainFrequencyMillis;
+    auto prev_step =
+        clock_->WallTime() / kMainFrequencyMillis * kMainFrequencyMillis;
     flush_metrics();
     // move the clock forward to send partial increments for step counters
     auto now_offset = clock_->WallTime() - prev_step;
@@ -398,7 +399,8 @@ SubscriptionResults SubscriptionManager::get_lwc_metrics(
   Logger()->debug("Subs[{}] idx: {}", sub_idx, subs.size());
 
   // get all the measurements that will be used
-  auto measurements = sub_registries_[sub_idx]->measurements();
+  auto measurements =
+      sub_registries_[sub_idx]->measurements(clock_->WallTime());
   Logger()->debug("Measurements for subs[{}] idx: {}", sub_idx,
                   measurements.size());
 
@@ -495,14 +497,14 @@ void SubscriptionManager::send_to_main() {
       std::make_unique<interpreter::ClientVocabulary>()};
   auto config = config_manager_.GetConfig();
   auto common_tags = config->CommonTags();
-  auto metrics = get_main_measurements(*config, &common_tags,
-                                       main_registry_.measurements(),
-                                       registry_.get(), evaluator_);
-
   // all our metrics are normalized, so send them with a timestamp at the start
   // of the step
   auto timestamp =
       clock.WallTime() / kMainFrequencyMillis * kMainFrequencyMillis;
+  auto metrics = get_main_measurements(*config, &common_tags,
+                                       main_registry_.measurements(timestamp),
+                                       registry_.get(), evaluator_);
+
   PushMeasurements(timestamp, metrics);
   auto nanos = clock.MonotonicTime() - start;
   auto millis = nanos / 1e6;

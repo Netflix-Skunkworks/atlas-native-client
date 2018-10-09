@@ -17,7 +17,7 @@ class DefaultMaxGauge : public Meter, public Gauge<T> {
   DefaultMaxGauge(IdPtr id, const Clock& clock, int64_t freq_millis)
       : Meter(WithDefaultGaugeTags(std::move(id), statistic::max), clock),
         value_(0),
-        step_number_(kMinValue, freq_millis, clock) {
+        step_number_(kMinValue, freq_millis, &clock) {
     Updated();
   }
 

@@ -33,8 +33,7 @@ using std::chrono::milliseconds;
 using std::chrono::system_clock;
 
 SubscriptionManager::SubscriptionManager(
-    SystemClockWithOffset* clock,
-    const util::ConfigManager& config_manager) noexcept
+    WrappedClock* clock, const util::ConfigManager& config_manager) noexcept
     : clock_(clock),
       config_manager_(config_manager),
       registry_(
@@ -77,21 +76,22 @@ void SubscriptionManager::main_sender() noexcept {
   Logger()->info("Starting main sender thread");
   while (should_run_) {
     auto logger = Logger();
-    ++run;
     auto start = system_clock::now();
     update_metrics();
     update_registries();
 
     auto config = config_manager_.GetConfig();
     auto idx = run % kMainMultiple;
-    if (idx == (kMainMultiple - 1) && config->IsMainEnabled()) {
+    // send metrics at the beginning of each new minute
+    auto millis = clock_->WallTime() % 60000;
+    if (millis < kFastestFrequencyMillis && config->IsMainEnabled()) {
       logger->debug("Sending metrics to publish using the main registry");
       try {
         send_to_main();
       } catch (const std::exception& e) {
         logger->error("Error sending to main publish cluster: {}", e.what());
       }
-    } else if (idx == kMainMultiple - 1) {
+    } else if (millis < kFastestFrequencyMillis) {
       logger->info(
           "Not sending anything to the main publish cluster (disabled)");
     }
@@ -119,6 +119,7 @@ void SubscriptionManager::main_sender() noexcept {
         "Waiting {} millis until next main sender/updater run ({}/{})",
         wait_millis, idx, kMainMultiple - 1);
     std::unique_lock<std::mutex> lock{mutex};
+    ++run;
     cv.wait_for(lock, milliseconds(wait_millis));
   }
 }

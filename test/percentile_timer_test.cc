@@ -7,7 +7,7 @@ using atlas::util::intern_str;
 
 TEST(PercentileTimer, Percentile) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   PercentileTimer t{&r, r.CreateId("foo", kEmptyTags)};
 
   for (auto i = 0; i < 100000; ++i) {
@@ -23,7 +23,7 @@ TEST(PercentileTimer, Percentile) {
 
 TEST(PercentileTimer, HasProperStatistic) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   PercentileTimer t{&r, r.CreateId("foo", kEmptyTags)};
 
   t.Record(std::chrono::milliseconds{42});
@@ -41,7 +41,7 @@ TEST(PercentileTimer, HasProperStatistic) {
 
 TEST(PercentileTimer, CountTotal) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   PercentileTimer t{&r, r.CreateId("foo", kEmptyTags)};
 
   for (auto i = 0; i < 100; ++i) {

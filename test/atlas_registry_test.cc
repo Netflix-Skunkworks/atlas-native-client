@@ -19,7 +19,7 @@ using namespace atlas::meter;
 
 TEST(AtlasRegistry, MetersExpire) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   r.SetWall(42);
   Tags tags{{"k1", "v1"}, {"k2", "v2"}};
   auto id1 = r.CreateId("m1", tags);
@@ -48,7 +48,7 @@ TEST(AtlasRegistry, MetersExpire) {
 
 TEST(AtlasRegistry, MeasurementsExpire) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   r.SetWall(42);
   Tags tags{{"k1", "v1"}, {"k2", "v2"}};
   auto id1 = r.CreateId("m1", tags);
@@ -73,7 +73,7 @@ TEST(AtlasRegistry, MeasurementsExpire) {
 
 TEST(AtlasRegistry, DiffTypes) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
 
   auto id = r.CreateId("foo", {{"statistic", "test"}});
   r.timer(id)->Record(21);

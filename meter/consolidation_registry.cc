@@ -29,8 +29,8 @@ static AggrOp aggregate_op(const Measurement& measurement) {
 ConsolidationRegistry::ConsolidationRegistry(int64_t update_frequency,
                                              int64_t reporting_frequency,
                                              const Clock* clock) noexcept
-    : reporting_frequency_{reporting_frequency},
-      update_multiple{reporting_frequency / update_frequency},
+    : update_frequency_{update_frequency},
+      reporting_frequency_{reporting_frequency},
       clock_{clock} {
   assert(reporting_frequency % update_frequency == 0);
   assert(update_frequency % 1000 == 0);
@@ -40,6 +40,8 @@ void ConsolidationRegistry::update_from(
     const Measurements& measurements) noexcept {
   std::lock_guard<std::mutex> guard{mutex};
 
+  auto update_multiple = reporting_frequency_ / update_frequency_;
+  clock_.SetOffset(-update_frequency_);
   for (const auto& m : measurements) {
     if (std::isnan(m.value)) {
       continue;
@@ -51,12 +53,13 @@ void ConsolidationRegistry::update_from(
       it = my_values
                .emplace(values_map::value_type{
                    m.id, ConsolidatedValue(op == AggrOp::Max, update_multiple,
-                                           reporting_frequency_, clock_)})
+                                           reporting_frequency_, &clock_)})
                .first;
     }
     auto& my_value = it->second;
     my_value.update(m.value);
   }
+  clock_.SetOffset(0);
 }
 
 Measurements ConsolidationRegistry::measurements(int64_t timestamp) const

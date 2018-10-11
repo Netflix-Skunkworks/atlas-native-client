@@ -8,7 +8,7 @@ using namespace atlas::meter;
 using atlas::util::kMainFrequencyMillis;
 
 static ManualClock manual_clock;
-static TestRegistry test_registry{&manual_clock};
+static TestRegistry test_registry{60000, &manual_clock};
 static auto id = test_registry.CreateId("foo", kEmptyTags);
 
 static std::unique_ptr<DefaultDistributionSummary> newDistSummary() {
@@ -81,7 +81,7 @@ TEST(DefaultDistSummary, Measure) {
 
 TEST(DefaultDistSummary, Expiration) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
 
   auto id = r.CreateId("test", kEmptyTags);
   r.distribution_summary(id)->Record(1);

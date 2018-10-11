@@ -1,7 +1,10 @@
 #include "../meter/consolidation_registry.h"
 #include "../meter/manual_clock.h"
 #include "../util/config.h"
+#include "../meter/id_format.h"
+#include "../util/logger.h"
 #include "test_utils.h"
+#include "test_registry.h"
 #include <gtest/gtest.h>
 
 using atlas::meter::ConsolidationRegistry;
@@ -147,4 +150,47 @@ TEST(ConsolidationRegistry, Expiration) {
   ms = registry.measurements(clock.WallTime());
   EXPECT_TRUE(ms.empty());  // no data
   EXPECT_EQ(registry.size(), 0);
+}
+
+// make sure we get the increment regardless of where in the minute we saw it
+TEST(ConsolidationRegistry, OneIncrPerMinute) {
+  using atlas::util::Logger;
+  ManualClock clock;
+  clock.SetWall(0);
+
+  TestRegistry registry{5000, &clock};
+  auto ctr =
+      registry.counter(registry.CreateId("counter", atlas::meter::Tags{}));
+  auto counter_ref = atlas::util::intern_str("counter");
+  ConsolidationRegistry consolidationRegistry{5000, 60000, &clock};
+
+  auto base = 1;  // assume we start at this offset of the minute
+  auto first = true;
+  for (auto min = 1; min < 300; ++min) {
+    for (auto sec = 0; sec < 60; ++sec) {
+      // do measurements
+      clock.SetWall((min * 60 + sec) * 1000);
+      if (min % 60 == sec) {
+        ctr->Increment();
+      }
+      if (sec % 5 == base) {
+        auto ms = registry.measurements();
+        consolidationRegistry.update_from(ms);
+        if (sec < 5) {
+          auto consolidated =
+              consolidationRegistry.measurements(clock.WallTime());
+          auto found = false;
+          for (auto c : consolidated) {
+            if (c.id->NameRef() == counter_ref) {
+              EXPECT_EQ(c.value, 1 / 60.0);
+              found = true;
+            }
+          }
+          EXPECT_TRUE(first || found) << "Did not get counter at minute " << min
+                                      << " offset " << (min % 60);
+          first = false;
+        }
+      }
+    }
+  }
 }

@@ -51,9 +51,9 @@ class ConsolidationRegistry {
   }
 
  private:
+  int64_t update_frequency_;
   int64_t reporting_frequency_;
-  int64_t update_multiple;
-  const Clock* clock_;
+  WrappedClock clock_;
   using values_map = ska::flat_hash_map<IdPtr, ConsolidatedValue>;
   mutable values_map my_values;
   mutable std::mutex mutex;

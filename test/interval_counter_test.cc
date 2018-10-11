@@ -13,7 +13,7 @@ using atlas::util::intern_str;
 
 TEST(IntervalCounter, Init) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   r.SetWall(42 * 1000);
   auto id = r.CreateId("test", kEmptyTags);
   IntervalCounter c{&r, id};
@@ -24,7 +24,7 @@ TEST(IntervalCounter, Init) {
 
 TEST(IntervalCounter, Interval) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   r.SetWall(0);
   auto id = r.CreateId("test", kEmptyTags);
   IntervalCounter c{&r, id};
@@ -41,7 +41,7 @@ TEST(IntervalCounter, Interval) {
 
 TEST(IntervalCounter, Increment) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   auto id = r.CreateId("test", kEmptyTags);
   IntervalCounter c{&r, id};
 
@@ -70,7 +70,7 @@ void assert_interval_counter(const Measurements& ms, int64_t timestamp,
 
 TEST(IntervalCounter, Measure) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   auto id = r.CreateId("test", kEmptyTags);
   IntervalCounter c{&r, id};
 
@@ -91,7 +91,7 @@ TEST(IntervalCounter, Measure) {
 
 TEST(IntervalCounter, ReusesInstance) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
 
   auto id = r.CreateId("test", kEmptyTags);
 
@@ -109,7 +109,7 @@ TEST(IntervalCounter, ReusesInstance) {
 TEST(IntervalCounter, Expiration) {
   // make sure we always report the interval since last update
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
 
   auto id = r.CreateId("test", kEmptyTags);
   IntervalCounter c{&r, id};

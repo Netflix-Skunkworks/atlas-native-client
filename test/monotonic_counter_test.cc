@@ -6,14 +6,14 @@ using namespace atlas::meter;
 
 TEST(MonotonicCounter, Init) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   MonotonicCounter counter{&r, r.CreateId("ctr", kEmptyTags)};
   EXPECT_EQ(0, counter.Count()) << "A new counter should report a value of 0";
 }
 
 TEST(MonotonicCounter, Set) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   MonotonicCounter counter{&r, r.CreateId("ctr", kEmptyTags)};
   counter.Set(100);
 
@@ -25,7 +25,7 @@ TEST(MonotonicCounter, Set) {
 
 TEST(MonotonicCounter, NotEnoughData) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   MonotonicCounter counter{&r, r.CreateId("ctr", kEmptyTags)};
 
   EXPECT_EQ(0, r.measurements_for_name("ctr").size())
@@ -47,7 +47,7 @@ TEST(MonotonicCounter, NotEnoughData) {
 
 TEST(MonotonicCounter, Rate) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   MonotonicCounter counter{&r, r.CreateId("ctr", kEmptyTags)};
 
   r.SetWall(1000);
@@ -66,7 +66,7 @@ TEST(MonotonicCounter, Rate) {
 
 TEST(MonotonicCounter, Expiration) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   MonotonicCounter counter{&r, r.CreateId("ctr", kEmptyTags)};
 
   r.SetWall(61000);
@@ -86,7 +86,7 @@ TEST(MonotonicCounter, Expiration) {
 
 TEST(MonotonicCounter, Overflow) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   MonotonicCounter counter{&r, r.CreateId("ctr", kEmptyTags)};
 
   r.SetWall(1000);

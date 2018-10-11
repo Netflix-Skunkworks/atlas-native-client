@@ -83,7 +83,7 @@ TEST(DefaultTimer, Measure) {
 
 TEST(DefaultTimer, Expiration) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
 
   auto id = r.CreateId("test", kEmptyTags);
   r.timer(id)->Record(1);

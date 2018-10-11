@@ -17,7 +17,7 @@ using std::chrono::seconds;
 
 TEST(BucketTimer, Init) {
   ManualClock m;
-  TestRegistry r{&m};
+  TestRegistry r{60000, &m};
 
   auto id = r.CreateId("test", kEmptyTags);
   BucketTimer t(&r, id, Age(milliseconds{100}));
@@ -29,7 +29,7 @@ static constexpr auto kMillisToSecs = 1 / 1000.0;
 
 TEST(BucketTimer, Record) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   r.SetWall(1000);
 
   auto id = r.CreateId("test", kEmptyTags);
@@ -66,7 +66,7 @@ TEST(BucketTimer, Record) {
 
 TEST(BucketTimer, Latency) {
   ManualClock m;
-  TestRegistry r{&m};
+  TestRegistry r{60000, &m};
   r.SetWall(1000);
 
   auto id = r.CreateId("bucket.t", kEmptyTags);

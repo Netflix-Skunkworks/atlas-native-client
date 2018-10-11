@@ -17,7 +17,7 @@ using std::chrono::microseconds;
 
 TEST(BucketCounter, Init) {
   ManualClock m;
-  TestRegistry r{&m};
+  TestRegistry r{60000, &m};
   auto id = r.CreateId("test", kEmptyTags);
   BucketCounter b(&r, id, Age(microseconds{100}));
   auto ms = r.measurements_for_name("test");
@@ -28,7 +28,7 @@ TEST(BucketCounter, Init) {
 static constexpr int64_t kMicrosToNanos = 1000l;
 TEST(BucketCounter, Record) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   r.SetWall(1000);
 
   auto id = r.CreateId("test", kEmptyTags);

@@ -5,8 +5,9 @@
 
 class TestRegistry : public atlas::meter::AtlasRegistry {
  public:
-  TestRegistry(const atlas::meter::ManualClock* manual_clock)
-      : atlas::meter::AtlasRegistry(60000, manual_clock),
+  TestRegistry(int64_t step_millis,
+               const atlas::meter::ManualClock* manual_clock)
+      : atlas::meter::AtlasRegistry(step_millis, manual_clock),
         manual_clock_(manual_clock) {}
 
   void SetWall(int64_t millis) { manual_clock_->SetWall(millis); }

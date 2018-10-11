@@ -15,7 +15,7 @@ using std::chrono::seconds;
 
 TEST(BucketDistributionSummary, Init) {
   ManualClock m;
-  TestRegistry r{&m};
+  TestRegistry r{60000, &m};
 
   auto id = r.CreateId("test", kEmptyTags);
   BucketDistributionSummary ds(&r, id, Age(seconds{60}));
@@ -28,7 +28,7 @@ static constexpr int64_t kSecsToNanos = 1000l * 1000l * 1000l;
 
 TEST(BucketDistributionSummary, Record) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   r.SetWall(1000);
 
   auto id = r.CreateId("test", kEmptyTags);

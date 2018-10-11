@@ -17,7 +17,7 @@ using ParsedSubscriptions = std::array<Subscriptions, util::kMainMultiple>;
 
 class SubscriptionManager {
  public:
-  SubscriptionManager(SystemClockWithOffset* clock,
+  SubscriptionManager(WrappedClock* clock,
                       const util::ConfigManager& config_manager) noexcept;
   ~SubscriptionManager();
 
@@ -35,7 +35,7 @@ class SubscriptionManager {
   std::shared_ptr<Registry> GetRegistry() { return registry_; }
 
  private:
-  SystemClockWithOffset* clock_;
+  WrappedClock* clock_;
   interpreter::Evaluator evaluator_;
   const util::ConfigManager& config_manager_;
   std::shared_ptr<Registry> registry_;  // 5s registry

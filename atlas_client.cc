@@ -8,7 +8,7 @@
 
 using atlas::meter::Registry;
 using atlas::meter::SubscriptionManager;
-using atlas::meter::SystemClockWithOffset;
+using atlas::meter::WrappedClock;
 using atlas::util::ConfigManager;
 using atlas::util::http;
 using atlas::util::Logger;
@@ -32,6 +32,7 @@ class Client::impl {
  public:
   impl()
       : started{false},
+        clock{&system_clock},
         config_manager{util::kLocalFileName, util::kConfigRefreshMillis},
         subscription_manager{&clock, config_manager} {}
 
@@ -105,7 +106,8 @@ class Client::impl {
 
  private:
   bool started;
-  SystemClockWithOffset clock;
+  atlas::meter::SystemClock system_clock;
+  WrappedClock clock;
   ConfigManager config_manager;
   SubscriptionManager subscription_manager;
 };

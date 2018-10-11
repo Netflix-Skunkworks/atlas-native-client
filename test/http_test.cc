@@ -54,7 +54,7 @@ TEST(HttpTest, Post) {
 
   auto cfg = HttpConfig();
   ManualClock clock;
-  auto registry = std::make_shared<TestRegistry>(&clock);
+  auto registry = std::make_shared<TestRegistry>(60000, &clock);
   http client{registry, cfg};
   auto url = fmt::format("http://localhost:{}/foo", port);
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -131,7 +131,7 @@ TEST(HttpTest, PostBatches) {
 
   auto cfg = HttpConfig();
   ManualClock clock;
-  auto registry = std::make_shared<TestRegistry>(&clock);
+  auto registry = std::make_shared<TestRegistry>(60000, &clock);
   http client{registry, cfg};
 
   auto url = fmt::format("http://localhost:{}/foo", port);
@@ -185,7 +185,7 @@ TEST(HttpTest, Timeout) {
   cfg.connect_timeout = 1;
   cfg.read_timeout = 1;
   ManualClock clock;
-  auto registry = std::make_shared<TestRegistry>(&clock);
+  auto registry = std::make_shared<TestRegistry>(60000, &clock);
   http client{registry, cfg};
   auto url = fmt::format("http://localhost:{}/foo", port);
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -217,7 +217,7 @@ TEST(HttpTest, ConditionalGet) {
   auto cfg = HttpConfig();
   cfg.read_timeout = 60;
   ManualClock clock;
-  auto registry = std::make_shared<TestRegistry>(&clock);
+  auto registry = std::make_shared<TestRegistry>(60000, &clock);
   http client{registry, cfg};
   auto url = fmt::format("http://localhost:{}/get", port);
 
@@ -287,7 +287,7 @@ TEST(HttpTest, CompressedGet) {
   auto cfg = HttpConfig();
   cfg.read_timeout = 60;
   ManualClock manual_clock;
-  auto registry = std::make_shared<TestRegistry>(&manual_clock);
+  auto registry = std::make_shared<TestRegistry>(60000, &manual_clock);
   http client{registry, cfg};
 
   auto url = fmt::format("http://localhost:{}/compressed", port);

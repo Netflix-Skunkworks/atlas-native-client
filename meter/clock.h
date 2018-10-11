@@ -21,23 +21,20 @@ class SystemClock : public Clock {
   int64_t MonotonicTime() const noexcept override;
 };
 
-class SystemClockWithOffset : public Clock {
+class WrappedClock : public Clock {
  public:
-  SystemClockWithOffset() noexcept : offset_{0} {}
-
+  explicit WrappedClock(const Clock* clock) : underlying_(clock) {}
+  void SetOffset(int offset) { offset_ = offset; }
   int64_t WallTime() const noexcept override {
-    return clock.WallTime() + offset_;
+    return underlying_->WallTime() + offset_;
   }
-
   int64_t MonotonicTime() const noexcept override {
-    return clock.MonotonicTime();
+    return underlying_->MonotonicTime() + offset_ * 1000000;
   }
-
-  void SetOffset(int64_t offset) noexcept { offset_ = offset; }
 
  private:
-  SystemClock clock;
-  int64_t offset_;
+  const Clock* underlying_;
+  int offset_ = 0;
 };
 
 }  // namespace meter

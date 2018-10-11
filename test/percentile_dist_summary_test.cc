@@ -9,7 +9,7 @@ using atlas::util::intern_str;
 
 TEST(PercentileDistributionSummary, Percentile) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   PercentileDistributionSummary d{&r, r.CreateId("foo", kEmptyTags)};
 
   for (auto i = 0; i < 100000; ++i) {
@@ -25,7 +25,7 @@ TEST(PercentileDistributionSummary, Percentile) {
 
 TEST(PercentileDistributionSummary, HasProperStatistic) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   PercentileDistributionSummary t{&r, r.CreateId("foo", kEmptyTags)};
   t.Record(42);
 
@@ -42,7 +42,7 @@ TEST(PercentileDistributionSummary, HasProperStatistic) {
 
 TEST(PercentileDistributionSummary, CountTotal) {
   ManualClock manual_clock;
-  TestRegistry r{&manual_clock};
+  TestRegistry r{60000, &manual_clock};
   PercentileDistributionSummary d{&r, r.CreateId("foo", kEmptyTags)};
 
   for (auto i = 0; i < 100; ++i) {

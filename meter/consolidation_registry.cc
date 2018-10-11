@@ -41,6 +41,9 @@ void ConsolidationRegistry::update_from(
   std::lock_guard<std::mutex> guard{mutex};
 
   auto update_multiple = reporting_frequency_ / update_frequency_;
+  // set the clock to the beginning of the updating frequency step
+  // this allows us to attribute the update to the correct time period
+  // when we update the StepNumber for the reporting frequency step
   clock_.SetOffset(-update_frequency_);
   for (const auto& m : measurements) {
     if (std::isnan(m.value)) {
@@ -59,6 +62,8 @@ void ConsolidationRegistry::update_from(
     auto& my_value = it->second;
     my_value.update(m.value);
   }
+  // reset the clock to the correct time, so measurements are taken using a full reporting
+  // frequency step
   clock_.SetOffset(0);
 }
 

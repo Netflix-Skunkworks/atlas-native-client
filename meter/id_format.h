@@ -1,6 +1,7 @@
 #pragma once
 
 #include "id.h"
+#include <vector>
 #include <fmt/ostream.h>
 
 namespace atlas {

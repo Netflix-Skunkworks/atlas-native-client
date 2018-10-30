@@ -1,5 +1,7 @@
 #include "logger.h"
 #include <iostream>
+#include <spdlog/sinks/rotating_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 namespace atlas {
 namespace util {

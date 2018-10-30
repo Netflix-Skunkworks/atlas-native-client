@@ -1,5 +1,6 @@
 #include "logger.h"
 #include <iostream>
+#include <spdlog/async.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
@@ -56,7 +57,8 @@ void LogManager::fallback_init_for_logger() noexcept {
     spdlog::drop(name_);
   }
 
-  current_logger_ = spdlog::stderr_color_mt(name_);
+  current_logger_ =
+      spdlog::create_async_nb<spdlog::sinks::ansicolor_stderr_sink_mt>(name_);
   current_logging_directory = "";
 }
 
@@ -66,9 +68,10 @@ void LogManager::initialize_logger(const std::string& log_dir) noexcept {
     spdlog::set_error_handler([](const std::string& msg) {
       std::cerr << "Log error: " << msg << "\n";
     });
-    current_logger_ = spdlog::rotating_logger_mt(
-        kMainLogger, join_path(log_dir, "atlasclient.log"),
-        current_log_config.max_size, current_log_config.max_files);
+    current_logger_ =
+        spdlog::create_async_nb<spdlog::sinks::rotating_file_sink_mt>(
+            name_, join_path(log_dir, "atlasclient.log"),
+            current_log_config.max_size, current_log_config.max_files);
     current_logging_directory = log_dir;
     current_logger_->flush_on(spdlog::level::info);
   } else {
@@ -78,6 +81,8 @@ void LogManager::initialize_logger(const std::string& log_dir) noexcept {
 
 void LogManager::initialize() noexcept {
   try {
+    // use a queue with a max of 8k entries and one thread
+    spdlog::init_thread_pool(8192, 1);
     initialize_logger(get_usable_logging_directory());
   } catch (const spdlog::spdlog_ex& ex) {
     std::cerr << "Log initialization failed: " << ex.what() << "\n";
@@ -125,7 +130,8 @@ void LogManager::UseConsoleLogger(int level) noexcept {
     spdlog::drop(name_);
   }
 
-  current_logger_ = spdlog::stdout_color_mt(kMainLogger);
+  current_logger_ =
+      spdlog::create_async_nb<spdlog::sinks::ansicolor_stdout_sink_mt>(name_);
   current_logger_->set_level(level_from_int(level));
   current_logging_directory = "";
 }

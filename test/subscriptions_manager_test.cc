@@ -20,7 +20,7 @@ rapidjson::Document MeasurementsToJson(
     int64_t now_millis,
     const interpreter::TagsValuePairs::const_iterator& first,
     const interpreter::TagsValuePairs::const_iterator& last, bool validate,
-    int64_t* added);
+    int64_t* added, int64_t* errors);
 
 rapidjson::Document SubResultsToJson(
     int64_t now_millis, const SubscriptionResults::const_iterator& first,
@@ -77,16 +77,19 @@ TEST(SubscriptionManager, MeasurementsToJsonInvalid) {
   Tags t1{{"name", "name1"}, {"k1", "v1"}, {"k2", ""}};
   Tags t2{{"name", "name2"}, {"", "v1"}, {"k2", "v2.0"}};
   Tags t3{{"k1", "v1"}, {"k2", "v2.1"}};
+  Tags t4{{"name", "name"}, {"k1", "v1"}, {"k2", "v2.1"}};
 
   auto m1 = TagsValuePair::of(std::move(t1), 1.1);
   auto m2 = TagsValuePair::of(std::move(t2), 2.2);
   auto m3 = TagsValuePair::of(std::move(t3), 3.3);
-  TagsValuePairs ms{std::move(m1), std::move(m2), std::move(m3)};
+  auto m4 = TagsValuePair::of(std::move(t4), 4.0);
+  TagsValuePairs ms{std::move(m1), std::move(m2), std::move(m3), std::move(m4)};
 
-  int64_t added;
-  auto json =
-      atlas::meter::MeasurementsToJson(1, ms.begin(), ms.end(), true, &added);
-  EXPECT_EQ(added, 0);
+  int64_t added, errors;
+  auto json = atlas::meter::MeasurementsToJson(1, ms.begin(), ms.end(), true,
+                                               &added, &errors);
+  EXPECT_EQ(added, 1);
+  EXPECT_EQ(errors, 3);
 }
 
 TEST(SubscriptionManager, MeasurementsToJson) {
@@ -102,10 +105,11 @@ TEST(SubscriptionManager, MeasurementsToJson) {
   auto m3 = TagsValuePair::of(std::move(t3), 3.3);
   TagsValuePairs ms{std::move(m1), std::move(m2), std::move(m3)};
 
-  int64_t added;
-  auto json =
-      atlas::meter::MeasurementsToJson(1, ms.begin(), ms.end(), true, &added);
+  int64_t added, errors;
+  auto json = atlas::meter::MeasurementsToJson(1, ms.begin(), ms.end(), true,
+                                               &added, &errors);
   EXPECT_EQ(added, 3);
+  EXPECT_EQ(errors, 0);
 
   const char* expected =
       "{\"tags\":{},"

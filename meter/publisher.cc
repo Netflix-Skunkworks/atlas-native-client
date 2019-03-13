@@ -76,7 +76,7 @@ rapidjson::Document MeasurementsToJson(
     int64_t now_millis,
     const interpreter::TagsValuePairs::const_iterator& first,
     const interpreter::TagsValuePairs::const_iterator& last, bool validate,
-    int64_t* metrics_added) {
+    int64_t* metrics_added, int64_t* validation_errors) {
   using rapidjson::Document;
   using rapidjson::kArrayType;
   using rapidjson::kObjectType;
@@ -84,6 +84,7 @@ rapidjson::Document MeasurementsToJson(
   using rapidjson::Value;
 
   int64_t added = 0;
+  int64_t errors = 0;
   Document payload{kObjectType};
   auto& alloc = payload.GetAllocator();
   auto logger = Logger();
@@ -102,10 +103,9 @@ rapidjson::Document MeasurementsToJson(
     }
     auto tags = measure->all_tags();
     if (validate && !AreTagsValid(tags)) {
-      if (should_debug) {
-        logger->debug("{}={} is not valid - skipping", measure->all_tags(),
-                      measure->value());
-      }
+      logger->info("{}={} is not valid - skipping", measure->all_tags(),
+                   measure->value());
+      ++errors;
       continue;
     }
     Value json_metric{kObjectType};
@@ -131,6 +131,7 @@ rapidjson::Document MeasurementsToJson(
   payload.AddMember("metrics", json_metrics, alloc);
 
   *metrics_added = added;
+  *validation_errors = errors;
   return payload;
 }
 
@@ -145,13 +146,11 @@ static void SendBatch(Registry* registry, const util::http& client,
   const auto& log_config = config.LogConfiguration();
   logger->info("Sending batch of {} metrics to {}", num_measurements,
                endpoints.publish);
-  int64_t added = 0;
+  int64_t added = 0, errors = 0;
   auto num_metrics = static_cast<int64_t>(num_measurements);
-  auto payload = MeasurementsToJson(now_millis, first, last,
-                                    config.ShouldValidateMetrics(), &added);
-  if (added != num_metrics) {
-    UpdateValidationErrorStats(registry, num_metrics - added);
-  }
+  auto payload = MeasurementsToJson(
+      now_millis, first, last, config.ShouldValidateMetrics(), &added, &errors);
+  UpdateValidationErrorStats(registry, errors);
   UpdateTotalSentStat(registry, num_metrics);
   if (added == 0) {
     return;
@@ -197,14 +196,14 @@ static void PushInParallel(const std::shared_ptr<Registry>& registry,
     auto to = from;
     std::advance(to, to_advance);
 
-    int64_t added;
+    int64_t added, errors;
     batches.emplace_back(MeasurementsToJson(
-        now_millis, from, to, config.ShouldValidateMetrics(), &added));
+        now_millis, from, to, config.ShouldValidateMetrics(), &added, &errors));
     if (config.LogConfiguration().dump_metrics) {
       DumpJson("/tmp", "main_batch_", batches.back());
     }
     total_valid_metrics += added;
-    validation_errors += to_advance - added;
+    validation_errors += errors;
     batch_sizes.push_back(added);
     from = to;
   }

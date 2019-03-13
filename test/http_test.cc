@@ -96,7 +96,7 @@ rapidjson::Document MeasurementsToJson(
     int64_t now_millis,
     const interpreter::TagsValuePairs::const_iterator& first,
     const interpreter::TagsValuePairs::const_iterator& last, bool validate,
-    int64_t* metrics_added);
+    int64_t* metrics_added, int64_t* validation_errors);
 }  // namespace meter
 }  // namespace atlas
 
@@ -113,9 +113,9 @@ static rapidjson::Document get_json_doc() {
   tag_values.push_back(std::move(exp1));
   tag_values.push_back(std::move(exp2));
 
-  int64_t n;
+  int64_t n, e;
   return atlas::meter::MeasurementsToJson(1000, tag_values.begin(),
-                                          tag_values.end(), false, &n);
+                                          tag_values.end(), false, &n, &e);
 }
 
 TEST(HttpTest, PostBatches) {

@@ -200,12 +200,23 @@ FeaturesConfig FeaturesConfig::FromJson(
           ? json["subscriptionsRefreshMillis"].GetInt64()
           : defaults.subscription_refresh_ms;
 
-  const char* maybe_file = std::getenv("ATLAS_DISABLED_FILE");
-  config.disabled_file =
-      maybe_file != nullptr ? maybe_file : defaults.disabled_file;
+  config.disabled_file = json.HasMember("disabledFile")
+                             ? json["disabledFile"].GetString()
+                             : defaults.disabled_file;
 
   return config;
 }
+
+static const char* get_default_disabled_file() {
+  const char* maybe_file = std::getenv("ATLAS_DISABLED_FILE");
+  log_manager().Logger()->trace("maybe_file = {}",
+                               maybe_file == nullptr ? "(null)" : maybe_file);
+  return maybe_file != nullptr ? maybe_file
+                               : "/var/lib/nflx-nimble-gate/atlas-disabled";
+}
+
+FeaturesConfig::FeaturesConfig() noexcept
+    : disabled_file(get_default_disabled_file()) {}
 
 }  // namespace util
 }  // namespace atlas

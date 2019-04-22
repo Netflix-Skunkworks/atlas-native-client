@@ -7,13 +7,16 @@
 using namespace atlas::meter;
 
 int main(int argc, char* argv[]) {
-  atlas::util::UseConsoleLogger(1);
+  atlas::util::UseConsoleLogger(0);
+  auto logger = atlas::util::Logger();
   atlas::Client atlas_client;
+  auto cfg = atlas_client.GetConfig();
+  logger->info("Disabled File Name {}", cfg->DisabledFileName());
+
   atlas_client.Start();
   auto registry = atlas_client.GetRegistry();
 
   std::string name{"test.counter"};
-  auto logger = atlas::util::Logger();
   for (int second = 0; second < 60; ++second) {
     registry->counter(name, kEmptyTags)->Increment();
     logger->info("Incrementing test.counter: {} ({})", second + 1,

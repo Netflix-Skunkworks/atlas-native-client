@@ -84,14 +84,16 @@ struct LogConfig {
 
 std::ostream& operator<<(std::ostream& os, const LogConfig& log_config);
 
-struct FeaturesConfig {
+class FeaturesConfig {
+ public:
+  FeaturesConfig() noexcept;
+  std::string disabled_file;
   bool force_start = false;
   bool validate = true;
   bool main = true;
   bool subscriptions = false;
   int64_t subscription_refresh_ms = 10000;
   std::vector<std::string> publish_config = {":true,:all"};
-  std::string disabled_file = "/mnt/data/atlas.disabled";
 
   static FeaturesConfig FromJson(const rapidjson::Document& json,
                                  const FeaturesConfig& defaults) noexcept;
@@ -125,7 +127,9 @@ class Config {
   void AddCommonTags(const meter::Tags& extra_tags) noexcept {
     common_tags_.add_all(extra_tags);
   }
-
+  std::string DisabledFileName() const noexcept {
+    return disabled_file_watcher_.file_name();
+  }
   // for testing
   Config WithPublishConfig(std::vector<std::string> publish_config) {
     auto cfg = Config(*this);

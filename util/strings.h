@@ -53,17 +53,17 @@ inline bool StartsWith(StrRef ref, const char* prefix) noexcept {
 
 bool IStartsWith(const std::string& s, const std::string& prefix) noexcept;
 
+/// Remove whitespace from the end of a string
 inline void TrimRight(std::string* s) {
   s->erase(std::find_if(s->rbegin(), s->rend(),
-                        std::not1(std::ptr_fun<int, int>(std::isspace)))
+                        [](int c) { return !std::isspace(c); })
                .base(),
            s->end());
 }
 
 inline void ToLower(std::string* s) {
-  for (size_t i = 0; i < s->size(); ++i) {
-    s->at(i) = static_cast<char>(std::tolower(s->at(i)));
-  }
+  std::transform(s->begin(), s->end(), s->begin(),
+                 [](char c) { return std::tolower(c); });
 }
 
 inline std::string ToLowerCopy(std::string s) {

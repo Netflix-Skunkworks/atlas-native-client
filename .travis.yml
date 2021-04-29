@@ -25,11 +25,6 @@ matrix:
             - clang-5.0
       env: CC='clang-5.0' CXX='clang++-5.0'
 
-after_success:
-  - ./create-lcov-report.sh
-  # Uploading report to CodeCov
-  - bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
-
 env:
   global:
     - LANG="en_US.UTF-8"

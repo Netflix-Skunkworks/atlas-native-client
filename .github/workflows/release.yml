@@ -36,7 +36,7 @@ jobs:
         env:
           CC: "clang-5.0"
           CXX: "clang++-5.0"
-        run: run-build.sh
+        run: ./run-build.sh
 
       - name: Install Dependencies (gcc)
         if: startsWith(matrix.compiler, 'gcc')
@@ -50,4 +50,4 @@ jobs:
         env:
           CC: "gcc-5"
           CXX: "g++-5"
-        run: run-build.sh
+        run: ./run-build.sh

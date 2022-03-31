@@ -24,14 +24,14 @@ jobs:
           sudo apt-add-repository -y "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-5.0 main"
           sudo apt-add-repository -y ppa:ubuntu-toolchain-r/test
           sudo apt-get update
+          sudo apt-get install -y clang-5.0 dpkg
           echo ==== debug ====
           cmake --version
           echo ==== debug ====
-          dpkg -l |grep cmake
+          sudo dpkg -l |grep cmake
           echo ==== debug ====
           cat /etc/lsb-release
           echo ==== debug ====
-          sudo apt-get install -y clang-5.0
 
       - name: Build and Test (clang)
         if: startsWith(matrix.compiler, 'clang')

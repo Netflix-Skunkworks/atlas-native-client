@@ -188,7 +188,6 @@ static void PushInParallel(const std::shared_ptr<Registry>& registry,
   std::vector<int64_t> batch_sizes;
   auto from = measurements.begin();
   auto end = measurements.end();
-  int64_t total_valid_metrics = 0;
   int64_t validation_errors = 0;
   while (from != end) {
     auto to_end = std::distance(from, end);
@@ -202,7 +201,6 @@ static void PushInParallel(const std::shared_ptr<Registry>& registry,
     if (config.LogConfiguration().dump_metrics) {
       DumpJson("/tmp", "main_batch_", batches.back());
     }
-    total_valid_metrics += added;
     validation_errors += errors;
     batch_sizes.push_back(added);
     from = to;

@@ -43,7 +43,7 @@ int64_t DefaultLongTaskTimer::Duration() const noexcept {
   std::lock_guard<std::mutex> lock(tasks_mutex_);
   const auto now = clock_.MonotonicTime();
   int64_t total_duration = 0;
-  for (const auto value : tasks_) {
+  for (const auto &value : tasks_) {
     const auto nanos = now - value.second;
     total_duration += nanos;
   }

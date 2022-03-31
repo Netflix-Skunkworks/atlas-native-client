@@ -2,13 +2,17 @@
 
 # Atlas Client Native Library
 
+This is the original C++ client implementation, which was intended to be a fully-featured equivalent
+of the Java reference implementation, with on-instance alerts, and other items which were deprecated
+from the Spectator clients when we moved to fully using the Light Weight Client infrastructure. New
+C++ projects should use the [spectator-cpp](https://github.com/Netflix/spectator-cpp) library instead.
+
+This is only used by the [atlas-node-client](https://github.com/Netflix-Skunkworks/atlas-node-client)
+library, which is deprecated.
+
 ## Building
 
 ```
 ./run-build.sh
-```
-### To run tests:
-```
 ./build/runtests
 ```
-

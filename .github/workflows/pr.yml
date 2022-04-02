@@ -4,8 +4,9 @@ on: [pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           - {compiler: gcc}
@@ -15,29 +16,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Install Dependencies (clang)
-        if: startsWith(matrix.compiler, 'clang')
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y curl software-properties-common
-          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo apt-add-repository -y "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-5.0 main"
-          sudo apt-add-repository -y ppa:ubuntu-toolchain-r/test
-          sudo apt-get update
-          sudo apt-get install -y clang-5.0 dpkg
-          echo ==== debug ====
-          cmake --version
-          echo ==== debug ====
-          sudo dpkg -l |grep cmake
-          echo ==== debug ====
-          cat /etc/lsb-release
-          echo ==== debug ====
-
       - name: Build and Test (clang)
         if: startsWith(matrix.compiler, 'clang')
         env:
-          CC: "clang-5.0"
-          CXX: "clang++-5.0"
+          CC: "clang-11"
+          CXX: "clang++-11"
         run: ./run-build.sh
 
       - name: Install Dependencies (gcc)
@@ -45,11 +28,11 @@ jobs:
         run: |
           sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
           sudo apt-get update
-          sudo apt-get install -y g++-5 lcov
+          sudo apt-get install -y lcov
 
       - name: Build and Test (gcc)
         if: startsWith(matrix.compiler, 'gcc')
         env:
-          CC: "gcc-5"
-          CXX: "g++-5"
+          CC: "gcc-10"
+          CXX: "g++-10"
         run: ./run-build.sh

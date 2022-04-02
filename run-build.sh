@@ -51,4 +51,3 @@ if [ $? -ne 0 ]; then
 fi
 
 workingprocess "All tests compile and pass."
-

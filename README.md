@@ -2,9 +2,9 @@
 
 # Atlas Client Native Library
 
-> :warning: This library is deprecated. C++ projects should migrate to
-[spectator-cpp](https://github.com/Netflix/spectator-cpp) for publishing Atlas
-metrics.
+> :warning: This library is deprecated. If you need to publish metrics from C++ projects, then you
+should use the [SpectatorD](https://github.com/Netflix-Skunkworks/spectatord) service directly,
+which is considered the primary metrics publishing interface.
 
 This is the original C++ client implementation, which was intended to be a fully-featured equivalent
 of the Java reference implementation, with on-instance alerts, and other items which were deprecated
@@ -17,5 +17,4 @@ library, which is deprecated.
 
 ```
 ./run-build.sh
-./build/runtests
 ```

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.12)
 
 set(PROJECT_NAME_STR libatlasclient)
 set(CMAKE_MACOSX_RPATH 1)

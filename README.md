@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/Netflix-Skunkworks/atlas-native-client.svg?branch=master)](https://travis-ci.com/Netflix-Skunkworks/atlas-native-client)
+[![Snapshot](https://github.com/Netflix-Skunkworks/atlas-native-client/actions/workflows/snapshot.yml/badge.svg)](https://github.com/Netflix-Skunkworks/atlas-native-client/actions/workflows/snapshot.yml) [![Release](https://github.com/Netflix-Skunkworks/atlas-native-client/actions/workflows/release.yml/badge.svg)](https://github.com/Netflix-Skunkworks/atlas-native-client/actions/workflows/release.yml)
 
 # Atlas Client Native Library
 
